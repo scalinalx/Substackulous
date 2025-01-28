@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^0.0.48",
-    "@ai-sdk/openai": "^0.0.54",
     "@deepgram/sdk": "^3.6.0",
     "@stripe/stripe-js": "^5.5.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
