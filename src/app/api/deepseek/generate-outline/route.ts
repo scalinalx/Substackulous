@@ -71,7 +71,7 @@ Format the outline with clear hierarchical structure using markdown.`;
             content: prompt
           }
         ],
-        max_tokens: 2000,
+        max_tokens: 1200,
         temperature: 0.7,
         top_p: 1.0
       }),

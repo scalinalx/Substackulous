@@ -1,7 +1,6 @@
-import { NextResponse } from 'next/server';
+export const runtime = 'edge';
 
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const API_URL = 'https://api.deepseek.com/v1/chat/completions';
+import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +11,11 @@ export async function POST(req: Request) {
         { error: 'Theme and Primary Intent are required' },
         { status: 400 }
       );
+    }
+
+    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+    if (!DEEPSEEK_API_KEY) {
+      throw new Error('Deepseek API key not configured');
     }
 
     const prompt = `Act as a top Substack growth strategist with 10+ years experience creating viral content. Generate 4 high-impact notes using this framework:
@@ -48,7 +52,7 @@ Never mark the copywriting frameworks you used in the notes. Don't indicate the 
 Don't restrict yourself to only a few wellknown copywriting frameworks like AIDA, FOMO, PAS, etc. Output each sentence on a new line.
 `;
 
-    const response = await fetch(API_URL, {
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -58,14 +62,20 @@ Don't restrict yourself to only a few wellknown copywriting frameworks like AIDA
         model: 'deepseek-chat',
         messages: [
           {
-            role: 'user',
-            content: prompt,
+            role: 'system',
+            content: 'You are an expert social media content creator and viral growth strategist. You excel at creating engaging, viral social media posts.'
           },
+          {
+            role: 'user',
+            content: prompt
+          }
         ],
+        max_tokens: 2000,
         temperature: 0.7,
-        max_tokens: 1000,
         top_p: 1.0
       }),
+      // Add timeout of 55 seconds
+      signal: AbortSignal.timeout(55000)
     });
 
     if (!response.ok) {
@@ -74,14 +84,18 @@ Don't restrict yourself to only a few wellknown copywriting frameworks like AIDA
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    const content = data.choices[0]?.message?.content;
     const notes = content.split('---###$$$###---').map((note: string) => note.trim()).filter(Boolean);
+
+    if (!notes.length) {
+      throw new Error('No notes generated');
+    }
 
     return NextResponse.json({ notes });
   } catch (error) {
     console.error('Error generating notes:', error);
     return NextResponse.json(
-      { error: 'Failed to generate notes' },
+      { error: error instanceof Error ? error.message : 'Failed to generate notes' },
       { status: 500 }
     );
   }
