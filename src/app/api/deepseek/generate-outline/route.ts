@@ -18,16 +18,34 @@ export async function POST(req: Request) {
       throw new Error('Deepseek API key not configured');
     }
 
-    const prompt = `Create a detailed outline for a viral blog post about ${topic}.
-${keyPoints ? `\nKey points to cover:\n${keyPoints}` : ''}
-${targetAudience ? `\nTarget audience: ${targetAudience}` : ''}
+    const prompt = `Act as a master content architect and Pulitzer-winning editorial director. The best in the world at writing viral, engaging Substack posts.
+Create a detailed outline for a blog post about: ${topic}
 
-Please provide a well-structured outline that includes:
-1. An attention-grabbing introduction
-2. Main sections with clear subpoints
-3. Engaging examples or case studies
-4. A compelling conclusion
-5. Call-to-action
+**Strategic Foundation**
+- Primary Goal: Viral engagement and thought leadership
+- Audience Profile: ${targetAudience || 'General audience interested in the topic'}
+${keyPoints ? `- Key Points to Address: ${keyPoints}` : ''}
+
+**Content Core**
+- Central Theme: "${topic}"
+- Target Length: 1500-2000 words
+- Content Style: Engaging, informative, and shareable
+
+**Optimization Levers**
+- Content Type: Long-form blog post
+- Tone: Professional yet conversational
+- Structural Template: Problem-Solution-Action
+
+**Output Requirements**
+1. Title Options (3 viral headline variants)
+2. Meta Description (160 chars)
+3. Detailed Section Framework
+   - Introduction (Hook + Context)
+   - Main Body (3-5 key sections)
+   - Conclusion + Call to Action
+4. Key Data Points to Include
+5. Engagement Hooks (Open Loops/Story Elements)
+6. SEO Optimization Notes
 
 Format the outline with clear hierarchical structure using markdown.`;
 
@@ -51,6 +69,7 @@ Format the outline with clear hierarchical structure using markdown.`;
         ],
         max_tokens: 2000,
         temperature: 0.7,
+        top_p: 1.0
       }),
     });
 
