@@ -41,11 +41,14 @@ export default function ThumbnailGenerator() {
         body: JSON.stringify({
           prompt,
           aspectRatio: options.aspectRatio,
-          model: 'flux',
-          output_format: 'jpg',
-          output_quality: 95,
-          safety_tolerance: 2,
-          prompt_upsampling: true
+          model: 'ideogram-ai/ideogram-v2-turbo',
+          input: {
+            prompt,
+            resolution: "None",
+            style_type: "Design",
+            aspect_ratio: options.aspectRatio,
+            magic_prompt_option: "On"
+          }
         }),
       });
 

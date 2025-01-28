@@ -9,7 +9,7 @@ interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   loading: boolean;
@@ -119,7 +119,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: {
             credits: 100 // Initial credits for new users
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/dashboard`
         }
       });
       
@@ -142,9 +143,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (profileError) throw profileError;
       }
 
-      router.push('/dashboard');
+      return {
+        success: true,
+        message: "Please check your email for a verification link. You must verify your email before accessing your account."
+      };
     } catch (error) {
       setError((error as Error).message);
+      return {
+        success: false,
+        message: (error as Error).message
+      };
     } finally {
       setLoading(false);
     }
@@ -154,14 +162,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      // First clear local state
       setUser(null);
       setProfile(null);
-      await router.push('/');
+      
+      // Then sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // Force a hard navigation to clear all state
+      window.location.href = '/';
     } catch (error) {
       setError((error as Error).message);
-    } finally {
       setLoading(false);
     }
   };

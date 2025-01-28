@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   const { signIn, signUp, error, loading, user } = useAuth();
   const router = useRouter();
+  const [verificationMessage, setVerificationMessage] = useState('');
 
   const scrollToForm = () => {
     const formElement = document.getElementById('auth-form');
@@ -44,10 +45,17 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSignUp) {
-      await signUp(email, password);
-    } else {
-      await signIn(email, password);
+    try {
+      if (isSignUp) {
+        const result = await signUp(email, password);
+        if (result.success) {
+          setVerificationMessage(result.message);
+        }
+      } else {
+        await signIn(email, password);
+      }
+    } catch (error) {
+      console.error('Error:', error);
     }
   };
 
@@ -101,9 +109,18 @@ export default function LoginPage() {
             </h2>
           </div>
 
+          {/* Verification Message */}
+          {verificationMessage && (
+            <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-700">
+              <p className="font-medium">Email Verification Required</p>
+              <p className="text-sm mt-1">{verificationMessage}</p>
+            </div>
+          )}
+
+          {/* Error Message */}
           {error && (
-            <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm">
-              {error}
+            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+              <p>{error}</p>
             </div>
           )}
 
