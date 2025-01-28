@@ -34,6 +34,7 @@ export default function ThumbnailGenerator() {
 
       setLoading(true);
       setGeneratedImages(null);
+      setError(null);
 
       const prompt = `A viral thumbnail about "${options.title}". Clickbait, Eye-catchy, Engaging visuals. Viral. ${options.theme} theme. Inspiring. CGI. Text Masking.`;
 
@@ -60,6 +61,7 @@ export default function ThumbnailGenerator() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       const tempImages: string[] = [];
+      let completionReceived = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -89,6 +91,16 @@ export default function ThumbnailGenerator() {
                     throw new Error('No images were generated successfully');
                   }
                   setGeneratedImages({ urls: data.imageUrls });
+                  completionReceived = true;
+                  
+                  // Update credits only after successful completion
+                  if (profile && data.successCount > 0) {
+                    const updatedProfile = {
+                      ...profile,
+                      credits: (profile.credits || 0) - creditCost,
+                    };
+                    await updateProfile(updatedProfile);
+                  }
                   break;
               }
             } catch (e) {
@@ -98,16 +110,12 @@ export default function ThumbnailGenerator() {
         }
       }
 
-      // Update credits in profile
-      if (profile) {
-        const updatedProfile = {
-          ...profile,
-          credits: (profile.credits || 0) - creditCost,
-        };
-        await updateProfile(updatedProfile);
+      if (!completionReceived) {
+        throw new Error('Generation did not complete successfully');
       }
     } catch (err) {
       setError((err as Error).message);
+      setGeneratedImages(null);
     } finally {
       setLoading(false);
       setStatus('');

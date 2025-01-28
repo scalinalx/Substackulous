@@ -41,6 +41,8 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
 
     setError(null);
     setGenerating(true);
+    setGeneratedImages([]);
+    setLoading(true);
 
     try {
       const prompt = `A viral image about ${mainIdea}. Clickbait, Eye-catchy, Engaging visuals. Viral. ${theme} theme. Inspiring.`;
@@ -68,6 +70,7 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       const tempImages: string[] = [];
+      let completionReceived = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -97,6 +100,16 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
                     throw new Error('No images were generated successfully');
                   }
                   setGeneratedImages(data.imageUrls);
+                  completionReceived = true;
+                  
+                  // Update credits only after successful completion
+                  if (profile && data.successCount > 0) {
+                    const updatedProfile = {
+                      ...profile,
+                      credits: (profile.credits || 0) - creditCost,
+                    };
+                    await updateProfile(updatedProfile);
+                  }
                   break;
               }
             } catch (e) {
@@ -106,19 +119,12 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
         }
       }
 
-      // Update credits in profile
-      if (profile) {
-        // Calculate new credits
-        const updatedProfile = {
-          ...profile,
-          credits: (profile.credits || 0) - creditCost,
-        };
-        
-        // Update profile in database and local state
-        await updateProfile(updatedProfile);
+      if (!completionReceived) {
+        throw new Error('Generation did not complete successfully');
       }
     } catch (err) {
       setError((err as Error).message);
+      setGeneratedImages([]);
     } finally {
       setGenerating(false);
       setLoading(false);
