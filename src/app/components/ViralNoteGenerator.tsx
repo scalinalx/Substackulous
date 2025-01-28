@@ -19,6 +19,8 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[] | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [generatedNote, setGeneratedNote] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,6 +80,92 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
       setTimeout(() => setCopiedIndex(null), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+    }
+  };
+
+  const generateNote = async () => {
+    if ((profile?.credits || 0) < 2) {
+      setError('Not enough credits. You need 2 credits to generate a viral note.');
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+    setGeneratedNote('');
+    let completionReceived = false;
+
+    try {
+      const response = await fetch('/api/anthropic/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: 'user',
+              content: `Write a viral note about ${theme}. Make it engaging, informative, and shareable. Use a ${primaryIntent} tone. Include relevant hashtags.`
+            }
+          ]
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate note');
+      }
+
+      if (!response.body) {
+        throw new Error('No response body received');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedNote = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(5));
+              
+              if (data.type === 'completion') {
+                accumulatedNote += data.content;
+                setGeneratedNote(accumulatedNote);
+              } else if (data.type === 'error') {
+                throw new Error(data.message || 'Error generating note');
+              } else if (data.type === 'done') {
+                completionReceived = true;
+                
+                // Update credits only after successful completion
+                if (profile) {
+                  const updatedProfile = {
+                    ...profile,
+                    credits: (profile.credits || 0) - 2,
+                  };
+                  await updateProfile(updatedProfile);
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing SSE message:', e);
+            }
+          }
+        }
+      }
+
+      if (!completionReceived) {
+        throw new Error('Generation did not complete successfully');
+      }
+    } catch (err) {
+      setError((err as Error).message);
+      setGeneratedNote('');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -217,6 +305,15 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {generatedNote && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Note</h2>
+          <div className="whitespace-pre-wrap text-gray-900 bg-gray-50 p-3 rounded">
+            {generatedNote}
           </div>
         </div>
       )}

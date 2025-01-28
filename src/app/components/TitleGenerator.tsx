@@ -13,6 +13,9 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
   const [error, setError] = useState<string | null>(null);
   const [titles, setTitles] = useState<string[] | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [creditCost, setCreditCost] = useState(1);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,23 +25,29 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
       return;
     }
 
-    if ((profile?.credits || 0) < 1) {
-      setError('Not enough credits. Please purchase more credits to continue.');
+    if ((profile?.credits || 0) < creditCost) {
+      setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
       return;
     }
 
     setError(null);
     setGenerating(true);
+    setGeneratedTitles([]);
+    let completionReceived = false;
 
     try {
-      const response = await fetch('/api/deepseek/generate-titles', {
+      const response = await fetch('/api/anthropic/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          theme,
-          mainIdeas: mainIdeas.trim() || undefined,
+          messages: [
+            {
+              role: 'user',
+              content: `Generate 5 viral, clickbait-style titles about ${theme}. Make them engaging and shareable. Use a ${mainIdeas} tone.`
+            }
+          ]
         }),
       });
 
@@ -46,18 +55,61 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
         throw new Error('Failed to generate titles');
       }
 
-      const data = await response.json();
-      setTitles(data.titles);
+      if (!response.body) {
+        throw new Error('No response body received');
+      }
 
-      // Update credits in profile
-      if (profile) {
-        await updateProfile({
-          ...profile,
-          credits: (profile.credits || 0) - 1,
-        });
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(5));
+              
+              if (data.type === 'completion') {
+                accumulatedText += data.content;
+                // Parse the accumulated text into titles
+                const titles = accumulatedText
+                  .split('\n')
+                  .filter(line => line.trim().length > 0)
+                  .map(line => line.replace(/^\d+\.\s*/, '').trim());
+                setGeneratedTitles(titles);
+              } else if (data.type === 'error') {
+                throw new Error(data.message || 'Error generating titles');
+              } else if (data.type === 'done') {
+                completionReceived = true;
+                
+                // Update credits only after successful completion
+                if (profile) {
+                  const updatedProfile = {
+                    ...profile,
+                    credits: (profile.credits || 0) - creditCost,
+                  };
+                  await updateProfile(updatedProfile);
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing SSE message:', e);
+            }
+          }
+        }
+      }
+
+      if (!completionReceived) {
+        throw new Error('Generation did not complete successfully');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate titles');
+      setError((err as Error).message);
+      setGeneratedTitles([]);
     } finally {
       setGenerating(false);
     }
@@ -76,7 +128,7 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-        <span className="text-amber-700">Credits required: 1</span>
+        <span className="text-amber-700">Credits required: {creditCost}</span>
         <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
       </div>
 
@@ -142,11 +194,11 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
         </button>
       </form>
 
-      {titles && titles.length > 0 && (
+      {generatedTitles.length > 0 && (
         <div className="mt-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles</h2>
           <div className="space-y-3">
-            {titles.map((title, index) => (
+            {generatedTitles.map((title, index) => (
               <div
                 key={index}
                 className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-200 transition-colors"
