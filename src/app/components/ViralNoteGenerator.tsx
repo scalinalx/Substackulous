@@ -92,21 +92,18 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
     setError(null);
     setLoading(true);
     setGeneratedNote('');
-    let completionReceived = false;
 
     try {
-      const response = await fetch('/api/openai/chat', {
+      const response = await fetch('/api/deepseek/generate-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [
-            {
-              role: 'user',
-              content: `Write a viral note about ${theme}. Make it engaging, informative, and shareable. Use a ${primaryIntent} tone. Include relevant hashtags.`
-            }
-          ]
+          theme: theme.trim(),
+          coreTopics: coreTopics.trim() || undefined,
+          targetAudience: targetAudience.trim() || undefined,
+          primaryIntent,
         }),
       });
 
@@ -114,52 +111,16 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
         throw new Error('Failed to generate note');
       }
 
-      if (!response.body) {
-        throw new Error('No response body received');
-      }
+      const data = await response.json();
+      setGeneratedNote(data.notes[0] || '');
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedNote = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(5));
-              
-              if (data.type === 'completion') {
-                accumulatedNote += data.content;
-                setGeneratedNote(accumulatedNote);
-              } else if (data.type === 'error') {
-                throw new Error(data.message || 'Error generating note');
-              } else if (data.type === 'done') {
-                completionReceived = true;
-                
-                // Update credits only after successful completion
-                if (profile) {
-                  const updatedProfile = {
-                    ...profile,
-                    credits: (profile.credits || 0) - 2,
-                  };
-                  await updateProfile(updatedProfile);
-                }
-              }
-            } catch (e) {
-              console.error('Error parsing SSE message:', e);
-            }
-          }
-        }
-      }
-
-      if (!completionReceived) {
-        throw new Error('Generation did not complete successfully');
+      // Update credits only after successful completion
+      if (profile) {
+        const updatedProfile = {
+          ...profile,
+          credits: (profile.credits || 0) - 2,
+        };
+        await updateProfile(updatedProfile);
       }
     } catch (err) {
       setError((err as Error).message);

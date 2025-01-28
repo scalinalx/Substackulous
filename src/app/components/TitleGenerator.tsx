@@ -34,21 +34,16 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
     setError(null);
     setGenerating(true);
     setGeneratedTitles([]);
-    let completionReceived = false;
 
     try {
-      const response = await fetch('/api/openai/chat', {
+      const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [
-            {
-              role: 'user',
-              content: `Generate 5 viral, clickbait-style titles about ${theme}. Make them engaging and shareable. Use a ${mainIdeas} tone.`
-            }
-          ]
+          theme: theme.trim(),
+          mainIdeas: mainIdeas.trim() || undefined,
         }),
       });
 
@@ -56,57 +51,16 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
         throw new Error('Failed to generate titles');
       }
 
-      if (!response.body) {
-        throw new Error('No response body received');
-      }
+      const data = await response.json();
+      setGeneratedTitles(data.titles);
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedText = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(5));
-              
-              if (data.type === 'completion') {
-                accumulatedText += data.content;
-                // Parse the accumulated text into titles
-                const titles = accumulatedText
-                  .split('\n')
-                  .filter(line => line.trim().length > 0)
-                  .map(line => line.replace(/^\d+\.\s*/, '').trim());
-                setGeneratedTitles(titles);
-              } else if (data.type === 'error') {
-                throw new Error(data.message || 'Error generating titles');
-              } else if (data.type === 'done') {
-                completionReceived = true;
-                
-                // Update credits only after successful completion
-                if (profile) {
-                  const updatedProfile = {
-                    ...profile,
-                    credits: (profile.credits || 0) - creditCost,
-                  };
-                  await updateProfile(updatedProfile);
-                }
-              }
-            } catch (e) {
-              console.error('Error parsing SSE message:', e);
-            }
-          }
-        }
-      }
-
-      if (!completionReceived) {
-        throw new Error('Generation did not complete successfully');
+      // Update credits only after successful completion
+      if (profile) {
+        const updatedProfile = {
+          ...profile,
+          credits: (profile.credits || 0) - creditCost,
+        };
+        await updateProfile(updatedProfile);
       }
     } catch (err) {
       setError((err as Error).message);
