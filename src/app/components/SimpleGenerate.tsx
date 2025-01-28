@@ -17,6 +17,9 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [aspectRatio, setAspectRatio] = useState('3:2');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
+  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,24 +47,64 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
 
       const response = await fetch('/api/replicate/generate-image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           prompt,
-          aspectRatio,
           model: 'flux',
-          output_format: 'jpg',
-          output_quality: 95,
-          safety_tolerance: 2,
-          prompt_upsampling: true
+          aspectRatio,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate illustrations');
+        throw new Error('Failed to generate images');
       }
 
-      const data = await response.json();
-      setImageUrls(data.imageUrls);
+      if (!response.body) {
+        throw new Error('No response body received');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      const tempImages: string[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(5));
+              
+              switch (data.status) {
+                case 'generating':
+                  setStatus(data.message);
+                  break;
+                case 'success':
+                  tempImages[data.index] = data.imageUrl;
+                  setGeneratedImages([...tempImages]);
+                  break;
+                case 'error':
+                  setError(data.message);
+                  break;
+                case 'complete':
+                  if (data.imageUrls.length === 0) {
+                    throw new Error('No images were generated successfully');
+                  }
+                  setGeneratedImages(data.imageUrls);
+                  break;
+              }
+            } catch (e) {
+              console.error('Error parsing SSE message:', e);
+            }
+          }
+        }
+      }
 
       // Update credits in profile
       if (profile) {
@@ -75,9 +118,11 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
         await updateProfile(updatedProfile);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate illustrations');
+      setError((err as Error).message);
     } finally {
       setGenerating(false);
+      setLoading(false);
+      setStatus('');
     }
   };
 
@@ -185,21 +230,21 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
         </button>
       </form>
 
-      {imageUrls.length > 0 && (
+      {generatedImages.length > 0 && (
         <div className="mt-8 space-y-6">
           <h3 className="text-xl font-semibold mb-4">Generated Images</h3>
           
           {/* Large Preview */}
           <div className="relative w-[85%] mx-auto">
             <Image
-              src={imageUrls[selectedImageIndex]}
+              src={generatedImages[selectedImageIndex]}
               alt={`Generated image ${selectedImageIndex + 1}`}
               width={1200}
               height={800}
               className="rounded-lg shadow-xl"
             />
             <button
-              onClick={() => handleDownload(imageUrls[selectedImageIndex])}
+              onClick={() => handleDownload(generatedImages[selectedImageIndex])}
               className="absolute bottom-4 right-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-6 py-3 rounded-lg shadow-lg hover:from-amber-600 hover:to-amber-700 transition-colors flex items-center space-x-2"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -211,7 +256,7 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
 
           {/* Thumbnails */}
           <div className="flex justify-center gap-4 mt-4">
-            {imageUrls.map((url, index) => (
+            {generatedImages.map((url, index) => (
               <button
                 key={index}
                 onClick={() => setSelectedImageIndex(index)}

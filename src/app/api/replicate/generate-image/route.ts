@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { NextResponse } from "next/server";
 import Replicate from "replicate";
 
@@ -71,103 +73,105 @@ export async function POST(req: Request) {
     // Create a new client for each request to ensure fresh token
     const replicate = getReplicateClient();
 
-    // Generate three images sequentially
-    const imageUrls: string[] = [];
-    const errors: string[] = [];
-    let successfulGenerations = 0;
-    
-    for (let i = 0; i < 3; i++) {
-      try {
-        console.log(`[${requestId}] Starting generation ${i + 1}/3...`);
-        
-        let output;
-        const generationStartTime = Date.now();
+    // Use a TransformStream to stream the response
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+    const encoder = new TextEncoder();
 
-        if (model === 'flux') {
-          output = await replicate.run(
-            "black-forest-labs/flux-1.1-pro",
-            {
-              input: {
-                prompt,
-                aspect_ratio: aspectRatio,
-                output_format,
-                output_quality,
-                safety_tolerance,
-                prompt_upsampling
-              }
-            }
-          );
-        } else {
-          // Add retry logic for Ideogram model
-          let retryCount = 0;
-          const maxRetries = 2;
-          
-          while (retryCount <= maxRetries) {
-            try {
+    // Start the response stream
+    const response = new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+
+    // Process generations in the background
+    (async () => {
+      try {
+        const imageUrls: string[] = [];
+        const errors: string[] = [];
+        let successfulGenerations = 0;
+
+        for (let i = 0; i < 3; i++) {
+          try {
+            await writer.write(encoder.encode(`data: {"status":"generating","message":"Starting generation ${i + 1}/3"}\n\n`));
+            
+            let output;
+            const generationStartTime = Date.now();
+
+            if (model === 'flux') {
               output = await replicate.run(
-                "ideogram-ai/ideogram-v2-turbo",
+                "black-forest-labs/flux-1.1-pro",
                 {
                   input: {
                     prompt,
-                    resolution: "None",
-                    style_type: "Design",
                     aspect_ratio: aspectRatio,
-                    magic_prompt_option: "On"
-                  },
+                    output_format,
+                    output_quality,
+                    safety_tolerance,
+                    prompt_upsampling
+                  }
                 }
               );
-              break; // If successful, exit retry loop
-            } catch (retryError) {
-              console.error(`[${requestId}] Attempt ${retryCount + 1} failed:`, retryError);
-              if (retryCount === maxRetries) throw retryError;
-              retryCount++;
-              await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+              let retryCount = 0;
+              const maxRetries = 2;
+              
+              while (retryCount <= maxRetries) {
+                try {
+                  output = await replicate.run(
+                    "ideogram-ai/ideogram-v2-turbo",
+                    {
+                      input: {
+                        prompt,
+                        resolution: "None",
+                        style_type: "Design",
+                        aspect_ratio: aspectRatio,
+                        magic_prompt_option: "On"
+                      },
+                    }
+                  );
+                  break;
+                } catch (retryError) {
+                  console.error(`[${requestId}] Attempt ${retryCount + 1} failed:`, retryError);
+                  await writer.write(encoder.encode(`data: {"status":"retrying","message":"Attempt ${retryCount + 1} failed, retrying..."}\n\n`));
+                  if (retryCount === maxRetries) throw retryError;
+                  retryCount++;
+                  await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+              }
             }
+
+            const generationTime = Date.now() - generationStartTime;
+            const imageUrl = parseReplicateOutput(output);
+            
+            if (imageUrl) {
+              imageUrls.push(imageUrl);
+              successfulGenerations++;
+              await writer.write(encoder.encode(`data: {"status":"success","imageUrl":"${imageUrl}","index":${i}}\n\n`));
+            } else {
+              throw new Error(`Failed to parse output from generation ${i + 1}`);
+            }
+          } catch (genError) {
+            console.error(`[${requestId}] Error in generation ${i + 1}:`, genError);
+            errors.push(`Generation ${i + 1}: ${(genError as Error).message}`);
+            await writer.write(encoder.encode(`data: {"status":"error","message":"Error in generation ${i + 1}: ${(genError as Error).message}"}\n\n`));
           }
         }
 
-        const generationTime = Date.now() - generationStartTime;
-        console.log(`[${requestId}] Generation ${i + 1} completed in ${generationTime}ms. Output:`, output);
-
-        const imageUrl = parseReplicateOutput(output);
-        if (imageUrl) {
-          imageUrls.push(imageUrl);
-          successfulGenerations++;
-          console.log(`[${requestId}] Successfully parsed image URL for generation ${i + 1}:`, imageUrl);
-        } else {
-          throw new Error(`Failed to parse output from generation ${i + 1}`);
-        }
-      } catch (genError) {
-        console.error(`[${requestId}] Error in generation ${i + 1}:`, genError);
-        errors.push(`Generation ${i + 1}: ${(genError as Error).message}`);
+        // Send final status
+        await writer.write(encoder.encode(`data: {"status":"complete","imageUrls":${JSON.stringify(imageUrls)},"errors":${JSON.stringify(errors)},"successCount":${successfulGenerations}}\n\n`));
+      } catch (error) {
+        await writer.write(encoder.encode(`data: {"status":"error","message":"${(error as Error).message}"}\n\n`));
+      } finally {
+        await writer.close();
       }
-    }
+    })();
 
-    const totalTime = Date.now() - startTime;
-    console.log(`[${requestId}] Request completed in ${totalTime}ms. Success: ${successfulGenerations}/3`);
-
-    if (imageUrls.length === 0) {
-      console.error(`[${requestId}] No successful generations. Errors:`, errors);
-      return NextResponse.json(
-        { 
-          error: 'Failed to generate any images',
-          details: errors.join('; '),
-          requestId
-        },
-        { status: 500 }
-      );
-    }
-
-    // Return successful generations and any errors
-    return NextResponse.json({ 
-      imageUrls,
-      errors: errors.length > 0 ? errors : undefined,
-      requestId,
-      generationTime: totalTime,
-      successCount: successfulGenerations
-    });
+    return response;
   } catch (error) {
-    console.error(`[${requestId}] Fatal error in image generation process:`, error);
     return NextResponse.json(
       { 
         error: 'Failed to generate images',

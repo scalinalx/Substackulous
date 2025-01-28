@@ -22,6 +22,8 @@ export default function ThumbnailGenerator() {
   const creditCost = 30; // Fixed credit cost
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     try {
@@ -37,18 +39,13 @@ export default function ThumbnailGenerator() {
 
       const response = await fetch('/api/replicate/generate-image', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           prompt,
-          aspectRatio: options.aspectRatio,
           model: 'ideogram-ai/ideogram-v2-turbo',
-          input: {
-            prompt,
-            resolution: "None",
-            style_type: "Design",
-            aspect_ratio: options.aspectRatio,
-            magic_prompt_option: "On"
-          }
+          aspectRatio: options.aspectRatio,
         }),
       });
 
@@ -56,12 +53,50 @@ export default function ThumbnailGenerator() {
         throw new Error('Failed to generate images');
       }
 
-      const data = await response.json();
-      if (!data.imageUrls || !Array.isArray(data.imageUrls)) {
-        throw new Error('Invalid response format');
+      if (!response.body) {
+        throw new Error('No response body received');
       }
 
-      setGeneratedImages({ urls: data.imageUrls });
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      const tempImages: string[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(5));
+              
+              switch (data.status) {
+                case 'generating':
+                  setStatus(data.message);
+                  break;
+                case 'success':
+                  tempImages[data.index] = data.imageUrl;
+                  setGeneratedImages({ urls: tempImages });
+                  break;
+                case 'error':
+                  setError(data.message);
+                  break;
+                case 'complete':
+                  if (data.imageUrls.length === 0) {
+                    throw new Error('No images were generated successfully');
+                  }
+                  setGeneratedImages({ urls: data.imageUrls });
+                  break;
+              }
+            } catch (e) {
+              console.error('Error parsing SSE message:', e);
+            }
+          }
+        }
+      }
 
       // Update credits in profile
       if (profile) {
@@ -71,11 +106,11 @@ export default function ThumbnailGenerator() {
         };
         await updateProfile(updatedProfile);
       }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to generate images. Please try again.');
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setLoading(false);
+      setStatus('');
     }
   };
 
