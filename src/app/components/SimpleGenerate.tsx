@@ -20,6 +20,7 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [creditDeducted, setCreditDeducted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +44,7 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
     setGenerating(true);
     setGeneratedImages([]);
     setLoading(true);
+    setCreditDeducted(false);
 
     try {
       const prompt = `A viral image about ${mainIdea}. Clickbait, Eye-catchy, Engaging visuals. Viral. ${theme} theme. Inspiring.`;
@@ -91,6 +93,16 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
                 case 'success':
                   tempImages[data.index] = data.imageUrl;
                   setGeneratedImages([...tempImages]);
+                  
+                  // Deduct credits after first successful image generation
+                  if (!creditDeducted && profile) {
+                    const updatedProfile = {
+                      ...profile,
+                      credits: (profile.credits || 0) - creditCost,
+                    };
+                    await updateProfile(updatedProfile);
+                    setCreditDeducted(true);
+                  }
                   break;
                 case 'error':
                   setError(data.message);
@@ -101,15 +113,7 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
                   }
                   setGeneratedImages(data.imageUrls);
                   completionReceived = true;
-                  
-                  // Update credits only after successful completion
-                  if (profile && data.successCount > 0) {
-                    const updatedProfile = {
-                      ...profile,
-                      credits: (profile.credits || 0) - creditCost,
-                    };
-                    await updateProfile(updatedProfile);
-                  }
+                  setGenerating(false);
                   break;
               }
             } catch (e) {
