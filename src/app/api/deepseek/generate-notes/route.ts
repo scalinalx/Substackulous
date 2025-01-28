@@ -75,7 +75,7 @@ Don't restrict yourself to only a few wellknown copywriting frameworks like AIDA
 
     const data = await response.json();
     const content = data.choices[0].message.content;
-    const notes = content.split('---###$$$###---').map(note => note.trim()).filter(Boolean);
+    const notes = content.split('---###$$$###---').map((note: string) => note.trim()).filter(Boolean);
 
     return NextResponse.json({ notes });
   } catch (error) {
