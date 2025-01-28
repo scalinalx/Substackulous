@@ -1,9 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const deepseekApiKey = process.env.DEEPSEEK_API_KEY!;
+// Check for required environment variables
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set');
+}
+
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not set');
+}
+
+if (!process.env.DEEPSEEK_API_KEY) {
+  throw new Error('DEEPSEEK_API_KEY is not set');
+}
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set');
+}
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
 
 // Client for authentication
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -14,7 +31,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Admin client for database operations that bypass RLS
-const supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+const supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
@@ -25,6 +42,10 @@ export async function POST(req: Request) {
   try {
     const { userId, prompt } = await req.json();
     console.log('Received request with userId:', userId);
+
+    if (!userId || !prompt) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
 
     // Get the session from the Authorization header
     const authHeader = req.headers.get('Authorization');
