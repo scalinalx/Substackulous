@@ -113,6 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       setLoading(true);
+      
+      // First, create the user in Supabase Auth
       const { error: signUpError, data } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -126,21 +128,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (signUpError) throw signUpError;
 
+      // Only create profile if user was created successfully
       if (data.user) {
-        // Create profile record
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            {
-              id: data.user.id,
-              email: data.user.email,
-              credits: 100,
-              created_at: new Date().toISOString(),
-              last_login: new Date().toISOString()
-            }
-          ]);
+        try {
+          // Wait a short moment to ensure the user is fully created in Auth
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
-        if (profileError) throw profileError;
+          // Create profile record
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: data.user.id,
+                email: data.user.email,
+                credits: 100,
+                created_at: new Date().toISOString(),
+                last_login: new Date().toISOString()
+              }
+            ]);
+
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+            // Don't throw the error as the user is already created
+          }
+        } catch (profileError) {
+          console.error('Error in profile creation:', profileError);
+          // Don't throw the error as the user is already created
+        }
       }
 
       return {

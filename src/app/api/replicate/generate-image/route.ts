@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import Replicate from "replicate";
 
-// Initialize the Replicate client
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
-});
+// Initialize the Replicate client with auth token
+const getReplicateClient = () => {
+  const token = process.env.REPLICATE_API_TOKEN;
+  if (!token) {
+    throw new Error('Replicate API token not configured');
+  }
+  return new Replicate({ auth: token });
+};
 
 export async function POST(req: Request) {
   try {
@@ -25,18 +29,15 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!process.env.REPLICATE_API_TOKEN) {
-      return new Response('Replicate API token not configured', { status: 500 });
-    }
-
-    const apiToken = process.env.REPLICATE_API_TOKEN;
+    // Create a new client for each request to ensure fresh token
+    const replicate = getReplicateClient();
     console.log('Starting image generation with prompt:', prompt);
     console.log('Using aspect ratio:', aspectRatio);
     console.log('Using model:', model);
-    console.log('Using API token:', apiToken);
 
     // Generate three images sequentially
     const imageUrls: string[] = [];
+    const errors: string[] = [];
     
     for (let i = 0; i < 3; i++) {
       try {
@@ -58,18 +59,33 @@ export async function POST(req: Request) {
             }
           );
         } else {
-          output = await replicate.run(
-            "ideogram-ai/ideogram-v2-turbo",
-            {
-              input: {
-                prompt,
-                resolution: "None",
-                style_type: "Design",
-                aspect_ratio: aspectRatio,
-                magic_prompt_option: "On"
-              },
+          // Add retry logic for Ideogram model
+          let retryCount = 0;
+          const maxRetries = 2;
+          
+          while (retryCount <= maxRetries) {
+            try {
+              output = await replicate.run(
+                "ideogram-ai/ideogram-v2-turbo",
+                {
+                  input: {
+                    prompt,
+                    resolution: "None",
+                    style_type: "Design",
+                    aspect_ratio: aspectRatio,
+                    magic_prompt_option: "On"
+                  },
+                }
+              );
+              break; // If successful, exit retry loop
+            } catch (retryError) {
+              console.error(`Attempt ${retryCount + 1} failed:`, retryError);
+              if (retryCount === maxRetries) throw retryError;
+              retryCount++;
+              // Wait before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000));
             }
-          );
+          }
         }
 
         console.log(`Generation ${i + 1} output:`, output);
@@ -79,33 +95,30 @@ export async function POST(req: Request) {
         } else if (Array.isArray(output) && output.length > 0) {
           imageUrls.push(output[0]);
         } else {
-          console.warn(`Generation ${i + 1} output was not in expected format:`, output);
+          throw new Error(`Invalid output format from generation ${i + 1}`);
         }
       } catch (genError) {
         console.error(`Error in generation ${i + 1}:`, genError);
-        // Continue with next generation even if one fails
+        errors.push(`Generation ${i + 1}: ${(genError as Error).message}`);
       }
     }
 
-    console.log('All generations complete. Generated images:', imageUrls);
-
     if (imageUrls.length === 0) {
-      throw new Error('No successful generations from Replicate');
+      return NextResponse.json(
+        { error: 'Failed to generate any images. Errors: ' + errors.join('; ') },
+        { status: 500 }
+      );
     }
 
-    // Return all image URLs
-    return NextResponse.json({ imageUrls });
+    // Return successful generations and any errors
+    return NextResponse.json({ 
+      imageUrls,
+      errors: errors.length > 0 ? errors : undefined
+    });
   } catch (error) {
     console.error('Error in image generation process:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
-    }
     return NextResponse.json(
-      { error: 'Failed to generate image: ' + (error as Error).message },
+      { error: 'Failed to generate images: ' + (error as Error).message },
       { status: 500 }
     );
   }
