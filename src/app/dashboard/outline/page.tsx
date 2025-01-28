@@ -3,39 +3,49 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import type { Components } from 'react-markdown';
 import { motion } from 'framer-motion';
 
 interface OutlineRequest {
-  objective: string;
-  format: string;
-  knowledgeLevel: string;
-  painPoints: string;
-  keyMessage: string;
-  subtopics: string[];
-  wordCount: number;
-  keywords: string[];
+  topic: string;
+  keyPoints: string;
+  targetAudience: string;
+  objective: 'Brand awareness' | 'Lead generation' | 'Thought leadership' | 'Community building' | 'Product promotion';
+  format: 'How-to guide' | 'Listicle' | 'Case study' | 'Opinion piece' | 'Interview/Q&A' | 'Data-driven analysis';
+  knowledgeLevel: 'Beginner' | 'Intermediate' | 'Advanced';
   tone: string[];
-  template: string;
+  wordCount: number;
 }
 
 export default function OutlineGenerator() {
-  const { user, profile, updateProfile } = useAuth();
-  const [topic, setTopic] = useState('');
-  const [keyPoints, setKeyPoints] = useState('');
-  const [targetAudience, setTargetAudience] = useState('');
+  const { profile, updateProfile } = useAuth();
+  const [formData, setFormData] = useState<OutlineRequest>({
+    topic: '',
+    keyPoints: '',
+    targetAudience: '',
+    objective: 'Thought leadership',
+    format: 'How-to guide',
+    knowledgeLevel: 'Intermediate',
+    tone: ['Professional'],
+    wordCount: 1500
+  });
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [outline, setOutline] = useState<string | null>(null);
   const creditCost = 2;
 
+  const handleToneToggle = (tone: string) => {
+    setFormData(prev => ({
+      ...prev,
+      tone: prev.tone.includes(tone)
+        ? prev.tone.filter(t => t !== tone)
+        : [...prev.tone, tone]
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!topic.trim()) {
+    if (!formData.topic.trim()) {
       setError('Topic is required');
       return;
     }
@@ -55,11 +65,7 @@ export default function OutlineGenerator() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          topic: topic.trim(),
-          keyPoints: keyPoints.trim() || undefined,
-          targetAudience: targetAudience.trim() || undefined,
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -116,7 +122,7 @@ export default function OutlineGenerator() {
         </p>
 
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+          <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
             <div className="flex">
               <div className="flex-shrink-0">
                 <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -141,8 +147,8 @@ export default function OutlineGenerator() {
               Topic <span className="text-red-500">*</span>
             </label>
             <textarea
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
+              value={formData.topic}
+              onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
               placeholder="What's your post about?"
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
               rows={2}
@@ -155,9 +161,9 @@ export default function OutlineGenerator() {
               Key Points <span className="text-gray-500">(optional)</span>
             </label>
             <textarea
-              value={keyPoints}
-              onChange={(e) => setKeyPoints(e.target.value)}
-              placeholder="Any specific points you want to cover?"
+              value={formData.keyPoints}
+              onChange={(e) => setFormData(prev => ({ ...prev, keyPoints: e.target.value }))}
+              placeholder="Key points you want to cover in your post"
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
               rows={4}
             />
@@ -168,11 +174,98 @@ export default function OutlineGenerator() {
               Target Audience <span className="text-gray-500">(optional)</span>
             </label>
             <textarea
-              value={targetAudience}
-              onChange={(e) => setTargetAudience(e.target.value)}
+              value={formData.targetAudience}
+              onChange={(e) => setFormData(prev => ({ ...prev, targetAudience: e.target.value }))}
               placeholder="Who are you writing for?"
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
               rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Primary Objective
+            </label>
+            <select
+              value={formData.objective}
+              onChange={(e) => setFormData(prev => ({ ...prev, objective: e.target.value as OutlineRequest['objective'] }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+            >
+              <option value="Brand awareness">Brand awareness</option>
+              <option value="Lead generation">Lead generation</option>
+              <option value="Thought leadership">Thought leadership</option>
+              <option value="Community building">Community building</option>
+              <option value="Product promotion">Product promotion</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Content Format
+            </label>
+            <select
+              value={formData.format}
+              onChange={(e) => setFormData(prev => ({ ...prev, format: e.target.value as OutlineRequest['format'] }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+            >
+              <option value="How-to guide">How-to guide</option>
+              <option value="Listicle">Listicle</option>
+              <option value="Case study">Case study</option>
+              <option value="Opinion piece">Opinion piece</option>
+              <option value="Interview/Q&A">Interview/Q&A</option>
+              <option value="Data-driven analysis">Data-driven analysis</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Knowledge Level
+            </label>
+            <select
+              value={formData.knowledgeLevel}
+              onChange={(e) => setFormData(prev => ({ ...prev, knowledgeLevel: e.target.value as OutlineRequest['knowledgeLevel'] }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+            >
+              <option value="Beginner">Beginner (100% new to topic)</option>
+              <option value="Intermediate">Intermediate (Some familiarity)</option>
+              <option value="Advanced">Advanced (Seeking deep insights)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tone Selection
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {['Professional', 'Conversational', 'Authoritative', 'Friendly', 'Technical'].map((tone) => (
+                <button
+                  key={tone}
+                  type="button"
+                  onClick={() => handleToneToggle(tone)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors
+                    ${formData.tone.includes(tone)
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                >
+                  {tone}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Target Word Count: {formData.wordCount} words
+            </label>
+            <input
+              type="range"
+              min="800"
+              max="2500"
+              step="100"
+              value={formData.wordCount}
+              onChange={(e) => setFormData(prev => ({ ...prev, wordCount: parseInt(e.target.value) }))}
+              className="w-full"
             />
           </div>
 

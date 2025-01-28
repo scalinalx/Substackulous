@@ -4,7 +4,16 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { topic, keyPoints, targetAudience } = await req.json();
+    const { 
+      topic,
+      keyPoints,
+      targetAudience,
+      objective,
+      format,
+      knowledgeLevel,
+      tone,
+      wordCount
+    } = await req.json();
 
     if (!topic) {
       return NextResponse.json(
@@ -19,22 +28,17 @@ export async function POST(req: Request) {
     }
 
     const prompt = `Act as a master content architect and Pulitzer-winning editorial director. The best in the world at writing viral, engaging Substack posts.
-Create a detailed outline for a blog post about: ${topic}
+Create a ${format} outline using:
 
 **Strategic Foundation**
-- Primary Goal: Viral engagement and thought leadership
-- Audience Profile: ${targetAudience || 'General audience interested in the topic'}
-${keyPoints ? `- Key Points to Address: ${keyPoints}` : ''}
+- Primary Goal: ${objective}
+- Audience Profile: ${knowledgeLevel} | Target Audience: ${targetAudience || 'General audience'}
+${keyPoints ? `- Key Points to Address:\n${keyPoints}` : ''}
 
 **Content Core**
 - Central Theme: "${topic}"
-- Target Length: 1500-2000 words
-- Content Style: Engaging, informative, and shareable
-
-**Optimization Levers**
-- Content Type: Long-form blog post
-- Tone: Professional yet conversational
-- Structural Template: Problem-Solution-Action
+- Target Length: ${wordCount} words
+- Content Style: ${tone.join(', ')}
 
 **Output Requirements**
 1. Title Options (3 viral headline variants)
