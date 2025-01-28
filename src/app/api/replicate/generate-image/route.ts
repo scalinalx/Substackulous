@@ -10,7 +10,39 @@ const getReplicateClient = () => {
   return new Replicate({ auth: token });
 };
 
+// Helper function to parse Replicate output
+const parseReplicateOutput = (output: any): string | null => {
+  console.log('Parsing Replicate output:', JSON.stringify(output, null, 2));
+  
+  if (typeof output === 'string') {
+    return output;
+  }
+  
+  if (Array.isArray(output)) {
+    if (output.length > 0) {
+      if (typeof output[0] === 'string') {
+        return output[0];
+      }
+      // Some models return an array of objects with an 'image' property
+      if (output[0]?.image) {
+        return output[0].image;
+      }
+    }
+  }
+  
+  // Handle object response with 'image' property
+  if (output?.image) {
+    return output.image;
+  }
+
+  console.warn('Unexpected Replicate output format:', output);
+  return null;
+};
+
 export async function POST(req: Request) {
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substring(7);
+  
   try {
     const { 
       prompt, 
@@ -22,6 +54,13 @@ export async function POST(req: Request) {
       prompt_upsampling = true
     } = await req.json();
 
+    console.log(`[${requestId}] Starting request:`, {
+      prompt,
+      aspectRatio,
+      model,
+      timestamp: new Date().toISOString()
+    });
+
     if (!prompt) {
       return NextResponse.json(
         { error: 'Missing prompt' },
@@ -31,19 +70,19 @@ export async function POST(req: Request) {
 
     // Create a new client for each request to ensure fresh token
     const replicate = getReplicateClient();
-    console.log('Starting image generation with prompt:', prompt);
-    console.log('Using aspect ratio:', aspectRatio);
-    console.log('Using model:', model);
 
     // Generate three images sequentially
     const imageUrls: string[] = [];
     const errors: string[] = [];
+    let successfulGenerations = 0;
     
     for (let i = 0; i < 3; i++) {
       try {
-        console.log(`Starting generation ${i + 1}/3...`);
+        console.log(`[${requestId}] Starting generation ${i + 1}/3...`);
         
         let output;
+        const generationStartTime = Date.now();
+
         if (model === 'flux') {
           output = await replicate.run(
             "black-forest-labs/flux-1.1-pro",
@@ -79,33 +118,42 @@ export async function POST(req: Request) {
               );
               break; // If successful, exit retry loop
             } catch (retryError) {
-              console.error(`Attempt ${retryCount + 1} failed:`, retryError);
+              console.error(`[${requestId}] Attempt ${retryCount + 1} failed:`, retryError);
               if (retryCount === maxRetries) throw retryError;
               retryCount++;
-              // Wait before retrying
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
         }
 
-        console.log(`Generation ${i + 1} output:`, output);
+        const generationTime = Date.now() - generationStartTime;
+        console.log(`[${requestId}] Generation ${i + 1} completed in ${generationTime}ms. Output:`, output);
 
-        if (typeof output === 'string') {
-          imageUrls.push(output);
-        } else if (Array.isArray(output) && output.length > 0) {
-          imageUrls.push(output[0]);
+        const imageUrl = parseReplicateOutput(output);
+        if (imageUrl) {
+          imageUrls.push(imageUrl);
+          successfulGenerations++;
+          console.log(`[${requestId}] Successfully parsed image URL for generation ${i + 1}:`, imageUrl);
         } else {
-          throw new Error(`Invalid output format from generation ${i + 1}`);
+          throw new Error(`Failed to parse output from generation ${i + 1}`);
         }
       } catch (genError) {
-        console.error(`Error in generation ${i + 1}:`, genError);
+        console.error(`[${requestId}] Error in generation ${i + 1}:`, genError);
         errors.push(`Generation ${i + 1}: ${(genError as Error).message}`);
       }
     }
 
+    const totalTime = Date.now() - startTime;
+    console.log(`[${requestId}] Request completed in ${totalTime}ms. Success: ${successfulGenerations}/3`);
+
     if (imageUrls.length === 0) {
+      console.error(`[${requestId}] No successful generations. Errors:`, errors);
       return NextResponse.json(
-        { error: 'Failed to generate any images. Errors: ' + errors.join('; ') },
+        { 
+          error: 'Failed to generate any images',
+          details: errors.join('; '),
+          requestId
+        },
         { status: 500 }
       );
     }
@@ -113,12 +161,19 @@ export async function POST(req: Request) {
     // Return successful generations and any errors
     return NextResponse.json({ 
       imageUrls,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
+      requestId,
+      generationTime: totalTime,
+      successCount: successfulGenerations
     });
   } catch (error) {
-    console.error('Error in image generation process:', error);
+    console.error(`[${requestId}] Fatal error in image generation process:`, error);
     return NextResponse.json(
-      { error: 'Failed to generate images: ' + (error as Error).message },
+      { 
+        error: 'Failed to generate images',
+        details: (error as Error).message,
+        requestId
+      },
       { status: 500 }
     );
   }
