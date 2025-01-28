@@ -43,7 +43,7 @@ export async function POST(req: Request) {
         });
 
         for await (const chunk of completion) {
-          if (chunk.type === 'content_block_delta') {
+          if (chunk.type === 'content_block_delta' && 'text' in chunk.delta) {
             await writer.write(
               encoder.encode(
                 `data: ${JSON.stringify({
