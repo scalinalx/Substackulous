@@ -95,7 +95,7 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
     let completionReceived = false;
 
     try {
-      const response = await fetch('/api/anthropic/chat', {
+      const response = await fetch('/api/openai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

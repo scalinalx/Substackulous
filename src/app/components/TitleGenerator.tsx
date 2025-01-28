@@ -16,6 +16,7 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [creditCost, setCreditCost] = useState(1);
+  const [status, setStatus] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +37,7 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
     let completionReceived = false;
 
     try {
-      const response = await fetch('/api/anthropic/chat', {
+      const response = await fetch('/api/openai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,6 +113,8 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
       setGeneratedTitles([]);
     } finally {
       setGenerating(false);
+      setLoading(false);
+      setStatus('');
     }
   };
 
