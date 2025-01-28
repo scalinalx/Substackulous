@@ -52,6 +52,7 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
       // Update credits in profile
       if (profile) {
         await updateProfile({
+          ...profile,
           credits: (profile.credits || 0) - 1,
         });
       }
