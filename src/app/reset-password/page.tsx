@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function ResetPasswordPage() {
@@ -12,14 +11,15 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    // If user is already logged in, redirect to dashboard
-    if (user) {
-      router.replace('/dashboard');
+    // Check if there's an error in the URL (like expired token)
+    const errorDescription = searchParams.get('error_description');
+    if (errorDescription) {
+      setError(decodeURIComponent(errorDescription));
     }
-  }, [user, router]);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,11 +35,31 @@ export default function ResetPasswordPage() {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      const { data, error } = await supabase.auth.updateUser({
+      // Get the access token from the URL hash
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+
+      if (!accessToken) {
+        throw new Error('No access token found. Please try resetting your password again.');
+      }
+
+      // Set the session using the access token
+      const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: '',
+      });
+
+      if (sessionError) throw sessionError;
+
+      // Update the password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Sign out after password reset to force a fresh login
+      await supabase.auth.signOut();
 
       setSuccess(true);
       // Redirect to login page after 3 seconds
