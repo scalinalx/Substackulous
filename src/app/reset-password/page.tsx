@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState('');
@@ -12,6 +13,7 @@ function ResetPasswordForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
 
   useEffect(() => {
     // Check if there's an error in the URL (like expired token)
@@ -20,6 +22,13 @@ function ResetPasswordForm() {
       setError(decodeURIComponent(errorDescription));
     }
   }, [searchParams]);
+
+  // If no user is authenticated, redirect to login
+  useEffect(() => {
+    if (!user && !searchParams.get('error_description')) {
+      router.replace('/');
+    }
+  }, [user, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,19 +44,15 @@ function ResetPasswordForm() {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      // Get the token from the query parameters
-      const token = searchParams.get('token');
-
-      if (!token) {
-        throw new Error('No reset token found. Please try resetting your password again.');
-      }
-
-      // Update the password using the token
+      // Update the password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (updateError) throw updateError;
+
+      // Sign out after password reset
+      await supabase.auth.signOut();
 
       setSuccess(true);
       // Redirect to login page after 3 seconds
