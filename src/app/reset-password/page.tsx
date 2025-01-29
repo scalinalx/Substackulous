@@ -46,19 +46,31 @@ function ResetPasswordForm() {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      // Get the token from the URL
-      const token = searchParams.get('token');
-      
-      if (!token) {
+      // Get the access token from the URL hash
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+
+      if (!accessToken) {
         throw new Error('Invalid reset link. Please request a new password reset email.');
       }
 
-      // Update the password using the recovery token
+      // Set the session with the access token
+      const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: '',
+      });
+
+      if (sessionError) throw sessionError;
+
+      // Update the password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (updateError) throw updateError;
+
+      // Sign out after password reset
+      await supabase.auth.signOut();
 
       setSuccess(true);
       // Redirect to login page after 3 seconds
@@ -67,6 +79,8 @@ function ResetPasswordForm() {
       }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reset password');
+      // If there's an error, sign out to ensure clean state
+      await supabase.auth.signOut();
     } finally {
       setLoading(false);
     }
