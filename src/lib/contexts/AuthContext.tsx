@@ -12,6 +12,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ success: boolean; message: string }>;
   loading: boolean;
   error: string | null;
   updateProfile: (newProfile: UserProfile) => Promise<void>;
@@ -211,6 +212,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      setError(null);
+      setLoading(true);
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      
+      if (error) throw error;
+      
+      return {
+        success: true,
+        message: "Password reset instructions have been sent to your email."
+      };
+    } catch (error) {
+      setError((error as Error).message);
+      return {
+        success: false,
+        message: (error as Error).message
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateProfile = async (newProfile: UserProfile) => {
     try {
       // Update the database first
@@ -242,6 +269,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     signInWithGoogle,
+    resetPassword,
     loading,
     error,
     updateProfile

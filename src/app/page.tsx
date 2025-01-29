@@ -9,8 +9,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { signIn, signUp, error, loading, user } = useAuth();
+  const { signIn, signUp, resetPassword, error, loading, user } = useAuth();
   const router = useRouter();
   const [verificationMessage, setVerificationMessage] = useState('');
 
@@ -46,7 +47,12 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (isSignUp) {
+      if (isForgotPassword) {
+        const result = await resetPassword(email);
+        if (result.success) {
+          setVerificationMessage(result.message);
+        }
+      } else if (isSignUp) {
         const result = await signUp(email, password);
         if (result.success) {
           setVerificationMessage(result.message);
@@ -105,14 +111,20 @@ export default function LoginPage() {
                       transform transition-all duration-300 hover:shadow-amber-200/50">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {isSignUp ? 'Create your account' : 'Welcome back'}
+              {isForgotPassword 
+                ? 'Reset Your Password'
+                : isSignUp 
+                  ? 'Create your account' 
+                  : 'Welcome back'}
             </h2>
           </div>
 
           {/* Verification Message */}
           {verificationMessage && (
             <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-700">
-              <p className="font-medium">Email Verification Required</p>
+              <p className="font-medium">
+                {isForgotPassword ? 'Password Reset Email Sent' : 'Email Verification Required'}
+              </p>
               <p className="text-sm mt-1">{verificationMessage}</p>
             </div>
           )}
@@ -142,22 +154,24 @@ export default function LoginPage() {
               />
             </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm shadow-sm 
-                         placeholder-gray-400 text-gray-900
-                         focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500
-                         transition-all duration-200"
-              />
-            </div>
+            {!isForgotPassword && (
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  required={!isForgotPassword}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm shadow-sm 
+                           placeholder-gray-400 text-gray-900
+                           focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500
+                           transition-all duration-200"
+                />
+              </div>
+            )}
 
             <button
               type="submit"
@@ -178,18 +192,38 @@ export default function LoginPage() {
                   Processing...
                 </span>
               ) : (
-                isSignUp ? 'Create Account' : 'Sign In'
+                isForgotPassword 
+                  ? 'Send Reset Instructions'
+                  : isSignUp 
+                    ? 'Create Account' 
+                    : 'Sign In'
               )}
             </button>
           </form>
 
-          <div className="text-center">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-amber-600 hover:text-amber-500 transition-colors duration-200"
-            >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </button>
+          <div className="text-center space-y-2">
+            {!isForgotPassword && (
+              <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-amber-600 hover:text-amber-500 transition-colors duration-200"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </button>
+            )}
+            
+            {!isSignUp && (
+              <div>
+                <button
+                  onClick={() => {
+                    setIsForgotPassword(!isForgotPassword);
+                    setVerificationMessage('');
+                  }}
+                  className="text-sm text-amber-600 hover:text-amber-500 transition-colors duration-200"
+                >
+                  {isForgotPassword ? 'Back to Sign In' : 'Forgot your password?'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
