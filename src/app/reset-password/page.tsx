@@ -3,7 +3,6 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/hooks/useAuth';
 
 function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState('');
@@ -13,7 +12,6 @@ function ResetPasswordForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
 
   useEffect(() => {
     // Check if there's an error in the URL (like expired token)
@@ -21,14 +19,15 @@ function ResetPasswordForm() {
     if (errorDescription) {
       setError(decodeURIComponent(errorDescription));
     }
-  }, [searchParams]);
 
-  // If no user is authenticated, redirect to login
-  useEffect(() => {
-    if (!user && !searchParams.get('error_description')) {
+    // If we're on the reset password page but there's no token or error,
+    // redirect to login
+    const hasResetToken = window.location.hash.includes('type=recovery') || 
+                         searchParams.get('type') === 'recovery';
+    if (!hasResetToken && !errorDescription) {
       router.replace('/');
     }
-  }, [user, router, searchParams]);
+  }, [searchParams, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +42,22 @@ function ResetPasswordForm() {
       if (newPassword.length < 6) {
         throw new Error('Password must be at least 6 characters long');
       }
+
+      // Get the access token from the URL hash
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+
+      if (!accessToken) {
+        throw new Error('Invalid reset link. Please request a new password reset email.');
+      }
+
+      // Set the session with the access token
+      const { data: { session }, error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: '',
+      });
+
+      if (sessionError) throw sessionError;
 
       // Update the password
       const { error: updateError } = await supabase.auth.updateUser({
