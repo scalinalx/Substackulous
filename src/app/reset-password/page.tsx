@@ -13,16 +13,40 @@ function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Clean up function to handle navigation interruption
+  useEffect(() => {
+    return () => {
+      // If we're navigating away while loading, sign out to ensure clean state
+      if (loading) {
+        supabase.auth.signOut();
+      }
+    };
+  }, [loading]);
+
   useEffect(() => {
     // Check if there's an error in the URL (like expired token)
     const errorDescription = searchParams.get('error_description');
     if (errorDescription) {
       setError(decodeURIComponent(errorDescription));
     }
-  }, [searchParams]);
+
+    // Check if we're already authenticated
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session && !errorDescription) {
+        // If no session and no error, redirect to login
+        router.replace('/');
+      }
+    };
+    checkAuth();
+  }, [searchParams, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Don't allow multiple submissions
+    if (loading) return;
+    
     setError(null);
     setLoading(true);
 
@@ -42,22 +66,47 @@ function ResetPasswordForm() {
 
       if (updateError) throw updateError;
 
-      // Sign out after successful password reset
-      await supabase.auth.signOut();
-
       setSuccess(true);
-      // Redirect to login page after 3 seconds
-      setTimeout(() => {
+
+      // Sign out and redirect after successful password reset
+      try {
+        await supabase.auth.signOut();
+        // Use a shorter timeout since we're already showing success message
+        setTimeout(() => {
+          router.push('/');
+        }, 1500);
+      } catch (signOutError) {
+        console.error('Error signing out:', signOutError);
+        // Still redirect even if sign out fails
         router.push('/');
-      }, 3000);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reset password');
-      // If there's an error, sign out to ensure clean state
-      await supabase.auth.signOut();
-    } finally {
       setLoading(false);
+      // If there's an error, try to sign out
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.error('Error signing out after error:', signOutError);
+      }
     }
   };
+
+  // If success, show only the success message
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-400 flex items-center justify-center px-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-xl shadow-2xl p-8">
+            <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-700 text-center">
+              <p className="font-medium">Password successfully reset!</p>
+              <p className="text-sm mt-1">Redirecting to login page...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-400 flex items-center justify-center px-4">
@@ -78,12 +127,6 @@ function ResetPasswordForm() {
             </div>
           )}
 
-          {success && (
-            <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-700">
-              <p>Password successfully reset! Redirecting to login page...</p>
-            </div>
-          )}
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
@@ -95,10 +138,12 @@ function ResetPasswordForm() {
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                disabled={loading}
                 className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm shadow-sm 
                          placeholder-gray-400 text-gray-900
                          focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500
-                         transition-all duration-200"
+                         transition-all duration-200
+                         disabled:bg-gray-50 disabled:text-gray-500"
                 placeholder="Enter your new password"
               />
             </div>
@@ -113,10 +158,12 @@ function ResetPasswordForm() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={loading}
                 className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-sm shadow-sm 
                          placeholder-gray-400 text-gray-900
                          focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500
-                         transition-all duration-200"
+                         transition-all duration-200
+                         disabled:bg-gray-50 disabled:text-gray-500"
                 placeholder="Confirm your new password"
               />
             </div>
@@ -145,14 +192,16 @@ function ResetPasswordForm() {
             </button>
           </form>
 
-          <div className="text-center">
-            <button
-              onClick={() => router.push('/')}
-              className="text-sm text-amber-600 hover:text-amber-500 transition-colors duration-200"
-            >
-              Back to Sign In
-            </button>
-          </div>
+          {!loading && (
+            <div className="text-center">
+              <button
+                onClick={() => router.push('/')}
+                className="text-sm text-amber-600 hover:text-amber-500 transition-colors duration-200"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
