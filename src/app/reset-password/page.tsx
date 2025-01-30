@@ -19,22 +19,6 @@ function ResetPasswordForm() {
     if (errorDescription) {
       setError(decodeURIComponent(errorDescription));
     }
-
-    // Handle the initial code exchange
-    const handleInitialCode = async () => {
-      const code = searchParams.get('code');
-      if (code) {
-        try {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) {
-            setError(error.message);
-          }
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to verify reset code');
-        }
-      }
-    };
-    handleInitialCode();
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,13 +33,6 @@ function ResetPasswordForm() {
 
       if (newPassword.length < 6) {
         throw new Error('Password must be at least 6 characters long');
-      }
-
-      // Get the current session
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error('Your reset link has expired. Please request a new password reset email.');
       }
 
       // Update the password
