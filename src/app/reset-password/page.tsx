@@ -44,20 +44,11 @@ function ResetPasswordForm() {
   // Handle redirect after success
   useEffect(() => {
     if (success) {
-      // Sign out and redirect
-      const handleSuccess = async () => {
-        try {
-          await supabase.auth.signOut();
-        } catch (error) {
-          console.error('Error signing out:', error);
-        } finally {
-          // Redirect regardless of sign out success
-          setTimeout(() => {
-            router.push('/');
-          }, 1500);
-        }
-      };
-      handleSuccess();
+      // Redirect after success
+      const timer = setTimeout(() => {
+        router.push('/');
+      }, 1500);
+      return () => clearTimeout(timer);
     }
   }, [success, router]);
 
@@ -86,18 +77,22 @@ function ResetPasswordForm() {
 
       if (updateError) throw updateError;
 
-      // Set success immediately after password update
+      // Sign out first
+      await supabase.auth.signOut();
+
+      // Then set success state
       setSuccess(true);
+      setLoading(false);
     } catch (err) {
+      console.error('Error in password reset:', err);
       setError(err instanceof Error ? err.message : 'Failed to reset password');
-      // If there's an error, try to sign out
+      setLoading(false);
+      // Try to sign out on error
       try {
         await supabase.auth.signOut();
       } catch (signOutError) {
         console.error('Error signing out after error:', signOutError);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
