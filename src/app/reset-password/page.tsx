@@ -44,20 +44,26 @@ function ResetPasswordForm() {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      // Get the recovery token from the URL
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const type = hashParams.get('type');
+      // Get the code from the URL
+      const code = searchParams.get('code');
 
-      if (type !== 'recovery') {
+      if (!code) {
         throw new Error('Invalid reset link. Please request a new password reset email.');
       }
 
-      // Update the password
-      const { error: updateError } = await supabase.auth.updateUser({
+      // Verify the recovery code and update the password
+      const { error: updateError } = await supabase.auth.exchangeCodeForSession(code);
+      if (updateError) throw updateError;
+
+      // Now update the password
+      const { error: passwordError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
-      if (updateError) throw updateError;
+      if (passwordError) throw passwordError;
+
+      // Sign out after successful password reset
+      await supabase.auth.signOut();
 
       setSuccess(true);
       // Redirect to login page after 3 seconds
