@@ -19,6 +19,15 @@ function ResetPasswordForm() {
     if (errorDescription) {
       setError(decodeURIComponent(errorDescription));
     }
+
+    // Sign out any existing session when landing on this page
+    const handleInitialLoad = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await supabase.auth.signOut();
+      }
+    };
+    handleInitialLoad();
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,14 +44,15 @@ function ResetPasswordForm() {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      // Get the token from the query parameters
-      const token = searchParams.get('token');
+      // Get the recovery token from the URL
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const type = hashParams.get('type');
 
-      if (!token) {
+      if (type !== 'recovery') {
         throw new Error('Invalid reset link. Please request a new password reset email.');
       }
 
-      // Update the password using the recovery token
+      // Update the password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
