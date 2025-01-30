@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
+interface PricingProps {
+  onGetStarted: () => void;
+}
 
-const Pricing = () => {
+const Pricing = ({ onGetStarted }: PricingProps) => {
   const plans = [
     {
       name: "Starter",
@@ -51,7 +53,7 @@ const Pricing = () => {
   return (
     <section id="pricing" className="py-20 bg-white">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl md:text-4xl font-bold text-center text-amber-800 mb-12">
+        <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 mb-12">
           Simple, Transparent Pricing
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -60,12 +62,12 @@ const Pricing = () => {
               key={index}
               className={`relative p-8 rounded-xl ${
                 plan.popular
-                  ? "bg-amber-100 text-amber-800 shadow-xl scale-105"
+                  ? "bg-gray-100 text-gray-900 shadow-xl scale-105"
                   : "bg-white border border-gray-200"
               }`}
             >
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-800 text-white px-4 py-1 rounded-full text-sm">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-1 rounded-full text-sm">
                   Most Popular
                 </div>
               )}
@@ -74,7 +76,7 @@ const Pricing = () => {
                 <span className="text-4xl font-bold">{plan.price}</span>
                 <span className="text-sm opacity-80">/month</span>
               </div>
-              <div className="text-lg font-semibold mb-6 text-amber-500">
+              <div className="text-lg font-semibold mb-6 text-gray-600">
                 {plan.credits} credits
               </div>
               <ul className="space-y-4 mb-8">
@@ -85,16 +87,16 @@ const Pricing = () => {
                   </li>
                 ))}
               </ul>
-              <Link
-                href="/dashboard"
+              <button
+                onClick={onGetStarted}
                 className={`block w-full py-3 rounded-full font-medium text-center transition-colors ${
                   plan.popular
-                    ? "bg-amber-800 text-white hover:bg-amber-700"
-                    : "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                    ? "bg-gray-900 text-white hover:bg-gray-800"
+                    : "bg-gray-100 text-gray-900 hover:bg-gray-200"
                 }`}
               >
                 {plan.cta}
-              </Link>
+              </button>
             </div>
           ))}
         </div>

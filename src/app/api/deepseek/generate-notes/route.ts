@@ -27,7 +27,7 @@ ${targetAudience ? `- Target Audience: ${targetAudience}` : ''}
 - Primary Intent: ${primaryIntent}
 
 **Creation Guidelines**
-1. Hook Formula: Open with "Did you know?" / "Here's why X matters" / Controversial truth / Surprising statistic
+1. Hook Formula: Open with "Did you know?" / "Here's why X matters" / Controversial truth / Surprisaing statistic
 2. Value Structure: Problem > Agitate > Solution > Proof
 3. Viral Elements: 
    - Leverage psychological triggers (curiosity gap, FOMO, social proof)
