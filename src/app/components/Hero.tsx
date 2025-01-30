@@ -20,7 +20,7 @@ const Avatar = ({ src, className }: { src: string; className?: string }) => (
 
 const Hero = ({ onGetStarted }: HeroProps) => {
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100 pt-20">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-amber-300 via-amber-400 to-[#FFF8DC] pt-20">
       {/* Decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/2 left-0 w-64 h-64 bg-white/20 rounded-full filter blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
@@ -43,7 +43,7 @@ const Hero = ({ onGetStarted }: HeroProps) => {
           <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
         </button>
         <div className="flex flex-col items-center">
-          <p className="text-gray-600 mb-4">Trusted by the best of Substack</p>
+          <p className="text-gray-700 mb-4">Trusted by the best of Substack</p>
           <div className="flex flex-wrap justify-center gap-4 mb-4">
             <Avatar className="w-20 h-20 border-2 border-white/20" src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158" />
             <Avatar className="w-20 h-20 border-2 border-white/20" src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b" />
@@ -54,7 +54,7 @@ const Hero = ({ onGetStarted }: HeroProps) => {
             <Avatar className="w-20 h-20 border-2 border-white/20" src="https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5" />
             <Avatar className="w-20 h-20 border-2 border-white/20" src="https://images.unsplash.com/photo-1581092795360-fd1ca04f0952" />
           </div>
-          <p className="text-gray-600 text-lg">+40k more...</p>
+          <p className="text-gray-700 text-lg">+40k more...</p>
         </div>
       </div>
     </div>

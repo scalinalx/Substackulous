@@ -10,6 +10,7 @@ import UseCases from './components/UseCases';
 import PainPoints from './components/PainPoints';
 import Testimonials from './components/Testimonials';
 import Pricing from './components/Pricing';
+import FAQ from './components/FAQ';
 import LoginForm from './components/LoginForm';
 
 export default function HomePage() {
@@ -44,6 +45,7 @@ export default function HomePage() {
       <PainPoints />
       <Testimonials />
       <Pricing onGetStarted={() => setShowLogin(true)} />
+      <FAQ />
     </main>
   );
 }
