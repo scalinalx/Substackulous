@@ -14,22 +14,11 @@ function ResetPasswordForm() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Immediately sign out if we detect a login from the reset password flow
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && window.location.pathname === '/reset-password') {
-        await supabase.auth.signOut();
-      }
-    });
-
     // Check if there's an error in the URL (like expired token)
     const errorDescription = searchParams.get('error_description');
     if (errorDescription) {
       setError(decodeURIComponent(errorDescription));
     }
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,31 +35,19 @@ function ResetPasswordForm() {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      // Get the access token from the URL hash
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const accessToken = hashParams.get('access_token');
+      // Get the token from the query parameters
+      const token = searchParams.get('token');
 
-      if (!accessToken) {
+      if (!token) {
         throw new Error('Invalid reset link. Please request a new password reset email.');
       }
 
-      // Set the session with the access token
-      const { data: { session }, error: sessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: '',
-      });
-
-      if (sessionError) throw sessionError;
-
-      // Update the password
+      // Update the password using the recovery token
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
       if (updateError) throw updateError;
-
-      // Sign out after password reset
-      await supabase.auth.signOut();
 
       setSuccess(true);
       // Redirect to login page after 3 seconds
