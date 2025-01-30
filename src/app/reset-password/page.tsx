@@ -20,14 +20,21 @@ function ResetPasswordForm() {
       setError(decodeURIComponent(errorDescription));
     }
 
-    // Sign out any existing session when landing on this page
-    const handleInitialLoad = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await supabase.auth.signOut();
+    // Handle the initial code exchange
+    const handleInitialCode = async () => {
+      const code = searchParams.get('code');
+      if (code) {
+        try {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            setError(error.message);
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to verify reset code');
+        }
       }
     };
-    handleInitialLoad();
+    handleInitialCode();
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,23 +51,19 @@ function ResetPasswordForm() {
         throw new Error('Password must be at least 6 characters long');
       }
 
-      // Get the code from the URL
-      const code = searchParams.get('code');
-
-      if (!code) {
-        throw new Error('Invalid reset link. Please request a new password reset email.');
+      // Get the current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('Your reset link has expired. Please request a new password reset email.');
       }
 
-      // Verify the recovery code and update the password
-      const { error: updateError } = await supabase.auth.exchangeCodeForSession(code);
-      if (updateError) throw updateError;
-
-      // Now update the password
-      const { error: passwordError } = await supabase.auth.updateUser({
+      // Update the password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
-      if (passwordError) throw passwordError;
+      if (updateError) throw updateError;
 
       // Sign out after successful password reset
       await supabase.auth.signOut();
