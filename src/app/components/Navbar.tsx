@@ -23,7 +23,7 @@ const Navbar = ({ onSignIn }: NavbarProps) => {
   return (
     <nav
       className={`fixed w-full z-50 transition-all duration-300 ${
-        isScrolled ? "bg-white shadow-md py-2" : "bg-transparent py-4"
+        isScrolled ? "bg-white/90 backdrop-blur-sm shadow-md py-2" : "bg-transparent py-4"
       }`}
     >
       <div className="container mx-auto px-4">
@@ -65,7 +65,7 @@ const Navbar = ({ onSignIn }: NavbarProps) => {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-white shadow-lg py-4">
+          <div className="md:hidden absolute top-full left-0 right-0 bg-white/90 backdrop-blur-sm shadow-lg py-4">
             <div className="flex flex-col space-y-4 px-4">
               <a
                 href="#use-cases"

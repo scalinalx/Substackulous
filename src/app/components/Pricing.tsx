@@ -40,7 +40,7 @@ const Pricing = ({ onGetStarted }: PricingProps) => {
       credits: "3,300",
       features: [
         "5x growth on your Substack journey",
-        <span key="serious">Perfect if you're <span className="font-bold italic">really serious</span> about Substack</span>,
+        <span key="serious">Perfect if you&apos;re <span className="font-bold italic">really serious</span> about Substack</span>,
         "Improve your conversion rate by 100% and save up to 90h/month",
         "Credits are 50% cheaper (compared to Starter)",
         "Dedicated Support & API Access",
