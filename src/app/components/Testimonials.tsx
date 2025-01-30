@@ -64,7 +64,7 @@ const Testimonials = () => {
                     <p className="text-sm text-amber-800/60">{testimonial.role}</p>
                   </div>
                 </div>
-                <p className="text-amber-800/80 mb-4">"{testimonial.quote}"</p>
+                <p className="text-amber-800/80 mb-4">&ldquo;{testimonial.quote}&rdquo;</p>
                 <div className="text-amber-500 font-semibold">{testimonial.metric}</div>
               </div>
             </div>
