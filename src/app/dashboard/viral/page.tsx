@@ -4,13 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
-import { Metadata } from 'next';
 import ViralNoteGenerator from '@/app/components/ViralNoteGenerator';
-
-export const metadata: Metadata = {
-  title: 'Viral Note Generator',
-  description: 'Generate viral social media notes for your Substack newsletter',
-};
 
 export default function ViralPage() {
   const [mounted, setMounted] = useState(false);
