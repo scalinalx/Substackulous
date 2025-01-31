@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useAuth } from '@/lib/contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useRouter } from 'next/navigation';
 
 interface ViralNoteGeneratorProps {
   onClose?: () => void;
@@ -10,6 +12,8 @@ interface ViralNoteGeneratorProps {
 type PrimaryIntent = 'Growth' | 'Entertain' | 'Educate';
 
 export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps) {
+  const router = useRouter();
+  const supabase = createClientComponentClient();
   const { profile, updateProfile } = useAuth();
   const [theme, setTheme] = useState('');
   const [coreTopics, setCoreTopics] = useState('');
@@ -21,7 +25,41 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [generatedNote, setGeneratedNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const [generatedNotes, setGeneratedNotes] = useState<string[]>([]);
+  const [topic, setTopic] = useState('');
   const creditCost = 2;
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Initial session check:', { session, error });
+        
+        if (error || !session) {
+          console.log('No session found, redirecting to login...');
+          router.push('/');
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
+        router.push('/');
+      }
+    };
+
+    checkSession();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session);
+      if (event === 'SIGNED_OUT' || !session) {
+        router.push('/');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +75,7 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
     }
 
     if ((profile?.credits || 0) < creditCost) {
-      setError('Not enough credits. You need 2 credits to generate viral notes.');
+      setError(`Not enough credits. You need ${creditCost} credits to generate notes.`);
       return;
     }
 
@@ -45,14 +83,30 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
     setGenerating(true);
 
     try {
-      const response = await fetch('/api/deepseek/generate-notes', {
+      setLoading(true);
+      console.log('Getting session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session result:', { session, error: sessionError });
+      
+      if (sessionError) {
+        setError(`Authentication error: ${sessionError.message}`);
+        return;
+      }
+      
+      if (!session) {
+        console.log('No session found, redirecting to login...');
+        router.push('/');
+        return;
+      }
+
+      const response = await fetch('/api/anthropic/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          theme: theme.trim(),
+          topic: theme.trim(),
           coreTopics: coreTopics.trim() || undefined,
           targetAudience: targetAudience.trim() || undefined,
           primaryIntent,
@@ -80,6 +134,7 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
       setError(err instanceof Error ? err.message : 'Failed to generate notes');
     } finally {
       setGenerating(false);
+      setLoading(false);
     }
   };
 

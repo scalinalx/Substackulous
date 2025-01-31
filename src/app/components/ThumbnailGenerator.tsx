@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useRouter } from 'next/navigation';
 
 interface GenerationOptions {
   title: string;
@@ -12,6 +13,7 @@ interface GenerationOptions {
 }
 
 export default function ThumbnailGenerator() {
+  const router = useRouter();
   const supabase = createClientComponentClient();
   const { profile, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -26,6 +28,38 @@ export default function ThumbnailGenerator() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [status, setStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Initial session check:', { session, error });
+        
+        if (error || !session) {
+          console.log('No session found, redirecting to login...');
+          router.push('/');
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
+        router.push('/');
+      }
+    };
+
+    checkSession();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session);
+      if (event === 'SIGNED_OUT' || !session) {
+        router.push('/');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, router]);
 
   const handleGenerate = async () => {
     try {
@@ -44,16 +78,17 @@ export default function ThumbnailGenerator() {
       setError(null);
 
       console.log('Getting session...');
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session result:', { sessionData, error: sessionError });
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session result:', { session, error: sessionError });
       
       if (sessionError) {
         setError(`Authentication error: ${sessionError.message}`);
         return;
       }
       
-      if (!sessionData?.session) {
-        setError('Not authenticated - no session found');
+      if (!session) {
+        console.log('No session found, redirecting to login...');
+        router.push('/');
         return;
       }
 
@@ -63,7 +98,7 @@ export default function ThumbnailGenerator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           prompt,

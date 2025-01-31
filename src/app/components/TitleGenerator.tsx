@@ -1,32 +1,55 @@
+'use client';
+
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/contexts/AuthContext';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useRouter } from 'next/navigation';
 
-interface TitleGeneratorProps {
-  onClose?: () => void;
-}
-
-export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
+export default function TitleGenerator() {
+  const router = useRouter();
   const supabase = createClientComponentClient();
   const { profile, updateProfile } = useAuth();
-  const [theme, setTheme] = useState('');
-  const [mainIdeas, setMainIdeas] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [titles, setTitles] = useState<string[] | null>(null);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const creditCost = 1;
-  const [status, setStatus] = useState('');
+  const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
+  const [topic, setTopic] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const creditCost = 2;
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Initial session check:', { session, error });
+        
+        if (error || !session) {
+          console.log('No session found, redirecting to login...');
+          router.push('/');
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
+        router.push('/');
+      }
+    };
+
+    checkSession();
+
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session);
+      if (event === 'SIGNED_OUT' || !session) {
+        router.push('/');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!theme.trim()) {
-      setError('Theme is required');
-      return;
-    }
+    setError(null);
 
     if (!profile) {
       setError('User profile not found');
@@ -38,34 +61,31 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
       return;
     }
 
-    setError(null);
-    setGenerating(true);
-    setGeneratedTitles([]);
-
     try {
+      setLoading(true);
       console.log('Getting session...');
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session result:', { sessionData, error: sessionError });
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session result:', { session, error: sessionError });
       
       if (sessionError) {
         setError(`Authentication error: ${sessionError.message}`);
         return;
       }
       
-      if (!sessionData?.session) {
-        setError('Not authenticated - no session found');
+      if (!session) {
+        console.log('No session found, redirecting to login...');
+        router.push('/');
         return;
       }
 
-      const response = await fetch('/api/deepseek/generate-titles', {
+      const response = await fetch('/api/openai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          theme: theme.trim(),
-          mainIdeas: mainIdeas.trim() || undefined,
+          topic,
           userId: profile.id
         }),
       });
@@ -85,19 +105,7 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
       setError((err as Error).message);
       setGeneratedTitles([]);
     } finally {
-      setGenerating(false);
       setLoading(false);
-      setStatus('');
-    }
-  };
-
-  const copyToClipboard = async (text: string, index: number) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedIndex(index);
-      setTimeout(() => setCopiedIndex(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
     }
   };
 
@@ -126,39 +134,26 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Theme <span className="text-red-500">*</span>
+            Topic <span className="text-red-500">*</span>
           </label>
           <textarea
-            value={theme}
-            onChange={(e) => setTheme(e.target.value)}
-            placeholder="Brief description of your post's theme..."
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Brief description of your post's topic..."
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
             rows={2}
             required
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Main Ideas <span className="text-gray-500">(optional)</span>
-          </label>
-          <textarea
-            value={mainIdeas}
-            onChange={(e) => setMainIdeas(e.target.value)}
-            placeholder="3-4 brief sentences describing the main ideas in your post..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
-            rows={4}
-          />
-        </div>
-
         <button
           type="submit"
-          disabled={generating}
+          disabled={loading}
           className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md 
                    hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 
                    focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
-          {generating ? (
+          {loading ? (
             <span className="flex items-center justify-center">
               <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -188,26 +183,6 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
                   readOnly
                   className="flex-1 bg-transparent border-none focus:ring-0 text-gray-900"
                 />
-                <button
-                  onClick={() => copyToClipboard(title, index)}
-                  className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-indigo-600 focus:outline-none focus:text-indigo-600 transition-colors"
-                >
-                  {copiedIndex === index ? (
-                    <span className="flex items-center">
-                      <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Copied!
-                    </span>
-                  ) : (
-                    <span className="flex items-center opacity-0 group-hover:opacity-100">
-                      <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                      </svg>
-                      Copy
-                    </span>
-                  )}
-                </button>
               </div>
             ))}
           </div>
