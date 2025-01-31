@@ -44,15 +44,15 @@ export default function ThumbnailGenerator() {
       setError(null);
 
       console.log('Getting session...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session result:', { session, error: sessionError });
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session result:', { sessionData, error: sessionError });
       
       if (sessionError) {
         setError(`Authentication error: ${sessionError.message}`);
         return;
       }
       
-      if (!session) {
+      if (!sessionData?.session) {
         setError('Not authenticated - no session found');
         return;
       }
@@ -63,7 +63,7 @@ export default function ThumbnailGenerator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${sessionData.session.access_token}`
         },
         body: JSON.stringify({
           prompt,
