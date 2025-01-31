@@ -37,7 +37,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       
-      // Always update the profile with the latest data from the database
       if (data) {
         setProfile(data);
       } else {
@@ -54,27 +53,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     async function initializeAuth() {
       try {
-        // Check active sessions
-        const { data: { session } } = await supabase.auth.getSession();
+        // Check active sessions and refresh if needed
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) throw sessionError;
         
         if (mounted) {
-          setUser(session?.user ?? null);
           if (session?.user) {
-            // Fetch fresh profile data
+            setUser(session.user);
             await fetchProfile(session.user.id);
+          } else {
+            setUser(null);
+            setProfile(null);
           }
           setLoading(false);
         }
 
         // Listen for changes on auth state
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state changed:', event, session);
+          
           if (mounted) {
-            setUser(session?.user ?? null);
             if (session?.user) {
-              // Fetch fresh profile data
+              setUser(session.user);
               await fetchProfile(session.user.id);
             } else {
+              setUser(null);
               setProfile(null);
+              // Only redirect on sign out
+              if (event === 'SIGNED_OUT') {
+                router.push('/');
+              }
             }
             setLoading(false);
           }
@@ -94,15 +103,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     initializeAuth();
-  }, []);
+  }, [router]);
 
   const signIn = async (email: string, password: string) => {
     try {
       setError(null);
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      
       if (error) throw error;
-      router.push('/dashboard');
+      
+      if (data.session) {
+        setUser(data.session.user);
+        await fetchProfile(data.session.user.id);
+        router.push('/dashboard');
+      }
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -178,18 +193,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       setLoading(true);
       
-      // First clear local state
-      setUser(null);
-      setProfile(null);
-      
-      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-
-      // Force a hard navigation to clear all state
-      window.location.href = '/';
+      
+      setUser(null);
+      setProfile(null);
+      router.push('/');
     } catch (error) {
       setError((error as Error).message);
+    } finally {
       setLoading(false);
     }
   };
