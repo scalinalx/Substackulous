@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
+import supabase from '@/lib/supabase';
 
 interface ViralNoteGeneratorProps {
   onClose?: () => void;
@@ -13,7 +13,6 @@ type PrimaryIntent = 'Growth' | 'Entertain' | 'Educate';
 
 export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps) {
   const router = useRouter();
-  const supabase = createClientComponentClient();
   const { profile, updateProfile } = useAuth();
   const [theme, setTheme] = useState('');
   const [coreTopics, setCoreTopics] = useState('');

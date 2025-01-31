@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
+import supabase from '@/lib/supabase';
 
 export default function TitleGenerator() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
   const { profile, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
