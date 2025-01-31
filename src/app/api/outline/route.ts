@@ -122,8 +122,20 @@ export async function POST(req: Request) {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || 'Failed to generate outline');
+        let errorMessage = 'Failed to generate outline';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error?.message || errorData.message || errorMessage;
+        } catch (parseError) {
+          // If we can't parse the error response as JSON, try to get the text
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          } catch {
+            // If we can't get the text either, use the default error message
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
