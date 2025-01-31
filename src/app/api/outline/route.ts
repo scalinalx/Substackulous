@@ -42,6 +42,9 @@ const supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROL
 });
 
 export async function POST(req: Request) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
   try {
     const { userId, prompt } = await req.json();
     console.log('Received request with userId:', userId);
@@ -96,81 +99,76 @@ export async function POST(req: Request) {
     }
 
     // Call DeepSeek API
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${deepseekApiKey}`
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: [{
+          role: "user",
+          content: prompt
+        }],
+        temperature: 0.7,
+        max_tokens: 1200,
+        top_p: 1.0
+      }),
+      signal: controller.signal
+    });
 
-    try {
-      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${deepseekApiKey}`
-        },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages: [{
-            role: "user",
-            content: prompt
-          }],
-          temperature: 0.7,
-          max_tokens: 1200,
-          top_p: 1.0
-        }),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        let errorMessage = 'Failed to generate outline';
+    if (!response.ok) {
+      let errorMessage = 'Failed to generate outline';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error?.message || errorData.message || errorMessage;
+      } catch (parseError) {
+        // If we can't parse the error response as JSON, try to get the text
         try {
-          const errorData = await response.json();
-          errorMessage = errorData.error?.message || errorData.message || errorMessage;
-        } catch (parseError) {
-          // If we can't parse the error response as JSON, try to get the text
-          try {
-            const errorText = await response.text();
-            errorMessage = errorText || errorMessage;
-          } catch {
-            // If we can't get the text either, use the default error message
-          }
+          const errorText = await response.text();
+          errorMessage = errorText || errorMessage;
+        } catch {
+          // If we can't get the text either, use the default error message
         }
-        throw new Error(errorMessage);
       }
-
-      const data = await response.json();
-      const outline = data.choices[0]?.message?.content;
-
-      if (!outline) {
-        throw new Error('No outline generated');
-      }
-
-      // Update the credits using supabaseAdmin
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update({ credits: profile.credits - 2 })
-        .eq('id', userId);
-
-      if (updateError) {
-        console.error('Failed to update credits:', updateError);
-        return NextResponse.json({ 
-          error: 'Failed to update credits' 
-        }, { status: 500 });
-      }
-
-      return NextResponse.json({ content: outline });
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        return NextResponse.json({ error: 'Request timed out' }, { status: 504 });
-      }
-      throw error;
+      return NextResponse.json({ error: errorMessage }, { status: response.status });
     }
+
+    const data = await response.json();
+    const outline = data.choices[0]?.message?.content;
+
+    if (!outline) {
+      return NextResponse.json({ error: 'No outline generated' }, { status: 500 });
+    }
+
+    // Update the credits using supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ credits: profile.credits - 2 })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Failed to update credits:', updateError);
+      return NextResponse.json({ 
+        error: 'Failed to update credits' 
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({ content: outline });
   } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      return NextResponse.json({ error: 'Request timed out' }, { status: 504 });
+    }
+
     console.error('Error generating outline:', error);
     return NextResponse.json(
-      { error: error.message },
+      { error: error.message || 'An unexpected error occurred' },
       { status: 500 }
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 } 

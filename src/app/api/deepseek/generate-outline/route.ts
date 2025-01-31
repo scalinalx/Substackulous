@@ -124,56 +124,82 @@ ${keyPoints ? `- Key Points to Address:\n${keyPoints}` : ''}
 
 Format the outline with clear hierarchical structure using markdown.`;
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert content strategist and outline creator. You excel at creating well-structured, engaging outlines for viral blog posts.'
-          },
-          {
-            role: 'user',
-            content: prompt
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert content strategist and outline creator. You excel at creating well-structured, engaging outlines for viral blog posts.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 1200,
+          top_p: 1.0
+        }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to generate outline';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error?.message || errorData.message || errorMessage;
+        } catch (parseError) {
+          // If we can't parse the error response as JSON, try to get the text
+          try {
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          } catch {
+            // If we can't get the text either, use the default error message
           }
-        ],
-        max_tokens: 1200,
-        temperature: 0.7,
-        top_p: 1.0
-      }),
-    });
+        }
+        throw new Error(errorMessage);
+      }
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to generate outline');
+      const data = await response.json();
+      const outline = data.choices[0]?.message?.content;
+
+      if (!outline) {
+        throw new Error('No outline generated');
+      }
+
+      // Update the credits using supabaseAdmin
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ credits: profile.credits - creditCost })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('Failed to update credits:', updateError);
+        return NextResponse.json({ 
+          error: 'Failed to update credits' 
+        }, { status: 500 });
+      }
+
+      return NextResponse.json({ outline });
+    } catch (error) {
+      console.error('Error generating outline:', error);
+      return NextResponse.json(
+        { error: (error as Error).message },
+        { status: 500 }
+      );
     }
-
-    const data = await response.json();
-    const outline = data.choices[0]?.message?.content;
-
-    if (!outline) {
-      throw new Error('No outline generated');
-    }
-
-    // Update the credits using supabaseAdmin
-    const { error: updateError } = await supabaseAdmin
-      .from('profiles')
-      .update({ credits: profile.credits - creditCost })
-      .eq('id', userId);
-
-    if (updateError) {
-      console.error('Failed to update credits:', updateError);
-      return NextResponse.json({ 
-        error: 'Failed to update credits' 
-      }, { status: 500 });
-    }
-
-    return NextResponse.json({ outline });
   } catch (error) {
     console.error('Error generating outline:', error);
     return NextResponse.json(
