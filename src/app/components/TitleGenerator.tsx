@@ -15,7 +15,7 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [creditCost, setCreditCost] = useState(1);
+  const creditCost = 1;
   const [status, setStatus] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,6 +23,11 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
     
     if (!theme.trim()) {
       setError('Theme is required');
+      return;
+    }
+
+    if (!profile) {
+      setError('User profile not found');
       return;
     }
 
@@ -40,25 +45,28 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
         },
         body: JSON.stringify({
           theme: theme.trim(),
           mainIdeas: mainIdeas.trim() || undefined,
+          userId: profile.id
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate titles');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate titles');
       }
 
       const data = await response.json();
       setGeneratedTitles(data.titles);
 
-      // Update credits only after successful completion
+      // Refresh the profile to get updated credits
       if (profile) {
         const updatedProfile = {
           ...profile,
-          credits: (profile.credits || 0) - creditCost,
+          credits: profile.credits - creditCost,
         };
         await updateProfile(updatedProfile);
       }

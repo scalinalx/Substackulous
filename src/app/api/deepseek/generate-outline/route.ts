@@ -1,6 +1,24 @@
 export const runtime = 'edge';
 
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+if (!DEEPSEEK_API_KEY) {
+  throw new Error('Deepseek API key not configured');
+}
+
+// Initialize Supabase client with service role key for admin operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 export async function POST(req: Request) {
   try {
@@ -12,19 +30,72 @@ export async function POST(req: Request) {
       format,
       knowledgeLevel,
       tone,
-      wordCount
+      wordCount,
+      userId
     } = await req.json();
 
-    if (!topic) {
+    if (!topic || !userId) {
       return NextResponse.json(
-        { error: 'Topic is required' },
+        { error: 'Topic and userId are required' },
         { status: 400 }
       );
     }
 
-    const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-    if (!DEEPSEEK_API_KEY) {
-      throw new Error('Deepseek API key not configured');
+    // Get the session from the Authorization header
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.error('No Authorization header');
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
+    
+    // Verify the token and get the user
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
+    const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !sessionUser) {
+      console.error('Auth error:', authError);
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    if (sessionUser.id !== userId) {
+      console.error('User ID mismatch:', { sessionUserId: sessionUser.id, requestUserId: userId });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    // First, check if user has enough credits
+    let { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      console.error('Profile query error:', profileError);
+      return NextResponse.json({ 
+        error: 'Failed to fetch user profile',
+        details: profileError.message 
+      }, { status: 404 });
+    }
+
+    if (!profile) {
+      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
+    }
+
+    const creditCost = 2;
+    if (profile.credits < creditCost) {
+      return NextResponse.json({ error: 'Insufficient credits' }, { status: 400 });
     }
 
     const prompt = `Act as a master content architect and Pulitzer-winning editorial director. The best in the world at writing viral, engaging Substack posts.
@@ -87,6 +158,19 @@ Format the outline with clear hierarchical structure using markdown.`;
 
     if (!outline) {
       throw new Error('No outline generated');
+    }
+
+    // Update the credits using supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ credits: profile.credits - creditCost })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('Failed to update credits:', updateError);
+      return NextResponse.json({ 
+        error: 'Failed to update credits' 
+      }, { status: 500 });
     }
 
     return NextResponse.json({ outline });

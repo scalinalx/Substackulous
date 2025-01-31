@@ -21,6 +21,7 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [generatedNote, setGeneratedNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const creditCost = 2;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +31,12 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
       return;
     }
 
-    if ((profile?.credits || 0) < 2) {
+    if (!profile) {
+      setError('User profile not found');
+      return;
+    }
+
+    if ((profile?.credits || 0) < creditCost) {
       setError('Not enough credits. You need 2 credits to generate viral notes.');
       return;
     }
@@ -43,28 +49,32 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
         },
         body: JSON.stringify({
           theme: theme.trim(),
           coreTopics: coreTopics.trim() || undefined,
           targetAudience: targetAudience.trim() || undefined,
           primaryIntent,
+          userId: profile.id
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate notes');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate notes');
       }
 
       const data = await response.json();
       setNotes(data.notes);
 
-      // Update credits in profile (cost: 2 credits)
+      // Refresh the profile to get updated credits
       if (profile) {
-        await updateProfile({
-          ...profile, // Maintain all existing fields
-          credits: (profile.credits || 0) - 2,
-        });
+        const updatedProfile = {
+          ...profile,
+          credits: profile.credits - creditCost,
+        };
+        await updateProfile(updatedProfile);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate notes');
@@ -133,7 +143,7 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-        <span className="text-amber-700">Credits required: 2</span>
+        <span className="text-amber-700">Credits required: {creditCost}</span>
         <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
       </div>
 
@@ -211,7 +221,7 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
 
         <button
           type="submit"
-          disabled={generating || (profile?.credits ?? 0) < 2}
+          disabled={generating || (profile?.credits ?? 0) < creditCost}
           className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white py-3 px-4 rounded-lg 
                    hover:from-amber-600 hover:to-amber-700 transition-all focus:outline-none focus:ring-2 
                    focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed 
@@ -236,34 +246,29 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
             {notes.map((note, index) => (
               <div
                 key={index}
-                className="group flex flex-col gap-2 p-4 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
+                className="group relative p-4 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-500">Note {index + 1}</span>
-                  <button
-                    onClick={() => copyToClipboard(note, index)}
-                    className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors"
-                  >
-                    {copiedIndex === index ? (
-                      <span className="flex items-center">
-                        <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Copied!
-                      </span>
-                    ) : (
-                      <span className="flex items-center opacity-0 group-hover:opacity-100">
-                        <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                        </svg>
-                        Copy
-                      </span>
-                    )}
-                  </button>
-                </div>
-                <div className="whitespace-pre-wrap text-gray-900 bg-gray-50 p-3 rounded">
-                  {note}
-                </div>
+                <div className="whitespace-pre-line text-gray-900">{note}</div>
+                <button
+                  onClick={() => copyToClipboard(note, index)}
+                  className="absolute top-4 right-4 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors"
+                >
+                  {copiedIndex === index ? (
+                    <span className="flex items-center">
+                      <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Copied!
+                    </span>
+                  ) : (
+                    <span className="flex items-center opacity-0 group-hover:opacity-100">
+                      <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                      </svg>
+                      Copy
+                    </span>
+                  )}
+                </button>
               </div>
             ))}
           </div>
