@@ -62,21 +62,21 @@ export default function ThumbnailGenerator() {
   }, [supabase, router]);
 
   const handleGenerate = async () => {
+    if (!profile) {
+      setError('User profile not found');
+      return;
+    }
+
+    if (profile.credits < creditCost) {
+      setError(`Not enough credits. You need ${creditCost} credits to generate thumbnails.`);
+      return;
+    }
+
+    setLoading(true);
+    setGeneratedImages(null);
+    setError(null);
+
     try {
-      if (!profile) {
-        setError('User profile not found');
-        return;
-      }
-
-      if ((profile?.credits || 0) < creditCost) {
-        setError(`Not enough credits. You need ${creditCost} credits to generate thumbnails.`);
-        return;
-      }
-
-      setLoading(true);
-      setGeneratedImages(null);
-      setError(null);
-
       console.log('Getting session...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       console.log('Session result:', { session, error: sessionError });
@@ -109,7 +109,8 @@ export default function ThumbnailGenerator() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate images');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate images');
       }
 
       if (!response.body) {
@@ -162,6 +163,13 @@ export default function ThumbnailGenerator() {
       if (!completionReceived) {
         throw new Error('Generation did not complete successfully');
       }
+
+      // Update credits only after successful completion
+      const updatedProfile = {
+        ...profile,
+        credits: profile.credits - creditCost,
+      };
+      await updateProfile(updatedProfile);
     } catch (err) {
       setError((err as Error).message);
       setGeneratedImages(null);

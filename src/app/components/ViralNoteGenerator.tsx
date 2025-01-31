@@ -99,14 +99,14 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
         return;
       }
 
-      const response = await fetch('/api/anthropic/chat', {
+      const response = await fetch('/api/deepseek/generate-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          topic: theme.trim(),
+          theme: theme.trim(),
           coreTopics: coreTopics.trim() || undefined,
           targetAudience: targetAudience.trim() || undefined,
           primaryIntent,
@@ -149,8 +149,13 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
   };
 
   const generateNote = async () => {
-    if ((profile?.credits || 0) < 2) {
-      setError('Not enough credits. You need 2 credits to generate a viral note.');
+    if (!profile) {
+      setError('User profile not found');
+      return;
+    }
+
+    if (profile.credits < creditCost) {
+      setError(`Not enough credits. You need ${creditCost} credits to generate notes.`);
       return;
     }
 
@@ -159,34 +164,49 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
     setGeneratedNote('');
 
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session result:', { session, error: sessionError });
+      
+      if (sessionError) {
+        setError(`Authentication error: ${sessionError.message}`);
+        return;
+      }
+      
+      if (!session) {
+        console.log('No session found, redirecting to login...');
+        router.push('/');
+        return;
+      }
+
       const response = await fetch('/api/deepseek/generate-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           theme: theme.trim(),
           coreTopics: coreTopics.trim() || undefined,
           targetAudience: targetAudience.trim() || undefined,
           primaryIntent,
+          userId: profile.id
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate note');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate notes');
       }
 
       const data = await response.json();
       setGeneratedNote(data.notes[0] || '');
 
       // Update credits only after successful completion
-      if (profile) {
-        const updatedProfile = {
-          ...profile,
-          credits: (profile.credits || 0) - 2,
-        };
-        await updateProfile(updatedProfile);
-      }
+      const updatedProfile = {
+        ...profile,
+        credits: profile.credits - creditCost,
+      };
+      await updateProfile(updatedProfile);
     } catch (err) {
       setError((err as Error).message);
       setGeneratedNote('');

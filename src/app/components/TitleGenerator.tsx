@@ -13,7 +13,7 @@ export default function TitleGenerator() {
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
   const [topic, setTopic] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const creditCost = 2;
+  const creditCost = 1;
 
   useEffect(() => {
     const checkSession = async () => {
@@ -56,7 +56,7 @@ export default function TitleGenerator() {
       return;
     }
 
-    if ((profile?.credits || 0) < creditCost) {
+    if (profile.credits < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
       return;
     }
@@ -78,14 +78,14 @@ export default function TitleGenerator() {
         return;
       }
 
-      const response = await fetch('/api/openai/chat', {
+      const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          topic,
+          theme: topic,
           userId: profile.id
         }),
       });
@@ -98,8 +98,12 @@ export default function TitleGenerator() {
       const data = await response.json();
       setGeneratedTitles(data.titles);
       
-      // Refresh the profile to get the latest credits
-      await updateProfile(profile);
+      // Update credits only after successful completion
+      const updatedProfile = {
+        ...profile,
+        credits: profile.credits - creditCost,
+      };
+      await updateProfile(updatedProfile);
     } catch (err) {
       console.error('Error in title generation:', err);
       setError((err as Error).message);
