@@ -132,10 +132,18 @@ export async function POST(req: Request) {
           // If we can't get the text either, use the default error message
         }
       }
+      // Return error in a proper JSON format
       return NextResponse.json({ error: errorMessage }, { status: response.status });
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (error) {
+      console.error('Error parsing DeepSeek response:', error);
+      return NextResponse.json({ error: 'Invalid response from AI service' }, { status: 500 });
+    }
+
     const outline = data.choices[0]?.message?.content;
 
     if (!outline) {
@@ -151,7 +159,8 @@ export async function POST(req: Request) {
     if (updateError) {
       console.error('Failed to update credits:', updateError);
       return NextResponse.json({ 
-        error: 'Failed to update credits' 
+        error: 'Failed to update credits',
+        details: updateError.message 
       }, { status: 500 });
     }
 

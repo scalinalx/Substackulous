@@ -265,14 +265,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
-      // If database update successful, update local state
+      // If database update successful, update local state immediately
       setProfile(newProfile);
     } catch (error) {
       console.error('Error updating profile:', error);
-      // Refresh profile from database to ensure consistency
+      // On error, refresh the profile from database to ensure consistency
       if (user) {
         await fetchProfile(user.id);
       }
+      throw error; // Re-throw the error so the component can handle it
     }
   };
 
