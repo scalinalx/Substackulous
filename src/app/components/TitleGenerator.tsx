@@ -12,7 +12,18 @@ export default function TitleGenerator() {
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
   const [topic, setTopic] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const creditCost = 1;
+
+  const copyToClipboard = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,17 +146,34 @@ export default function TitleGenerator() {
             {generatedTitles.map((title, index) => (
               <div
                 key={index}
-                className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-indigo-200 transition-colors"
+                className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
               >
                 <span className="flex-none w-8 text-gray-400 text-sm">
                   {index + 1}.
                 </span>
-                <input
-                  type="text"
-                  value={title}
-                  readOnly
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-gray-900"
-                />
+                <div className="flex-1 text-gray-900">
+                  {title}
+                </div>
+                <button
+                  onClick={() => copyToClipboard(title, index)}
+                  className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  {copiedIndex === index ? (
+                    <span className="flex items-center">
+                      <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Copied!
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                      </svg>
+                      Copy
+                    </span>
+                  )}
+                </button>
               </div>
             ))}
           </div>

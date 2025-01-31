@@ -100,6 +100,14 @@ export default function ThumbnailGenerator() {
                 case 'success':
                   tempImages[data.index] = data.imageUrl;
                   setGeneratedImages({ urls: tempImages });
+                  // Deduct credits after first successful image generation
+                  if (tempImages.length === 1) {
+                    const updatedProfile = {
+                      ...profile,
+                      credits: (profile?.credits || 0) - creditCost,
+                    };
+                    await updateProfile(updatedProfile);
+                  }
                   break;
                 case 'error':
                   setError(data.message);
@@ -122,13 +130,6 @@ export default function ThumbnailGenerator() {
       if (!completionReceived) {
         throw new Error('Generation did not complete successfully');
       }
-
-      // Update credits only after successful completion
-      const updatedProfile = {
-        ...profile,
-        credits: profile.credits - creditCost,
-      };
-      await updateProfile(updatedProfile);
     } catch (err) {
       setError((err as Error).message);
       setGeneratedImages(null);

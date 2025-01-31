@@ -114,6 +114,14 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
                 case 'success':
                   tempImages[data.index] = data.imageUrl;
                   setGeneratedImages([...tempImages]);
+                  // Deduct credits after first successful image generation
+                  if (tempImages.length === 1) {
+                    const updatedProfile = {
+                      ...profile,
+                      credits: (profile?.credits || 0) - creditCost,
+                    };
+                    await updateProfile(updatedProfile);
+                  }
                   break;
                 case 'error':
                   setError(data.message);
