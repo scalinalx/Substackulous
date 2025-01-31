@@ -43,9 +43,17 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
     setGeneratedTitles([]);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Getting session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session result:', { session, error: sessionError });
+      
+      if (sessionError) {
+        setError(`Authentication error: ${sessionError.message}`);
+        return;
+      }
+      
       if (!session) {
-        setError('Not authenticated');
+        setError('Not authenticated - no session found');
         return;
       }
 
@@ -69,16 +77,11 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
 
       const data = await response.json();
       setGeneratedTitles(data.titles);
-
-      // Refresh the profile to get updated credits
-      if (profile) {
-        const updatedProfile = {
-          ...profile,
-          credits: profile.credits - creditCost,
-        };
-        await updateProfile(updatedProfile);
-      }
+      
+      // Refresh the profile to get the latest credits
+      await updateProfile(profile);
     } catch (err) {
+      console.error('Error in title generation:', err);
       setError((err as Error).message);
       setGeneratedTitles([]);
     } finally {

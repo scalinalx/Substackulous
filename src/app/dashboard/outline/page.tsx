@@ -67,9 +67,17 @@ export default function OutlineGenerator() {
     setOutline(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Getting session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session result:', { session, error: sessionError });
+      
+      if (sessionError) {
+        setError(`Authentication error: ${sessionError.message}`);
+        return;
+      }
+      
       if (!session) {
-        setError('Not authenticated');
+        setError('Not authenticated - no session found');
         return;
       }
 
@@ -93,15 +101,10 @@ export default function OutlineGenerator() {
       const data = await response.json();
       setOutline(data.outline);
 
-      // Refresh the profile to get updated credits
-      if (profile) {
-        const updatedProfile = {
-          ...profile,
-          credits: profile.credits - creditCost,
-        };
-        await updateProfile(updatedProfile);
-      }
+      // Refresh the profile to get the latest credits
+      await updateProfile(profile);
     } catch (err) {
+      console.error('Error in outline generation:', err);
       setError((err as Error).message);
       setOutline(null);
     } finally {

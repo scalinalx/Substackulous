@@ -52,9 +52,17 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Getting session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session result:', { session, error: sessionError });
+      
+      if (sessionError) {
+        setError(`Authentication error: ${sessionError.message}`);
+        return;
+      }
+      
       if (!session) {
-        setError('Not authenticated');
+        setError('Not authenticated - no session found');
         return;
       }
 
