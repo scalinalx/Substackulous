@@ -3,6 +3,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 // Create a single instance of the Supabase client
 const supabase = createClientComponentClient();
 
+export { supabase };
 export default supabase;
 
 export interface UserProfile {
