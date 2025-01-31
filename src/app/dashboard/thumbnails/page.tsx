@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import ThumbnailGenerator from '../../components/ThumbnailGenerator';
+import ThumbnailGenerator from '@/app/components/ThumbnailGenerator';
 import Link from 'next/link';
 
 export default function ThumbnailsPage() {
   const [mounted, setMounted] = useState(false);
-  const { user, profile, signOut, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function ThumbnailsPage() {
     );
   }
 
-  if (!user || !profile) {
+  if (!user) {
     return null;
   }
 
@@ -37,28 +37,24 @@ export default function ThumbnailsPage() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
-          <Link
-            href="/dashboard"
-            className="flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <svg
-              className="w-6 h-6 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div>
+            <Link
+              href="/dashboard"
+              className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            Back to Dashboard
-          </Link>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Dashboard
+            </Link>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">Thumbnail Generator</h1>
+            <p className="mt-2 text-gray-600">
+              Create eye-catching thumbnails with AI-powered text overlay. Perfect for viral posts.
+            </p>
+          </div>
         </div>
         
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
           <ThumbnailGenerator />
         </div>
       </div>

@@ -1,3 +1,8 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import ViralNoteGenerator from '@/app/components/ViralNoteGenerator';
@@ -8,6 +13,32 @@ export const metadata: Metadata = {
 };
 
 export default function ViralPage() {
+  const [mounted, setMounted] = useState(false);
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !loading && !user) {
+      router.replace('/');
+    }
+  }, [mounted, loading, user, router]);
+
+  if (!mounted || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -15,7 +46,7 @@ export default function ViralPage() {
           <div>
             <Link
               href="/dashboard"
-              className="text-indigo-600 hover:text-indigo-500 flex items-center gap-1"
+              className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
