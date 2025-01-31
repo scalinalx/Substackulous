@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface GenerationOptions {
   title: string;
@@ -11,6 +12,7 @@ interface GenerationOptions {
 }
 
 export default function ThumbnailGenerator() {
+  const supabase = createClientComponentClient();
   const { profile, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<{ urls: string[] } | null>(null);
@@ -41,13 +43,19 @@ export default function ThumbnailGenerator() {
       setGeneratedImages(null);
       setError(null);
 
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated');
+        return;
+      }
+
       const prompt = `A viral thumbnail about "${options.title}". Clickbait, Eye-catchy, Engaging visuals. Viral. ${options.theme} theme. Inspiring. CGI. Text Masking.`;
 
       const response = await fetch('/api/replicate/generate-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           prompt,

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
@@ -17,6 +18,7 @@ interface OutlineRequest {
 }
 
 export default function OutlineGenerator() {
+  const supabase = createClientComponentClient();
   const { profile, updateProfile } = useAuth();
   const [formData, setFormData] = useState<OutlineRequest>({
     topic: '',
@@ -65,11 +67,17 @@ export default function OutlineGenerator() {
     setOutline(null);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated');
+        return;
+      }
+
       const response = await fetch('/api/deepseek/generate-outline', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           ...formData,

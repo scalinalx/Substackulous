@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Image from 'next/image';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface SimpleGenerateProps {
   creditCost?: number;
 }
 
 export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps) {
+  const supabase = createClientComponentClient();
   const { profile, updateProfile } = useAuth();
   const [mainIdea, setMainIdea] = useState('');
   const [theme, setTheme] = useState('');
@@ -50,13 +52,19 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated');
+        return;
+      }
+
       const prompt = `A viral image about ${mainIdea}. Clickbait, Eye-catchy, Engaging visuals. Viral. ${theme} theme. Inspiring.`;
 
       const response = await fetch('/api/replicate/generate-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           prompt,

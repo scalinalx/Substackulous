@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface TitleGeneratorProps {
   onClose?: () => void;
 }
 
 export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
+  const supabase = createClientComponentClient();
   const { profile, updateProfile } = useAuth();
   const [theme, setTheme] = useState('');
   const [mainIdeas, setMainIdeas] = useState('');
@@ -41,11 +43,17 @@ export default function TitleGenerator({ onClose }: TitleGeneratorProps) {
     setGeneratedTitles([]);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated');
+        return;
+      }
+
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           theme: theme.trim(),
