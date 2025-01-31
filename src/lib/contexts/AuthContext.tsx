@@ -254,6 +254,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (newProfile: UserProfile) => {
     try {
+      // Set loading state
+      setLoading(true);
+      setError(null);
+
       // Update the database first
       const { error } = await supabase
         .from('profiles')
@@ -267,6 +271,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // If database update successful, update local state immediately
       setProfile(newProfile);
+
+      // Verify the update by fetching the latest profile
+      const { data: updatedProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', newProfile.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Update local state with the fetched profile
+      setProfile(updatedProfile);
     } catch (error) {
       console.error('Error updating profile:', error);
       // On error, refresh the profile from database to ensure consistency
@@ -274,6 +290,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await fetchProfile(user.id);
       }
       throw error; // Re-throw the error so the component can handle it
+    } finally {
+      setLoading(false);
     }
   };
 

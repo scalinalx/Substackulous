@@ -26,6 +26,7 @@ export default function OutlineGenerator() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setGeneratedOutline(null);
 
     if (!profile) {
       setError('User profile not found');
@@ -46,6 +47,15 @@ export default function OutlineGenerator() {
         return;
       }
 
+      // First update the credits
+      const updatedProfile = {
+        ...profile,
+        credits: profile.credits - creditCost,
+      };
+      
+      await updateProfile(updatedProfile);
+
+      // Then make the API call
       const response = await fetch('/api/outline', {
         method: 'POST',
         headers: {
@@ -82,24 +92,29 @@ Format the outline with clear hierarchical structure using markdown.`
         }),
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
+        const data = await response.json();
         throw new Error(data.error || 'Failed to generate outline');
       }
 
+      const data = await response.json();
       setGeneratedOutline(data.content);
-      
-      // Update credits only after successful completion
-      const updatedProfile = {
-        ...profile,
-        credits: profile.credits - creditCost,
-      };
-      await updateProfile(updatedProfile);
     } catch (err) {
       console.error('Error in outline generation:', err);
       setError((err as Error).message);
-      setGeneratedOutline(null);
+      
+      // If there was an error, try to refund the credits
+      if (profile) {
+        try {
+          const refundProfile = {
+            ...profile,
+            credits: profile.credits,  // Keep original credits
+          };
+          await updateProfile(refundProfile);
+        } catch (refundError) {
+          console.error('Error refunding credits:', refundError);
+        }
+      }
     } finally {
       setLoading(false);
     }
