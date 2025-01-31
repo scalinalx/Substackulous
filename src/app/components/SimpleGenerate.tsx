@@ -20,7 +20,6 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-  const [creditDeducted, setCreditDeducted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +34,11 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
       return;
     }
 
+    if (!profile) {
+      setError('User profile not found');
+      return;
+    }
+
     if ((profile?.credits || 0) < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate illustrations.`);
       return;
@@ -44,7 +48,6 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
     setGenerating(true);
     setGeneratedImages([]);
     setLoading(true);
-    setCreditDeducted(false);
 
     try {
       const prompt = `A viral image about ${mainIdea}. Clickbait, Eye-catchy, Engaging visuals. Viral. ${theme} theme. Inspiring.`;
@@ -53,11 +56,13 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
         },
         body: JSON.stringify({
           prompt,
           model: 'flux',
           aspectRatio,
+          userId: profile.id
         }),
       });
 
@@ -93,16 +98,6 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
                 case 'success':
                   tempImages[data.index] = data.imageUrl;
                   setGeneratedImages([...tempImages]);
-                  
-                  // Deduct credits after first successful image generation
-                  if (!creditDeducted && profile) {
-                    const updatedProfile = {
-                      ...profile,
-                      credits: (profile.credits || 0) - creditCost,
-                    };
-                    await updateProfile(updatedProfile);
-                    setCreditDeducted(true);
-                  }
                   break;
                 case 'error':
                   setError(data.message);
@@ -113,7 +108,6 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
                   }
                   setGeneratedImages(data.imageUrls);
                   completionReceived = true;
-                  setGenerating(false);
                   break;
               }
             } catch (e) {

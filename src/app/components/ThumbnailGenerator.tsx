@@ -27,8 +27,13 @@ export default function ThumbnailGenerator() {
 
   const handleGenerate = async () => {
     try {
+      if (!profile) {
+        setError('User profile not found');
+        return;
+      }
+
       if ((profile?.credits || 0) < creditCost) {
-        alert(`Not enough credits. You need ${creditCost} credits to generate thumbnails.`);
+        setError(`Not enough credits. You need ${creditCost} credits to generate thumbnails.`);
         return;
       }
 
@@ -42,11 +47,13 @@ export default function ThumbnailGenerator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`
         },
         body: JSON.stringify({
           prompt,
           model: 'ideogram-ai/ideogram-v2-turbo',
           aspectRatio: options.aspectRatio,
+          userId: profile.id
         }),
       });
 
@@ -92,15 +99,6 @@ export default function ThumbnailGenerator() {
                   }
                   setGeneratedImages({ urls: data.imageUrls });
                   completionReceived = true;
-                  
-                  // Update credits only after successful completion
-                  if (profile && data.successCount > 0) {
-                    const updatedProfile = {
-                      ...profile,
-                      credits: (profile.credits || 0) - creditCost,
-                    };
-                    await updateProfile(updatedProfile);
-                  }
                   break;
               }
             } catch (e) {
