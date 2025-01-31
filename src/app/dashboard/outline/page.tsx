@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface OutlineRequest {
   topic: string;
@@ -21,6 +22,7 @@ export default function OutlineGenerator() {
   const [mounted, setMounted] = useState(false);
   const { user, profile, loading, updateProfile } = useAuth();
   const router = useRouter();
+  const supabase = createClientComponentClient();
   const [formData, setFormData] = useState<OutlineRequest>({
     topic: '',
     keyPoints: '',
@@ -69,6 +71,8 @@ export default function OutlineGenerator() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Starting outline generation...');
+    console.log('Profile:', { id: profile?.id, credits: profile?.credits });
     
     if (!formData.topic.trim()) {
       setError('Topic is required');
@@ -90,32 +94,84 @@ export default function OutlineGenerator() {
     setOutline(null);
 
     try {
-      const response = await fetch('/api/deepseek/generate-outline', {
+      console.log('Getting session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session result:', { 
+        session: {
+          ...session,
+          access_token: session?.access_token ? '[PRESENT]' : '[MISSING]'
+        }, 
+        error: sessionError 
+      });
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        setError(`Authentication error: ${sessionError.message}`);
+        return;
+      }
+      
+      if (!session) {
+        console.log('No session found, redirecting to login...');
+        router.replace('/');
+        return;
+      }
+
+      console.log('Making API request...');
+      const response = await fetch('/api/outline', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          ...formData,
-          userId: profile.id
+          userId: profile.id,
+          prompt: `Create a ${formData.format} outline using:
+
+**Strategic Foundation**
+- Primary Goal: ${formData.objective}
+- Audience Profile: ${formData.knowledgeLevel} | Target Audience: ${formData.targetAudience || 'General audience'}
+${formData.keyPoints ? `- Key Points to Address:\n${formData.keyPoints}` : ''}
+
+**Content Core**
+- Central Theme: "${formData.topic}"
+- Target Length: ${formData.wordCount} words
+- Content Style: ${formData.tone.join(', ')}
+
+**Output Requirements**
+1. Title Options (3 viral headline variants)
+2. Meta Description (160 chars)
+3. Detailed Section Framework
+   - Introduction (Hook + Context)
+   - Main Body (3-5 key sections)
+   - Conclusion + Call to Action
+4. Key Data Points to Include
+5. Engagement Hooks (Open Loops/Story Elements)
+6. SEO Optimization Notes
+
+Format the outline with clear hierarchical structure using markdown.`
         }),
       });
+      console.log('API response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('API error:', errorData);
         throw new Error(errorData.error || 'Failed to generate outline');
       }
 
       const data = await response.json();
-      setOutline(data.outline);
+      console.log('API success, setting outline...');
+      setOutline(data.content);
 
       // Update profile with new credits
       if (profile) {
+        console.log('Updating profile credits...');
         const updatedProfile = {
           ...profile,
           credits: profile.credits - creditCost
         };
         await updateProfile(updatedProfile);
+        console.log('Credits updated successfully');
       }
     } catch (err) {
       console.error('Error in outline generation:', err);
