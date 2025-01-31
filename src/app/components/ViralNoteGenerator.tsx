@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
@@ -29,38 +29,6 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
   const [topic, setTopic] = useState('');
   const creditCost = 2;
 
-  useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('Initial session check:', { session, error });
-        
-        if (error || !session) {
-          console.log('No session found, redirecting to login...');
-          router.push('/');
-          return;
-        }
-      } catch (err) {
-        console.error('Error checking session:', err);
-        router.push('/');
-      }
-    };
-
-    checkSession();
-
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session);
-      if (event === 'SIGNED_OUT' || !session) {
-        router.push('/');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [supabase, router]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -84,18 +52,10 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
 
     try {
       setLoading(true);
-      console.log('Getting session...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session result:', { session, error: sessionError });
       
-      if (sessionError) {
-        setError(`Authentication error: ${sessionError.message}`);
-        return;
-      }
-      
-      if (!session) {
-        console.log('No session found, redirecting to login...');
-        router.push('/');
+      if (sessionError || !session) {
+        setError('Authentication error. Please try again.');
         return;
       }
 
@@ -122,14 +82,12 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
       const data = await response.json();
       setNotes(data.notes);
 
-      // Refresh the profile to get updated credits
-      if (profile) {
-        const updatedProfile = {
-          ...profile,
-          credits: profile.credits - creditCost,
-        };
-        await updateProfile(updatedProfile);
-      }
+      // Update credits only after successful completion
+      const updatedProfile = {
+        ...profile,
+        credits: profile.credits - creditCost,
+      };
+      await updateProfile(updatedProfile);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate notes');
     } finally {
@@ -165,16 +123,9 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
 
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session result:', { session, error: sessionError });
       
-      if (sessionError) {
-        setError(`Authentication error: ${sessionError.message}`);
-        return;
-      }
-      
-      if (!session) {
-        console.log('No session found, redirecting to login...');
-        router.push('/');
+      if (sessionError || !session) {
+        setError('Authentication error. Please try again.');
         return;
       }
 
