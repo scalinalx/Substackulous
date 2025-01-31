@@ -82,12 +82,12 @@ Format the outline with clear hierarchical structure using markdown.`
         }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate outline');
+        throw new Error(data.error || 'Failed to generate outline');
       }
 
-      const data = await response.json();
       setGeneratedOutline(data.content);
       
       // Update credits only after successful completion
