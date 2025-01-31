@@ -99,6 +99,7 @@ export async function POST(req: Request) {
     }
 
     // Call DeepSeek API
+    console.log('Calling DeepSeek API...');
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -118,35 +119,27 @@ export async function POST(req: Request) {
       signal: controller.signal
     });
 
+    console.log('DeepSeek API response status:', response.status);
+    const responseText = await response.text();
+    console.log('Raw response text:', responseText);
+
     if (!response.ok) {
-      let errorMessage = 'Failed to generate outline';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error?.message || errorData.message || errorMessage;
-      } catch (parseError) {
-        // If we can't parse the error response as JSON, try to get the text
-        try {
-          const errorText = await response.text();
-          errorMessage = errorText || errorMessage;
-        } catch {
-          // If we can't get the text either, use the default error message
-        }
-      }
-      // Return error in a proper JSON format
-      return NextResponse.json({ error: errorMessage }, { status: response.status });
+      return NextResponse.json({ error: responseText }, { status: response.status });
     }
 
     let data;
     try {
-      data = await response.json();
+      data = JSON.parse(responseText);
+      console.log('Parsed response data:', data);
     } catch (error) {
-      console.error('Error parsing DeepSeek response:', error);
-      return NextResponse.json({ error: 'Invalid response from AI service' }, { status: 500 });
+      console.error('Error parsing response:', error);
+      return NextResponse.json({ error: 'Invalid JSON response from AI service' }, { status: 500 });
     }
 
     const outline = data.choices[0]?.message?.content;
 
     if (!outline) {
+      console.error('No outline in response:', data);
       return NextResponse.json({ error: 'No outline generated' }, { status: 500 });
     }
 
@@ -164,6 +157,7 @@ export async function POST(req: Request) {
       }, { status: 500 });
     }
 
+    console.log('Successfully generated outline and updated credits');
     return NextResponse.json({ content: outline });
   } catch (error: any) {
     clearTimeout(timeoutId);

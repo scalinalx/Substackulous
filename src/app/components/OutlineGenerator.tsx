@@ -98,6 +98,7 @@ Format the outline with clear hierarchical structure using markdown.`
       }
 
       const data = await response.json();
+      console.log('Raw API response:', data);
       setGeneratedOutline(data.content);
     } catch (err) {
       console.error('Error in outline generation:', err);
@@ -257,28 +258,10 @@ Format the outline with clear hierarchical structure using markdown.`
       {generatedOutline && (
         <div className="mt-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
-          <div className="prose prose-amber max-w-none bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-            <ReactMarkdown 
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4 text-gray-900" {...props} />,
-                h2: ({node, ...props}) => <h2 className="text-xl font-semibold mb-3 text-gray-800" {...props} />,
-                h3: ({node, ...props}) => <h3 className="text-lg font-medium mb-2 text-gray-800" {...props} />,
-                h4: ({node, ...props}) => <h4 className="text-base font-medium mb-2 text-gray-700" {...props} />,
-                p: ({node, ...props}) => <p className="mb-4 text-gray-600" {...props} />,
-                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-4 space-y-2" {...props} />,
-                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-4 space-y-2" {...props} />,
-                li: ({node, ...props}) => <li className="text-gray-600" {...props} />,
-                blockquote: ({node, ...props}) => (
-                  <blockquote className="border-l-4 border-amber-500 pl-4 my-4 italic text-gray-600" {...props} />
-                ),
-                hr: ({node, ...props}) => <hr className="my-8 border-t border-gray-200" {...props} />,
-                strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
-                em: ({node, ...props}) => <em className="italic text-gray-700" {...props} />,
-              }}
-            >
+          <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+            <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800">
               {generatedOutline}
-            </ReactMarkdown>
+            </pre>
           </div>
         </div>
       )}
