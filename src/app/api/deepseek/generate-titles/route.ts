@@ -108,6 +108,7 @@ Follow these rules:
 6. Target the right emotional triggers
 7. Make value proposition clear
 8. Use current year where relevant
+9. Use strategic clickbait whenever possible
 
 Output ONLY the titles, one per line. No explanations or frameworks needed.`;
 
