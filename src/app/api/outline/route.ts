@@ -161,16 +161,27 @@ export async function POST(req: Request) {
     return NextResponse.json({ content: outline });
   } catch (error: any) {
     clearTimeout(timeoutId);
+    console.error('Error in API route:', error);
     
     if (error.name === 'AbortError') {
-      return NextResponse.json({ error: 'Request timed out' }, { status: 504 });
+      return NextResponse.json({ 
+        error: 'The request timed out. Please try again.',
+        details: 'The AI service took too long to respond.'
+      }, { status: 504 });
     }
 
-    console.error('Error generating outline:', error);
-    return NextResponse.json(
-      { error: error.message || 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    // Handle fetch errors
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      return NextResponse.json({
+        error: 'Failed to connect to the AI service',
+        details: 'The service may be temporarily unavailable.'
+      }, { status: 503 });
+    }
+
+    return NextResponse.json({
+      error: 'An unexpected error occurred',
+      details: error.message || 'No additional details available'
+    }, { status: 500 });
   } finally {
     clearTimeout(timeoutId);
   }

@@ -93,19 +93,29 @@ Format the outline with clear hierarchical structure using markdown.`
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to generate outline');
+        const errorData = await response.json();
+        throw new Error(
+          errorData.details 
+            ? `${errorData.error}: ${errorData.details}`
+            : errorData.error || 'Failed to generate outline'
+        );
       }
 
       const data = await response.json();
       console.log('Raw API response:', data);
+      
+      if (!data.content) {
+        throw new Error('No outline was generated. Please try again.');
+      }
+      
       setGeneratedOutline(data.content);
     } catch (err) {
       console.error('Error in outline generation:', err);
       setError((err as Error).message);
       
-      // If there was an error, try to refund the credits
-      if (profile) {
+      // Only attempt to refund credits if it's not a timeout or connection error
+      const errorMessage = (err as Error).message;
+      if (profile && !errorMessage.includes('timed out') && !errorMessage.includes('Failed to connect')) {
         try {
           const refundProfile = {
             ...profile,
