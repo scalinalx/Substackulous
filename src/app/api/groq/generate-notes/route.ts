@@ -68,40 +68,49 @@ export async function POST(req: Request) {
     }
 
     console.log('Making request to Groq API...');
-    const prompt = `Act as a top Substack growth strategist with 10+ years experience creating viral content. Generate 4 high-impact notes using this framework:
+    const prompt = `Act as a top Substack growth strategist with 10+ years of experience creating viral content. Generate 4 high-impact short notes and 2 long-form notes based on the following framework:
 
-**Newsletter Context**
-- Theme: ${theme}
-${coreTopics ? `- Core Topics: ${coreTopics}` : ''}
-${targetAudience ? `- Target Audience: ${targetAudience}` : ''}
-- Primary Intent: ${primaryIntent}
+**Newsletter Context**  
+- Theme: ${theme}  
+${coreTopics ? `- Core Topics: ${coreTopics}` : ''}  
+${targetAudience ? `- Target Audience: ${targetAudience}` : ''}  
+- Primary Intent: ${primaryIntent}  
 
-**Creation Guidelines**
-1. Hook Formula: Open with "Did you know?" / "Here's why X matters" / Controversial truth / Surprisaing statistic
-2. Value Structure: Problem > Agitate > Solution > Proof
-3. Viral Elements: 
-   - Leverage psychological triggers (curiosity gap, FOMO, social proof)
-   - Include actionable takeaways
-   - Use audience-specific lingo/jargon
-4. Platform Optimization:
-   - 280-300 character sweet spot
-   - 3-4 paragraph max with single-line breaks
-   - Strategic emoji placement (max 1 per note)
-5. CTAs: Soft sell with "Save this" / "Thoughts?" / "Tag someone who..."
+**Short Note Guidelines (4 notes)**  
+1. **Hook Formula**: Open with "Did you know?" / "Here's why X matters" / Controversial truth / Surprising statistic  
+2. **Value Structure**: Problem > Agitate > Solution > Proof  
+3. **Viral Elements**:  
+   - Leverage psychological triggers (curiosity gap, FOMO, social proof)  
+   - Include actionable takeaways  
+   - Use audience-specific lingo/jargon  
+4. **Platform Optimization**:  
+   - 280-300 character sweet spot  
+   - 3-4 paragraph max with single-line breaks  
+   - Strategic emoji placement (max 1 per note)  
+5. **CTAs**: Soft sell with "Save this" / "Thoughts?" / "Tag someone who..."  
+6. **Unique Angle**: Vary hooks/angles across notes  
+7. **Unexpected Twist**: Include 1 unexpected twist per note  
 
-**Output Requirements**
-- Format as numbered list
-- No markdown
-- Vary hooks/angles across notes
-- Tailor to note intent (${primaryIntent})
-- Include 1 unexpected twist per note
+**Long-Form Note Guidelines (2 notes)**  
+1. **Word Count**: Up to 300 words  
+2. **Depth**: Expand on the ${theme}, taking into account ${primaryIntent}  
+3. **Structure**:  
+   - Start with a compelling hook  
+   - Dive deep into the topic with actionable insights  
+   - Include data, examples, or anecdotes  
+   - End with a strong CTA or thought-provoking question  
+4. **Tone**: Maintain a conversational yet authoritative tone  
+5. **Audience Tailoring**: Use audience-specific language and address their pain points  
 
-After these output 2 long-form notes, that include up to 300 words and expant on the ${theme} , taking into account ${primaryIntent} .
+**Output Requirements**  
+- Format as a numbered list for short notes and unnumbered paragraphs for long notes  
+- No markdown in the output  
+- Separate each note with the following separator: ---###$$$###---  
+- Output ONLY the notes and the separator, no other text  
+- Do not indicate the copywriting frameworks or methods used  
+- Each sentence should be on a new line  
 
-Separate each note with a the following separator: ---###$$$###---
-Output ONLY the notes and the separator, no other text. Do not number the notes.
-Never mark the copywriting frameworks you used in the notes. Don't indicate the method used along with each note.
-Don't restrict yourself to only a few wellknown copywriting frameworks like AIDA, FOMO, PAS, etc. Output each sentence on a new line.`;
+make sure you remove from the output the part that is enclosed in <think>  </think> tags`;
 
     const completion = await groq.chat.completions.create({
       messages: [{
