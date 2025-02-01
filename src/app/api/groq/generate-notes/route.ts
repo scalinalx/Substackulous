@@ -92,7 +92,7 @@ ${targetAudience ? `- Target Audience: ${targetAudience}` : ''}
 7. **Unexpected Twist**: Include 1 unexpected twist per note  
 
 **Long-Form Note Guidelines (2 notes)**  
-1. **Word Count**: Up to 500 words  
+1. **Word Count**: Up to 700 words  
 2. **Depth**: Expand on the ${theme}, taking into account ${primaryIntent}  
 3. **Structure**:  
    - Start with a compelling hook  
