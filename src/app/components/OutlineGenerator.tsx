@@ -116,23 +116,35 @@ Format the outline with clear hierarchical structure using markdown.`
         throw new Error('No outline was generated. Please try again.');
       }
 
-      // First update the credits
+      // First set the outline
+      console.log('Setting outline content:', data.content.substring(0, 100) + '...');
+      setGeneratedOutline(data.content);
+      console.log('Outline state updated successfully');
+
+      // Then update the credits
       console.log('Updating credits...');
       const updatedProfile = {
         ...profile,
         credits: profile.credits - creditCost,
       };
-      await updateProfile(updatedProfile);
-      console.log('Credits updated successfully');
 
-      // Then set the outline
-      console.log('Setting outline content:', data.content.substring(0, 100) + '...');
-      setGeneratedOutline(data.content);
-      console.log('Outline state updated successfully');
+      try {
+        await updateProfile(updatedProfile);
+        console.log('Credits updated successfully');
+      } catch (updateError) {
+        console.error('Error updating credits:', updateError);
+        // Don't throw here, we want to keep the outline visible
+      }
 
       // Scroll to the generated outline
       setTimeout(() => {
-        document.querySelector('.generated-outline')?.scrollIntoView({ behavior: 'smooth' });
+        const outlineElement = document.querySelector('.generated-outline');
+        if (outlineElement) {
+          outlineElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          console.log('Scrolled to outline');
+        } else {
+          console.log('Outline element not found');
+        }
       }, 100);
 
     } catch (err) {
@@ -171,6 +183,153 @@ Format the outline with clear hierarchical structure using markdown.`
     setError(null);
   };
 
+  // Memoize the form content to prevent re-renders
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Topic <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="e.g., Substack Growth Hacks"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+          rows={2}
+          required
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Key Points <span className="text-gray-500">(optional)</span>
+        </label>
+        <textarea
+          value={keyPoints}
+          onChange={(e) => setKeyPoints(e.target.value)}
+          placeholder="e.g., Niche selection, Content strategy, Monetization"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+          rows={2}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Target Audience <span className="text-gray-500">(optional)</span>
+        </label>
+        <textarea
+          value={targetAudience}
+          onChange={(e) => setTargetAudience(e.target.value)}
+          placeholder="e.g., Tech-savvy creators looking to grow their newsletter"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+          rows={2}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Primary Objective <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={objective}
+          onChange={(e) => setObjective(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+          required
+        >
+          <option value="">Select an objective</option>
+          <option value="Educate">Educate</option>
+          <option value="Entertain">Entertain</option>
+          <option value="Inspire">Inspire</option>
+          <option value="Persuade">Persuade</option>
+          <option value="Solve a Problem">Solve a Problem</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Knowledge Level <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={knowledgeLevel}
+          onChange={(e) => setKnowledgeLevel(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+          required
+        >
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Word Count <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={wordCount}
+          onChange={(e) => setWordCount(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+          required
+        >
+          <option value="1000">1,000 words</option>
+          <option value="1500">1,500 words</option>
+          <option value="2000">2,000 words</option>
+          <option value="2500">2,500 words</option>
+        </select>
+      </div>
+
+      <div className="flex gap-4">
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md 
+                   hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 
+                   focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        >
+          {loading ? (
+            <span className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generating...
+            </span>
+          ) : 'Generate Outline'}
+        </button>
+        {!loading && (
+          <button
+            type="button"
+            onClick={handleClearForm}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md 
+                     hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+          >
+            Clear Form
+          </button>
+        )}
+      </div>
+    </form>
+  );
+
+  // Memoize the outline content
+  const outlineContent = generatedOutline ? (
+    <div className="mt-8 generated-outline">
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
+      <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 prose prose-amber max-w-none">
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {generatedOutline}
+        </ReactMarkdown>
+      </div>
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={() => setGeneratedOutline(null)}
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          Clear Outline
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
@@ -193,148 +352,8 @@ Format the outline with clear hierarchical structure using markdown.`
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Topic <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            placeholder="e.g., Substack Growth Hacks"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
-            rows={2}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Key Points <span className="text-gray-500">(optional)</span>
-          </label>
-          <textarea
-            value={keyPoints}
-            onChange={(e) => setKeyPoints(e.target.value)}
-            placeholder="e.g., Niche selection, Content strategy, Monetization"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
-            rows={2}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Target Audience <span className="text-gray-500">(optional)</span>
-          </label>
-          <textarea
-            value={targetAudience}
-            onChange={(e) => setTargetAudience(e.target.value)}
-            placeholder="e.g., Tech-savvy creators looking to grow their newsletter"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
-            rows={2}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Primary Objective <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={objective}
-            onChange={(e) => setObjective(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
-            required
-          >
-            <option value="">Select an objective</option>
-            <option value="Educate">Educate</option>
-            <option value="Entertain">Entertain</option>
-            <option value="Inspire">Inspire</option>
-            <option value="Persuade">Persuade</option>
-            <option value="Solve a Problem">Solve a Problem</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Knowledge Level <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={knowledgeLevel}
-            onChange={(e) => setKnowledgeLevel(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
-            required
-          >
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Word Count <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={wordCount}
-            onChange={(e) => setWordCount(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
-            required
-          >
-            <option value="1000">1,000 words</option>
-            <option value="1500">1,500 words</option>
-            <option value="2000">2,000 words</option>
-            <option value="2500">2,500 words</option>
-          </select>
-        </div>
-
-        <div className="flex gap-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md 
-                     hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 
-                     focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Generating...
-              </span>
-            ) : 'Generate Outline'}
-          </button>
-          {!loading && (
-            <button
-              type="button"
-              onClick={handleClearForm}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md 
-                       hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
-            >
-              Clear Form
-            </button>
-          )}
-        </div>
-      </form>
-
-      {generatedOutline && (
-        <div className="mt-8 generated-outline">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
-          <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 prose prose-amber max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {generatedOutline}
-            </ReactMarkdown>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <button
-              onClick={() => setGeneratedOutline(null)}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              Clear Outline
-            </button>
-          </div>
-        </div>
-      )}
+      {formContent}
+      {outlineContent}
 
       {loading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
