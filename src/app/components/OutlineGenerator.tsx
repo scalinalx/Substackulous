@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import supabase from '@/lib/supabase';
@@ -31,7 +31,7 @@ export default function OutlineGenerator() {
     };
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -171,7 +171,7 @@ Format the outline with clear hierarchical structure using markdown.`
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile, creditCost, format, objective, knowledgeLevel, targetAudience, keyPoints, topic, wordCount, tone, updateProfile]);
 
   const handleClearForm = () => {
     setTopic('');
@@ -310,7 +310,7 @@ Format the outline with clear hierarchical structure using markdown.`
         )}
       </div>
     </form>
-  ), [topic, keyPoints, targetAudience, objective, format, knowledgeLevel, tone, wordCount, loading, handleSubmit]);
+  ), [topic, keyPoints, targetAudience, objective, knowledgeLevel, wordCount, loading, handleSubmit]);
 
   const outlineContent = useMemo(() => {
     if (!generatedOutline) return null;

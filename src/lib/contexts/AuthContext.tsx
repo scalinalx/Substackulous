@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { supabase, UserProfile } from '../supabase';
@@ -107,33 +107,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [router]);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
+    setError(null);
     try {
-      setError(null);
-      setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      
-      if (data.session) {
-        setUser(data.session.user);
-        await fetchProfile(data.session.user.id);
-        router.push('/dashboard');
-      }
     } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setLoading(false);
+      setError(error instanceof Error ? error.message : 'An error occurred during sign in');
+      throw error;
     }
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string) => {
+    setError(null);
     try {
-      setError(null);
-      setLoading(true);
-      
-      // First, create the user in Supabase Auth
-      const { error: signUpError, data } = await supabase.auth.signUp({ 
+      const { error, data } = await supabase.auth.signUp({ 
         email, 
         password,
         options: {
@@ -144,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       });
       
-      if (signUpError) throw signUpError;
+      if (error) throw error;
 
       // Only create profile if user was created successfully
       if (data.user) {
@@ -167,11 +155,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (profileError) {
             console.error('Error creating profile:', profileError);
-            // Don't throw the error as the user is already created
           }
         } catch (profileError) {
           console.error('Error in profile creation:', profileError);
-          // Don't throw the error as the user is already created
         }
       }
 
@@ -180,59 +166,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         message: "Please check your email for a verification link. You must verify your email before accessing your account."
       };
     } catch (error) {
-      setError((error as Error).message);
+      setError(error instanceof Error ? error.message : 'An error occurred during sign up');
       return {
         success: false,
-        message: (error as Error).message
+        message: error instanceof Error ? error.message : 'An error occurred during sign up'
       };
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
+    setError(null);
     try {
-      setError(null);
-      setLoading(true);
-      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
-      setUser(null);
-      setProfile(null);
-      router.push('/');
     } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setLoading(false);
+      setError(error instanceof Error ? error.message : 'An error occurred during sign out');
+      throw error;
     }
-  };
+  }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
+    setError(null);
     try {
-      setError(null);
-      setLoading(true);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${window.location.origin}/auth/callback`
         }
       });
       if (error) throw error;
     } catch (error) {
-      setError((error as Error).message);
-    } finally {
-      setLoading(false);
+      setError(error instanceof Error ? error.message : 'An error occurred during Google sign in');
+      throw error;
     }
-  };
+  }, []);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
+    setError(null);
     try {
-      setError(null);
-      setLoading(true);
-      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${window.location.origin}/auth/reset-password`,
       });
       
       if (error) throw error;
@@ -242,53 +215,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         message: "Password reset instructions have been sent to your email."
       };
     } catch (error) {
-      setError((error as Error).message);
+      setError(error instanceof Error ? error.message : 'An error occurred during password reset');
       return {
         success: false,
-        message: (error as Error).message
+        message: error instanceof Error ? error.message : 'An error occurred during password reset'
       };
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
-  const updateProfile = async (newProfile: UserProfile) => {
+  const updateProfile = useCallback(async (newProfile: UserProfile) => {
+    setError(null);
     try {
-      setError(null);
-      
-      if (!user) {
-        throw new Error('No user logged in');
-      }
-
-      // Update local state first for immediate UI feedback
-      setProfile(newProfile);
-
-      // Then update the database
       const { error } = await supabase
         .from('profiles')
         .update(newProfile)
-        .eq('id', user.id);
+        .eq('id', newProfile.id);
 
-      if (error) {
-        // If database update fails, revert local state
-        const { data: currentProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (currentProfile) {
-          setProfile(currentProfile);
-        }
-        throw error;
-      }
+      if (error) throw error;
 
+      setProfile(newProfile);
     } catch (error) {
-      console.error('Error updating profile:', error);
-      setError((error as Error).message);
+      setError(error instanceof Error ? error.message : 'An error occurred while updating profile');
       throw error;
     }
-  };
+  }, []);
 
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
@@ -302,7 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     error,
     updateProfile
-  }), [user, profile, loading, error]);
+  }), [user, profile, loading, error, signIn, signUp, signOut, signInWithGoogle, resetPassword, updateProfile]);
 
   return (
     <AuthContext.Provider value={contextValue}>
