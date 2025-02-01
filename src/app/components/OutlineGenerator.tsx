@@ -130,6 +130,11 @@ Format the outline with clear hierarchical structure using markdown.`
       setGeneratedOutline(data.content);
       console.log('Outline state updated successfully');
 
+      // Scroll to the generated outline
+      setTimeout(() => {
+        document.querySelector('.generated-outline')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+
     } catch (err) {
       console.error('Error in outline generation:', err);
       setError((err as Error).message);
@@ -150,6 +155,20 @@ Format the outline with clear hierarchical structure using markdown.`
     } finally {
       setLoading(false);
     }
+  };
+
+  // Add a function to handle clearing the form
+  const handleClearForm = () => {
+    setTopic('');
+    setKeyPoints('');
+    setTargetAudience('');
+    setObjective('');
+    setFormat('detailed');
+    setKnowledgeLevel('intermediate');
+    setTone(['professional', 'engaging']);
+    setWordCount('1500');
+    setGeneratedOutline(null);
+    setError(null);
   };
 
   return (
@@ -267,32 +286,52 @@ Format the outline with clear hierarchical structure using markdown.`
           </select>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md 
-                   hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 
-                   focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-        >
-          {loading ? (
-            <span className="flex items-center justify-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Generating...
-            </span>
-          ) : 'Generate Outline'}
-        </button>
+        <div className="flex gap-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md 
+                     hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 
+                     focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {loading ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generating...
+              </span>
+            ) : 'Generate Outline'}
+          </button>
+          {!loading && (
+            <button
+              type="button"
+              onClick={handleClearForm}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md 
+                       hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+            >
+              Clear Form
+            </button>
+          )}
+        </div>
       </form>
 
       {generatedOutline && (
-        <div className="mt-8">
+        <div className="mt-8 generated-outline">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
           <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 prose prose-amber max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {generatedOutline}
             </ReactMarkdown>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => setGeneratedOutline(null)}
+              className="text-sm text-gray-500 hover:text-gray-700"
+            >
+              Clear Outline
+            </button>
           </div>
         </div>
       )}
