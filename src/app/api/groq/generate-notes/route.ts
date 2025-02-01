@@ -68,7 +68,9 @@ export async function POST(req: Request) {
     }
 
     console.log('Making request to Groq API...');
-    const prompt = primaryIntent === 'Growth' ? `Act as a top Substack growth strategist with 10+ years of experience creating viral content. Generate 4 high-impact short notes and 2 long-form notes based on the following framework:
+    let prompt;
+    if (primaryIntent === 'Growth') {
+      prompt = `Act as a top Substack growth strategist with 10+ years of experience creating viral content. Generate 4 high-impact short notes and 2 long-form notes based on the following framework:
 
 **Newsletter Context**  
 - Theme: ${theme}  
@@ -175,7 +177,7 @@ This is how we all [grow/succeed] <3."
 7. **Unexpected Twist**: Include 1 unexpected twist per note  
 
 **Long-Form Note Guidelines (2 notes)**  
-1. **Word Count**: Up to 700 words  
+1. **Word Count**: Between 400 and 700 words  
 2. **Depth**: Expand on the ${theme}, taking into account ${primaryIntent}  
 3. **Structure**:  
    - Start with a compelling hook  
@@ -194,7 +196,277 @@ This is how we all [grow/succeed] <3."
 - Each sentence should be on a new line
 - Frequently use short&sweet sentences that pack a punch.   
 
-Make sure you remove from the output the part that is enclosed in <think>  </think> tags` : `Act as a top Substack growth strategist with 10+ years of experience creating viral content. Generate 4 high-impact short notes and 2 long-form notes based on the following framework:
+Make sure you remove from the output the part that is enclosed in <think>  </think> tags`;
+    } else if (primaryIntent === 'Educational') {
+      prompt = `Act as a top Substack growth strategist with 10+ years of experience creating viral content. Generate 4 high-impact short notes and 2 long-form notes based on the following framework:
+
+**Newsletter Context**  
+- Theme: ${theme}  
+${coreTopics ? `- Core Topics: ${coreTopics}` : ''}  
+${targetAudience ? `- Target Audience: ${targetAudience}` : ''}  
+- Primary Intent: ${primaryIntent}  
+
+Use the following templates as inspiration on how to write viral notes that are Educational:
+
+---
+
+1) "7 Steps to Achieve [Goal/Outcome]" Template
+Intro:
+
+"Most people struggle to [achieve a particular goal]. And 'gurus' charge [$X] for this strategy."
+Context Statement:
+
+"If you're looking to [benefit 1], [benefit 2], or [benefit 3], these [number] steps will get you closer to your goals:"
+Steps (bullet or numbered):
+
+Pick 2–3 core themesEx. If you're focusing on [topic], [topic], or [topic].
+Maintain a consistent scheduleEx. [Frequency 1], [Frequency 2], [Frequency 3].
+Make each piece of content clear and actionableStrategy: ["1 piece of content > 1 main takeaway"].
+Engage with others in your nicheAction: Follow, comment, and share their work.
+Leave thoughtful comments that add valueTip: Offer new angles or personal insights.
+Include a call-to-action (CTA) every timeEx. Encourage readers to [subscribe, share, comment, etc.].
+Track your best-performing content and double downUse data to see what resonates; refine your strategy accordingly.
+Bonus Tip:
+
+[Short, personal or community-focused idea—e.g., "Send a Sunday edition with a personal note."]
+Conclusion (Community & Encouragement):
+
+"[Platform/Topic] isn't just about [surface goal]; it's about building a real community and creating opportunities on your own terms. Keep going!"
+P.S.:
+
+Invite readers to share, "restack," or pass it on to someone who might need it.
+
+2) "7 Stages of Growth" Template
+Headline/Hook:
+
+"There are [X] stages to growing in [Platform/Topic], and most people stop at [Stage Y]."
+Stage Breakdown (number each stage):
+
+Stage 1: Start Consistently (Even with No Audience)Emphasize that consistency builds trust—not overnight fame.
+Stage 2: Build a Core AudienceFocus on [small, engaged group] rather than vanity metrics.
+Stage 3: Grow Through Word-of-MouthIf people aren't sharing, your content may not be compelling enough.
+Stage 4: Collaborate with OthersPartnerships, guest features, or cross-promotion.
+Stage 5: Monetize Before You Feel "Ready"Start small; see who's willing to invest early.
+Stage 6: Expand Your BrandVenture beyond your main medium into [podcasts, videos, workshops, etc.].
+Stage 7: Become the Go-To ExpertGain recognition as a trusted source in your niche.
+Motivation/Call-Out:
+
+"Most people play it safe and never go past [Stage X]. The real growth starts where your comfort zone ends."
+P.S.:
+
+Invite to share or restack for someone who needs it.
+
+3) "Stop Chasing Hacks" Template
+Intro (Bold Statement):
+
+"Stop chasing hacks. Here's what actually works to [achieve a goal in your domain]:"
+Key Points (short paragraphs):
+
+Pick a Clear LaneYour [content/product/service] doesn't need to serve everyone. Specific focus builds loyalty.
+Write/Communicate for One PersonMake it feel personal; speak directly to that one ideal audience member.
+Make Value ObviousAlways answer: "What's in it for the [reader/user/customer]?"
+Engage Like You Mean ItThoughtful replies and community interactions matter more than you think.
+Repurpose Your Best WorkNot everyone sees everything—reuse your content across platforms.
+Collaborate WiselyChoose partners whose audiences naturally align with yours.
+Build Momentum with ConsistencyShow up regularly so people know they can trust you.
+Conclusion (Reality Check):
+
+"[Platform/Topic] growth isn't rocket science. It's about clarity, connection, and consistency."
+Question/Engagement CTA:
+
+"What's one strategy you've tried that worked wonders? Drop it in the comments."
+
+4) "Simple Engagement Strategy" Template
+Headline/Hook:
+
+"My [engagement/sales/traffic] went up [X times] in [timeframe] with this exact strategy:"
+Bullet Steps:
+
+Be a Reply Person: Engage in [platform/community/ comments] consistently.
+Post Frequently: [3–5 times per day/week/month].
+Like and Interact: Show genuine support as you scroll.
+Conclusion (Simplicity Emphasis):
+
+"Just show up every day and engage. It's that simple."
+
+5) "The 100 Rule" Template
+Headline/Hook:
+
+"You'll need to show up [100 times] before you see real results."
+List the "100 Actions":
+
+Write [100 posts/pieces of content].
+Reply to [100 comments].
+Send [100 outreach messages/emails].
+Publish [100 short-form pieces of content on your chosen platform].
+Key Insight:
+
+"Most people quit at [10]. Don't stop before the magic happens."
+
+6) "Harsh Truth + Action Steps" Template
+Headline/Hook:
+
+"Harsh [Platform/Topic] truth: [Core statement]."
+Short List of Essentials:
+
+Show up daily/regularly.
+Promote your work outside [platform].
+Build relationships with others in your field.
+Support others if you want support back.
+Stop/Start Sections:
+
+STOP: [Waiting for results to happen magically.]
+START: [Actively sharing, engaging with your niche, being unapologetic about growth.]
+Engagement CTA:
+
+"Drop your [link/product/page] below—let's check them out and support each other."
+Motivational Ending:
+
+"Let's grow together."
+
+7) "30-Day Growth Plan" Template
+Headline:
+
+"If I Had [X Days] to [Achieve a Goal], Here's Exactly What I'd Do"
+Context/Claim:
+
+"I launched [Project Name] and achieved [specific result]. This strategy isn't flashy, but it works."
+Steps Overview:
+
+Start with Your Value PropositionWho are you helping, and how?
+Clear tagline or description.
+Optimize Your [Profile/Page]Headline, Bio, Welcome Post (focus on Credibility + Conversion).
+Post Consistently with a Clear Plan[Frequency: e.g., 3x a week, each post has a distinct goal].
+Day-by-Day BreakdownExample schedule:Day 1: Personal story (awareness)
+Day 3: Trust-building info (engagement)
+Day 5: Conversion push (ask for sale/subscription)
+Other days: [Short updates, Q&A, repurposed content].
+Promote on Other Platforms[List the platforms: LinkedIn, Twitter, etc. + strategy].
+Use a Lead Magnet[Giveaway, checklist, or free webinar].
+Nurture Your Audience to Become Loyal/PayingWelcome email, exclusive offers, limited-time discounts.
+Results / Expectation Setting:
+
+"Expect steady growth in [timeframe] if you stick to this plan."
+Final Prompt/CTA:
+
+"Save this and share if it helped. Comment 'Guide' if you want a deeper dive."
+
+8) "Addressing a Trend and Providing Solutions" Template
+Headline/Hook:
+
+"Have you noticed this new trend in [your niche/industry]? Everyone's talking about [pain point or complaint]."
+Transition to a Hard Truth:
+
+"Complaining won't solve it. Mastering the [platform/topic] will."
+3 Strategies Overview (Short Bullets):
+
+Prioritize EngagementComments and replies build trust.
+Connect GenuinelySpend time where your audience is; listen to them.
+Offer Value First, AlwaysProvide more than you ask in return.
+Conclusion (Empowerment):
+
+"Consistent action + focus on others = lasting growth."
+P.S.:
+
+"Be honest—have you felt [pain point]? Restack/share to help others."
+
+9) "85% Strategy Checklist" Template
+Intro/Hook:
+
+"If 85% of your [Platform/Topic] strategy looks like this, you'll see inevitable growth…"
+Checklist (Bulleted List):
+
+Consistent [Content Creation]
+Posting bold, original updates
+Replying to your [readers/customers/community]
+Networking with peers
+Promoting unapologetically
+Repurposing top content
+Offering genuine value
+Experimenting with premium/paid tiers
+Cross-promoting with aligned brands
+Focusing on connection over perfection
+Conclusion:
+
+"With a strategy this effective, growth becomes inevitable—even if you're not perfect."
+
+10) "It's Easier to Hit [Big Milestone] Than to Struggle for [Small Milestone]" Template
+Headline/Hook:
+
+"It's easier to [achieve big outcome] than to struggle for [tiny outcome]. (Let me prove it to you in 30 seconds.)"
+Illustrative Scenarios (Short paragraphs):
+
+Low-Frequency Approach[One piece of content a week, random, for a year]. Minimal progress.
+Medium-Frequency + Some CTASlight improvement, still small scale.
+Strategic GrowthEngage with peers, repurpose content, collaborate, see exponential growth.
+Multi-Platform Amplification[Podcasts, cross-promo, multi-platform content machine], watch your reach explode.
+Main Takeaway:
+
+"The secret isn't in doing more. It's in choosing strategies that propel you further, faster."
+P.S.:
+
+"Restack/share if someone needs it."
+
+11) "Avoid vs. Instead" Template
+Intro/Hook:
+
+"People overcomplicate [Platform/Topic]. If you're just starting out, here's what to avoid—and what to do instead."
+Avoid List:
+
+Posting random topics with no focus.
+[Hiding all content, being overly salesy, too soon].
+Trying to copy someone else's voice.
+Overthinking design, logos, or perfect visuals early on.
+Instead List:
+
+Pick one niche and stick to it.
+Offer free, high-value solutions or content first.
+Share personal stories to build a real connection.
+Post consistently (even if it's just once a week).
+Conclusion (Focus/Timeframe):
+
+"Do this for the first [90 days/timeframe], and you'll build momentum and learn what truly works."
+
+----
+
+**Short Note Guidelines (4 notes)**  
+1. **Hook Formula**: Start from the templates then go form there. Vary the hooks , be original, creative, engaging and even clickbaity if the context requires it. 
+2. Include the relevant industry examples (based on theme, core topics, target audience). Tailor numbers and timeframes to be realistic for the niche, context. Try to capture a unique voice  and personality to make them genuine and authentic.  
+3. **Viral Elements**:  
+   - Leverage psychological triggers (curiosity gap, FOMO, social proof)  
+   - Include actionable takeaways  
+   - Use audience-specific lingo/jargon  
+4. **Platform Optimization**:  
+   - 280-300 character sweet spot  
+   - 3-4 paragraph max with single-line breaks  
+   - Strategic emoji placement (max 1 per note)  
+5. **CTAs**: Soft sell with "Save this" / "Thoughts?" / "Tag someone who..."  
+6. **Unique Angle**: Vary hooks/angles across notes  
+7. **Unexpected Twist**: Include 1 unexpected twist per note  
+
+**Long-Form Note Guidelines (2 notes)**  
+1. **Word Count**: Between 400 and 700 words  
+2. **Depth**: Expand on the ${theme}, taking into account ${primaryIntent}. Take the templates as a starting point and expand on them. 
+3. **Structure**:  
+   - Start with a compelling hook  
+   - Dive deep into the topic with actionable insights  
+   - Include data, examples, or anecdotes  
+   - End with a strong CTA or thought-provoking question  
+4. **Tone**: Maintain a conversational yet authoritative tone  
+5. **Audience Tailoring**: Use audience-specific language and address their pain points  
+
+**Output Requirements**  
+- Format as a numbered list for short notes and unnumbered paragraphs for long notes  
+- No markdown in the output  
+- Separate each note with the following separator: ---###$$$###---  
+- Output ONLY the notes and the separator, no other text  
+- Do not indicate the copywriting frameworks or methods used  
+- Each sentence should be on a new line
+- Frequently use short&sweet sentences that pack a punch.   
+
+Make sure you remove from the output the part that is enclosed in <think>  </think> tags`;
+    } else {
+      prompt = `Act as a top Substack growth strategist with 10+ years of experience creating viral content. Generate 4 high-impact short notes and 2 long-form notes based on the following framework:
 
 **Newsletter Context**  
 - Theme: ${theme}  
@@ -218,7 +490,7 @@ ${targetAudience ? `- Target Audience: ${targetAudience}` : ''}
 7. **Unexpected Twist**: Include 1 unexpected twist per note  
 
 **Long-Form Note Guidelines (2 notes)**  
-1. **Word Count**: Up to 700 words  
+1. **Word Count**: Between 400 and 700 words  
 2. **Depth**: Expand on the ${theme}, taking into account ${primaryIntent}  
 3. **Structure**:  
    - Start with a compelling hook  
@@ -238,6 +510,7 @@ ${targetAudience ? `- Target Audience: ${targetAudience}` : ''}
 - Frequently use short&sweet sentences that pack a punch.   
 
 Make sure you remove from the output the part that is enclosed in <think>  </think> tags`;
+    }
 
     const completion = await groq.chat.completions.create({
       messages: [{
