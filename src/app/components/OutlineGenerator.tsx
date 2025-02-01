@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import supabase from '@/lib/supabase';
@@ -22,6 +22,13 @@ export default function OutlineGenerator() {
   const [wordCount, setWordCount] = useState('1500');
   const [error, setError] = useState<string | null>(null);
   const creditCost = 2;
+
+  useEffect(() => {
+    console.log('OutlineGenerator component mounted');
+    return () => {
+      console.log('OutlineGenerator component unmounted');
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +58,7 @@ export default function OutlineGenerator() {
         return;
       }
 
-      console.log('Making API request with prompt...');
+      console.log('Making API request...');
       const response = await fetch('/api/outline', {
         method: 'POST',
         headers: {
@@ -112,17 +119,14 @@ Format the outline with clear hierarchical structure using markdown.`
       console.log('API Response Data:', data);
 
       if (!data.content) {
-        console.error('No content in response:', data);
-        throw new Error('No outline was generated. Please try again.');
+        throw new Error('No outline was generated.');
       }
 
-      // First set the outline
-      console.log('Setting outline content:', data.content.substring(0, 100) + '...');
+      // Set outline first
       setGeneratedOutline(data.content);
-      console.log('Outline state updated successfully');
+      console.log('Outline state updated');
 
-      // Then update the credits
-      console.log('Updating credits...');
+      // Then update credits
       const updatedProfile = {
         ...profile,
         credits: profile.credits - creditCost,
@@ -133,31 +137,29 @@ Format the outline with clear hierarchical structure using markdown.`
         console.log('Credits updated successfully');
       } catch (updateError) {
         console.error('Error updating credits:', updateError);
-        // Don't throw here, we want to keep the outline visible
       }
 
-      // Scroll to the generated outline
+      // Scroll to outline
       setTimeout(() => {
         const outlineElement = document.querySelector('.generated-outline');
         if (outlineElement) {
           outlineElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
           console.log('Scrolled to outline');
-        } else {
-          console.log('Outline element not found');
         }
       }, 100);
 
     } catch (err) {
       console.error('Error in outline generation:', err);
-      setError((err as Error).message);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       
       // Only attempt to refund credits if it's not a timeout or connection error
-      const errorMessage = (err as Error).message;
-      if (profile && !errorMessage.includes('timed out') && !errorMessage.includes('Failed to connect')) {
+      if (profile && err instanceof Error && 
+          !err.message.includes('timed out') && 
+          !err.message.includes('Failed to connect')) {
         try {
           const refundProfile = {
             ...profile,
-            credits: profile.credits,  // Keep original credits
+            credits: profile.credits,
           };
           await updateProfile(refundProfile);
         } catch (refundError) {
@@ -169,7 +171,6 @@ Format the outline with clear hierarchical structure using markdown.`
     }
   };
 
-  // Add a function to handle clearing the form
   const handleClearForm = () => {
     setTopic('');
     setKeyPoints('');
@@ -183,8 +184,7 @@ Format the outline with clear hierarchical structure using markdown.`
     setError(null);
   };
 
-  // Memoize the form content to prevent re-renders
-  const formContent = (
+  const formContent = useMemo(() => (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -308,27 +308,29 @@ Format the outline with clear hierarchical structure using markdown.`
         )}
       </div>
     </form>
-  );
+  ), [topic, keyPoints, targetAudience, objective, format, knowledgeLevel, tone, wordCount, loading, handleSubmit]);
 
-  // Memoize the outline content
-  const outlineContent = generatedOutline ? (
-    <div className="mt-8 generated-outline">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
-      <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 prose prose-amber max-w-none">
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {generatedOutline}
-        </ReactMarkdown>
+  const outlineContent = useMemo(() => {
+    if (!generatedOutline) return null;
+    return (
+      <div className="mt-8 generated-outline">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
+        <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 prose prose-amber max-w-none">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {generatedOutline}
+          </ReactMarkdown>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={() => setGeneratedOutline(null)}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            Clear Outline
+          </button>
+        </div>
       </div>
-      <div className="mt-4 flex justify-end">
-        <button
-          onClick={() => setGeneratedOutline(null)}
-          className="text-sm text-gray-500 hover:text-gray-700"
-        >
-          Clear Outline
-        </button>
-      </div>
-    </div>
-  ) : null;
+    );
+  }, [generatedOutline]);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
