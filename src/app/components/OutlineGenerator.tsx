@@ -111,23 +111,27 @@ Format the outline with clear hierarchical structure using markdown.`
       }
 
       const data = await response.json();
-      console.log('Raw API response received');
+      console.log('Raw API response:', data.content);
 
       if (!data.content) {
         throw new Error('No outline was generated.');
       }
 
-      // Extract everything after </think>
-      const thinkTagEnd = data.content.indexOf('</think>');
-      const cleanedContent = thinkTagEnd !== -1 
-        ? data.content.substring(thinkTagEnd + 8).trim() // 8 is the length of '</think>'
-        : data.content.trim();
-
-      console.log('Cleaned content (first 100 chars):', cleanedContent.substring(0, 100));
+      // Extract everything between <think> tags and remove it
+      const cleanedContent = data.content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      console.log('Content after removing think tags:', cleanedContent);
+      
+      // Format the content to ensure proper markdown
+      const formattedContent = cleanedContent
+        .replace(/^\s*\n/gm, '\n') // Remove empty lines with whitespace
+        .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+        .trim();
+      
+      console.log('Final formatted content:', formattedContent);
       
       // Set outline first
-      setGeneratedOutline(cleanedContent);
-      console.log('Outline state updated with cleaned content');
+      setGeneratedOutline(formattedContent);
+      console.log('Outline state updated with cleaned and formatted content');
 
       // Then update credits
       const updatedProfile = {
@@ -328,8 +332,8 @@ Format the outline with clear hierarchical structure using markdown.`
                 h4: ({node, ...props}) => <h4 className="text-base font-semibold text-gray-700 mt-4 mb-2" {...props} />,
                 ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2 text-gray-600" {...props} />,
                 ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-gray-600" {...props} />,
-                li: ({node, ...props}) => <li className="mb-1" {...props} />,
-                p: ({node, ...props}) => <p className="mb-4 text-gray-600" {...props} />,
+                li: ({node, ...props}) => <li className="mb-1 text-gray-600" {...props} />,
+                p: ({node, ...props}) => <p className="mb-4 text-gray-600 whitespace-pre-wrap" {...props} />,
                 strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
                 em: ({node, ...props}) => <em className="text-gray-800 italic" {...props} />,
                 blockquote: ({node, ...props}) => (
@@ -339,6 +343,7 @@ Format the outline with clear hierarchical structure using markdown.`
                   <code className="px-1 py-0.5 bg-gray-100 rounded text-sm font-mono text-amber-600" {...props} />
                 ),
               }}
+              className="whitespace-pre-wrap break-words"
             >
               {generatedOutline}
             </ReactMarkdown>
