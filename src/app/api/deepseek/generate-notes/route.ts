@@ -116,6 +116,8 @@ ${targetAudience ? `- Target Audience: ${targetAudience}` : ''}
 - Tailor to note intent (${primaryIntent})
 - Include 1 unexpected twist per note
 
+After these output 2 long-form notes, that include up to 300 words and expant on the ${theme} , taking into account ${primaryIntent} .
+
 Separate each note with a the following separator: ---###$$$###---
 Output ONLY the notes and the separator, no other text. Do not number the notes.
 Never mark the copywriting frameworks you used in the notes. Don't indicate the method used along with each note.
