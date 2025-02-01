@@ -289,34 +289,39 @@ Format the outline with clear hierarchical structure using markdown.`
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Objective
+                Primary Objective <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.objective}
                 onChange={(e) => setFormData(prev => ({ ...prev, objective: e.target.value }))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+                required
               >
-                <option value="Thought leadership">Thought Leadership</option>
-                <option value="Educational">Educational</option>
-                <option value="Problem-solving">Problem-Solving</option>
-                <option value="Entertainment">Entertainment</option>
+                <option value="">Select an objective</option>
+                <option value="Educate">Educate</option>
+                <option value="Entertain">Entertain</option>
+                <option value="Inspire">Inspire</option>
+                <option value="Persuade">Persuade</option>
+                <option value="Solve a Problem">Solve a Problem</option>
+                <option value="Growth">Growth</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Format
+                Format <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.format}
                 onChange={(e) => setFormData(prev => ({ ...prev, format: e.target.value }))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+                required
               >
                 <option value="How-to guide">How-to Guide</option>
                 <option value="List post">List Post</option>
                 <option value="Case study">Case Study</option>
                 <option value="Opinion piece">Opinion Piece</option>
-                <option value="Interview">Interview</option>
+                <option value="In-Depth Research">In-Depth Research</option>
               </select>
             </div>
 
@@ -345,6 +350,8 @@ Format the outline with clear hierarchical structure using markdown.`
                 onChange={(e) => setFormData(prev => ({ ...prev, wordCount: parseInt(e.target.value) }))}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
               >
+                <option value="500">500 words</option>
+                <option value="800">800 words</option>
                 <option value="1000">1,000 words</option>
                 <option value="1500">1,500 words</option>
                 <option value="2000">2,000 words</option>
@@ -355,10 +362,10 @@ Format the outline with clear hierarchical structure using markdown.`
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tone
+                Tone (multiple selection)
               </label>
               <div className="flex flex-wrap gap-2">
-                {['Professional', 'Casual', 'Humorous', 'Authoritative', 'Empathetic', 'Technical'].map((tone) => (
+                {['Professional', 'Casual', 'Humorous', 'Authoritative', 'Empathetic', 'Technical', 'Inspirational'].map((tone) => (
                   <button
                     key={tone}
                     type="button"
