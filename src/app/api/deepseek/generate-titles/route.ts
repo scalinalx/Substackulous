@@ -6,6 +6,19 @@ if (!DEEPSEEK_API_KEY) {
   throw new Error('Deepseek API key not configured');
 }
 
+import Groq from 'groq-sdk';
+import { Completions } from 'groq-sdk/resources/completions.mjs';
+
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+if (!GROQ_API_KEY) {
+  throw new Error('Groq API key not configured');
+}
+
+const groq = new Groq({
+  apiKey: GROQ_API_KEY
+});
+
+
 // Initialize Supabase client with service role key for admin operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -112,39 +125,29 @@ Follow these rules:
 
 Output ONLY the titles, one per line. No explanations or frameworks needed.`;
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert copywriter and viral content strategist. You excel at creating engaging, viral titles that drive clicks and engagement.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 1000,
-        temperature: 0.7,
-        top_p: 1.0
-      }),
-      // Add timeout of 55 seconds
-      signal: AbortSignal.timeout(55000)
+
+    const completion = await groq.chat.completions.create({
+      messages: [{
+        role: "user",
+        content: prompt
+      }],
+      model: "deepseek-r1-distill-llama-70b",
+      temperature: 0.69,
+      max_tokens: 4096,
+      top_p: 0.95,
+      stream: false,
+      stop: null
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Failed to generate titles');
+    console.log('Received response from Groq API');
+
+    const content = completion.choices[0]?.message?.content;
+    
+    if (!content) {
+      throw new Error('No content received from API');
     }
 
-    const data = await response.json();
-    const titles = data.choices[0]?.message?.content
+    const titles = content
       .split('\n')
       .filter((line: string) => line.trim())
       .map((title: string) => {
