@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import supabase from '@/lib/supabase';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Components } from 'react-markdown';
 
 export default function OutlineGenerator() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function OutlineGenerator() {
   const creditCost = 2;
 
   useEffect(() => {
-    console.log('OutlineGenerator component mounted');
+    console.log('OutlineGenerator v2.0 mounted - with think tag removal');
     return () => {
       console.log('OutlineGenerator component unmounted');
     };
@@ -46,19 +47,15 @@ export default function OutlineGenerator() {
 
     try {
       setLoading(true);
-      console.log('Starting outline generation...');
-      console.log('Profile:', profile);
-
+      console.log('Starting outline generation v2.0...');
+      
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Getting session...');
-      console.log('Session result:', { session, error: sessionError });
       
       if (sessionError || !session) {
         setError('Authentication error. Please try again.');
         return;
       }
 
-      console.log('Making API request...');
       const response = await fetch('/api/outline', {
         method: 'POST',
         headers: {
@@ -96,8 +93,6 @@ Format the outline with clear hierarchical structure using markdown.`
         signal: AbortSignal.timeout(250000)
       });
 
-      console.log('API response received, status:', response.status);
-      
       if (!response.ok) {
         const errorData = await response.json().catch(e => ({
           error: response.statusText,
@@ -116,18 +111,23 @@ Format the outline with clear hierarchical structure using markdown.`
       }
 
       const data = await response.json();
-      console.log('API Response Data:', data);
+      console.log('Raw API response received');
 
       if (!data.content) {
         throw new Error('No outline was generated.');
       }
 
-      // Remove the thinking process and extract the actual outline
-      const cleanedContent = data.content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      // Extract everything after </think>
+      const thinkTagEnd = data.content.indexOf('</think>');
+      const cleanedContent = thinkTagEnd !== -1 
+        ? data.content.substring(thinkTagEnd + 8).trim() // 8 is the length of '</think>'
+        : data.content.trim();
+
+      console.log('Cleaned content (first 100 chars):', cleanedContent.substring(0, 100));
       
       // Set outline first
       setGeneratedOutline(cleanedContent);
-      console.log('Outline state updated');
+      console.log('Outline state updated with cleaned content');
 
       // Then update credits
       const updatedProfile = {
@@ -155,7 +155,6 @@ Format the outline with clear hierarchical structure using markdown.`
       console.error('Error in outline generation:', err);
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       
-      // Only attempt to refund credits if it's not a timeout or connection error
       if (profile && err instanceof Error && 
           !err.message.includes('timed out') && 
           !err.message.includes('Failed to connect')) {
@@ -318,24 +317,32 @@ Format the outline with clear hierarchical structure using markdown.`
     return (
       <div className="mt-8 generated-outline">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
-        <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 prose prose-amber max-w-none">
-          <ReactMarkdown 
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4" {...props} />,
-              h2: ({node, ...props}) => <h2 className="text-xl font-semibold mt-6 mb-3" {...props} />,
-              h3: ({node, ...props}) => <h3 className="text-lg font-medium mt-4 mb-2" {...props} />,
-              ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4" {...props} />,
-              ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4" {...props} />,
-              li: ({node, ...props}) => <li className="mb-1" {...props} />,
-              p: ({node, ...props}) => <p className="mb-4" {...props} />,
-              blockquote: ({node, ...props}) => (
-                <blockquote className="border-l-4 border-amber-500 pl-4 italic my-4" {...props} />
-              ),
-            }}
-          >
-            {generatedOutline}
-          </ReactMarkdown>
+        <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+          <div className="prose prose-amber prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-h4:text-base prose-p:text-gray-600 prose-strong:text-gray-900 prose-ul:list-disc prose-ol:list-decimal max-w-none">
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({node, ...props}) => <h1 className="text-2xl font-bold text-gray-900 mb-6 pb-2 border-b" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-xl font-bold text-gray-800 mt-8 mb-4" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3" {...props} />,
+                h4: ({node, ...props}) => <h4 className="text-base font-semibold text-gray-700 mt-4 mb-2" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4 space-y-2 text-gray-600" {...props} />,
+                ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-gray-600" {...props} />,
+                li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                p: ({node, ...props}) => <p className="mb-4 text-gray-600" {...props} />,
+                strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
+                em: ({node, ...props}) => <em className="text-gray-800 italic" {...props} />,
+                blockquote: ({node, ...props}) => (
+                  <blockquote className="border-l-4 border-amber-500 pl-4 py-2 my-4 bg-amber-50/50 text-gray-700 italic" {...props} />
+                ),
+                code: ({...props}) => (
+                  <code className="px-1 py-0.5 bg-gray-100 rounded text-sm font-mono text-amber-600" {...props} />
+                ),
+              }}
+            >
+              {generatedOutline}
+            </ReactMarkdown>
+          </div>
         </div>
         <div className="mt-4 flex justify-end">
           <button
