@@ -26,7 +26,6 @@ export default function OutlineGenerator() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setGeneratedOutline(null);
 
     if (!profile) {
       setError('User profile not found');
@@ -40,22 +39,19 @@ export default function OutlineGenerator() {
 
     try {
       setLoading(true);
+      console.log('Starting outline generation...');
+      console.log('Profile:', profile);
+
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Getting session...');
+      console.log('Session result:', { session, error: sessionError });
       
       if (sessionError || !session) {
         setError('Authentication error. Please try again.');
         return;
       }
 
-      // First update the credits
-      const updatedProfile = {
-        ...profile,
-        credits: profile.credits - creditCost,
-      };
-      
-      await updateProfile(updatedProfile);
-
-      // Then make the API call
+      console.log('Making API request with prompt...');
       const response = await fetch('/api/outline', {
         method: 'POST',
         headers: {
@@ -93,6 +89,8 @@ Format the outline with clear hierarchical structure using markdown.`
         signal: AbortSignal.timeout(250000)
       });
 
+      console.log('API response received, status:', response.status);
+      
       if (!response.ok) {
         const errorData = await response.json().catch(e => ({
           error: response.statusText,
@@ -111,17 +109,26 @@ Format the outline with clear hierarchical structure using markdown.`
       }
 
       const data = await response.json();
-      console.log('Raw API response:', data);
-      console.log('Response content:', data.content);
-      
+      console.log('API Response Data:', data);
+
       if (!data.content) {
         console.error('No content in response:', data);
         throw new Error('No outline was generated. Please try again.');
       }
-      
-      console.log('Setting outline to:', data.content);
+
+      // First update the credits
+      console.log('Updating credits...');
+      const updatedProfile = {
+        ...profile,
+        credits: profile.credits - creditCost,
+      };
+      await updateProfile(updatedProfile);
+      console.log('Credits updated successfully');
+
+      // Then set the outline
+      console.log('Setting outline content:', data.content.substring(0, 100) + '...');
       setGeneratedOutline(data.content);
-      console.log('Outline state updated');
+      console.log('Outline state updated successfully');
 
     } catch (err) {
       console.error('Error in outline generation:', err);
@@ -282,11 +289,8 @@ Format the outline with clear hierarchical structure using markdown.`
       {generatedOutline && (
         <div className="mt-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
-          <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-            <ReactMarkdown 
-              remarkPlugins={[remarkGfm]} 
-              className="prose prose-amber max-w-none"
-            >
+          <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 prose prose-amber max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {generatedOutline}
             </ReactMarkdown>
           </div>
