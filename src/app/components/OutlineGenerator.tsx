@@ -122,8 +122,11 @@ Format the outline with clear hierarchical structure using markdown.`
         throw new Error('No outline was generated.');
       }
 
+      // Remove the thinking process and extract the actual outline
+      const cleanedContent = data.content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      
       // Set outline first
-      setGeneratedOutline(data.content);
+      setGeneratedOutline(cleanedContent);
       console.log('Outline state updated');
 
       // Then update credits
@@ -316,7 +319,21 @@ Format the outline with clear hierarchical structure using markdown.`
       <div className="mt-8 generated-outline">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
         <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200 prose prose-amber max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4" {...props} />,
+              h2: ({node, ...props}) => <h2 className="text-xl font-semibold mt-6 mb-3" {...props} />,
+              h3: ({node, ...props}) => <h3 className="text-lg font-medium mt-4 mb-2" {...props} />,
+              ul: ({node, ...props}) => <ul className="list-disc pl-6 mb-4" {...props} />,
+              ol: ({node, ...props}) => <ol className="list-decimal pl-6 mb-4" {...props} />,
+              li: ({node, ...props}) => <li className="mb-1" {...props} />,
+              p: ({node, ...props}) => <p className="mb-4" {...props} />,
+              blockquote: ({node, ...props}) => (
+                <blockquote className="border-l-4 border-amber-500 pl-4 italic my-4" {...props} />
+              ),
+            }}
+          >
             {generatedOutline}
           </ReactMarkdown>
         </div>
