@@ -243,6 +243,7 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
             <option value="Growth">Growth</option>
             <option value="Entertain">Entertain</option>
             <option value="Educate">Educate</option>
+            <option value="Personal Story">Educate</option>
           </select>
         </div>
 
