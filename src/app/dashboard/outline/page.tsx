@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Components } from 'react-markdown';
 
 interface OutlineRequest {
   topic: string;
@@ -160,8 +163,27 @@ Format the outline with clear hierarchical structure using markdown.`
       }
 
       const data = await response.json();
-      console.log('API success, setting outline...');
-      setOutline(data.content);
+      console.log('Raw API response:', data.content);
+
+      if (!data.content) {
+        throw new Error('No outline was generated.');
+      }
+
+      // Extract everything between <think> tags and remove it
+      const cleanedContent = data.content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      console.log('Content after removing think tags:', cleanedContent);
+      
+      // Format the content to ensure proper markdown
+      const formattedContent = cleanedContent
+        .replace(/^\s*\n/gm, '\n') // Remove empty lines with whitespace
+        .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+        .trim();
+      
+      console.log('Final formatted content:', formattedContent);
+      
+      // Set outline
+      setOutline(formattedContent);
+      console.log('Outline state updated with cleaned and formatted content');
 
       // Update profile with new credits
       if (profile) {
@@ -374,16 +396,45 @@ Format the outline with clear hierarchical structure using markdown.`
           </form>
 
           {outline && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-8"
-            >
+            <div className="mt-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
-              <div className="prose prose-amber max-w-none">
-                <div className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm" dangerouslySetInnerHTML={{ __html: outline }} />
+              <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+                <div className="prose prose-amber prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-h4:text-base prose-p:text-gray-600 prose-strong:text-gray-900 prose-ul:list-disc prose-ol:list-decimal max-w-none">
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({...props}) => <h1 className="text-2xl font-bold text-gray-900 mb-6 pb-2 border-b" {...props} />,
+                      h2: ({...props}) => <h2 className="text-xl font-bold text-gray-800 mt-8 mb-4" {...props} />,
+                      h3: ({...props}) => <h3 className="text-lg font-semibold text-gray-800 mt-6 mb-3" {...props} />,
+                      h4: ({...props}) => <h4 className="text-base font-semibold text-gray-700 mt-4 mb-2" {...props} />,
+                      ul: ({...props}) => <ul className="list-disc pl-6 mb-4 space-y-2 text-gray-600" {...props} />,
+                      ol: ({...props}) => <ol className="list-decimal pl-6 mb-4 space-y-2 text-gray-600" {...props} />,
+                      li: ({...props}) => <li className="mb-1 text-gray-600" {...props} />,
+                      p: ({...props}) => <p className="mb-4 text-gray-600 whitespace-pre-wrap" {...props} />,
+                      strong: ({...props}) => <strong className="font-semibold text-gray-900" {...props} />,
+                      em: ({...props}) => <em className="text-gray-800 italic" {...props} />,
+                      blockquote: ({...props}) => (
+                        <blockquote className="border-l-4 border-amber-500 pl-4 py-2 my-4 bg-amber-50/50 text-gray-700 italic" {...props} />
+                      ),
+                      code: ({...props}) => (
+                        <code className="px-1 py-0.5 bg-gray-100 rounded text-sm font-mono text-amber-600" {...props} />
+                      ),
+                    }}
+                    className="whitespace-pre-wrap break-words"
+                  >
+                    {outline}
+                  </ReactMarkdown>
+                </div>
               </div>
-            </motion.div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setOutline(null)}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Clear Outline
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>
