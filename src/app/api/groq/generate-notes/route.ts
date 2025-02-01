@@ -219,7 +219,7 @@ Context Statement:
 "If you're looking to [benefit 1], [benefit 2], or [benefit 3], these [number] steps will get you closer to your goals:"
 Steps (bullet or numbered):
 
-Pick 2–3 core themesEx. If you're focusing on [topic], [topic], or [topic].
+Pick 2–3 core themes.Ex. If you're focusing on [topic], [topic], or [topic].
 Maintain a consistent scheduleEx. [Frequency 1], [Frequency 2], [Frequency 3].
 Make each piece of content clear and actionableStrategy: ["1 piece of content > 1 main takeaway"].
 Engage with others in your nicheAction: Follow, comment, and share their work.
@@ -431,7 +431,131 @@ Conclusion (Focus/Timeframe):
 
 **Short Note Guidelines (4 notes)**  
 1. **Hook Formula**: Start from the templates then go form there. Vary the hooks , be original, creative, engaging and even clickbaity if the context requires it. 
-2. Include the relevant industry examples (based on theme, core topics, target audience). Tailor numbers and timeframes to be realistic for the niche, context. Try to capture a unique voice  and personality to make them genuine and authentic.  
+2. Focus on what the primary feeling or insight you want to share. Adjust tone, add emojis, or style to match personality. Be authentic and genuine. 
+3. **Viral Elements**:  
+   - Leverage psychological triggers (curiosity gap, FOMO, social proof)  
+   - Include actionable takeaways  
+   - Use audience-specific lingo/jargon  
+4. **Platform Optimization**:  
+   - 280-300 character sweet spot  
+   - 3-4 paragraph max with single-line breaks  
+   - Strategic emoji placement (max 1 per note)  
+5. **CTAs**: Soft sell with "Save this" / "Thoughts?" / "Tag someone who..."  
+6. **Unique Angle**: Vary hooks/angles across notes  
+7. **Unexpected Twist**: Include 1 unexpected twist per note  
+
+**Long-Form Note Guidelines (2 notes)**  
+1. **Word Count**: Between 400 and 700 words  
+2. **Depth**: Expand on the ${theme}, taking into account ${primaryIntent}. Take the templates as a starting point and expand on them. 
+3. **Structure**:  
+   - Start with a compelling hook  
+   - Dive deep into the topic with actionable insights  
+   - Include data, examples, or anecdotes  
+   - End with a strong CTA or thought-provoking question  
+4. **Tone**: Maintain a conversational yet authoritative tone  
+5. **Audience Tailoring**: Use audience-specific language and address their pain points  
+
+**Output Requirements**  
+- Format as a numbered list for short notes and unnumbered paragraphs for long notes  
+- No markdown in the output  
+- Separate each note with the following separator: ---###$$$###---  
+- Output ONLY the notes and the separator, no other text  
+- Do not indicate the copywriting frameworks or methods used  
+- Each sentence should be on a new line
+- Frequently use short&sweet sentences that pack a punch.   
+
+Make sure you remove from the output the part that is enclosed in <think>  </think> tags`;
+    } else if (primaryIntent === 'Entertain') {
+      prompt = `Act as a top Substack growth strategist with 10+ years of experience creating viral content. Generate 4 high-impact short notes and 2 long-form notes based on the following framework:
+
+**Newsletter Context**  
+- Theme: ${theme}  
+${coreTopics ? `- Core Topics: ${coreTopics}` : ''}  
+${targetAudience ? `- Target Audience: ${targetAudience}` : ''}  
+- Primary Intent: ${primaryIntent}  
+
+Use the following templates as inspiration on how to write viral notes that are Entertaining:
+
+----
+
+1) Modern Luxury Quote
+
+"Modern [VALUE/IDEAL] is the ability to [KEY ACTION 1], [KEY ACTION 2], [KEY ACTION 3], and [KEY ACTION 4]—in a world designed to make it nearly impossible to do so."
+How to Customize
+[VALUE/IDEAL]: Instead of "luxury," choose a concept relevant to your niche (e.g., "success," "wellness," "freedom").
+[KEY ACTIONS]: Replace with the specific pursuits that represent an ideal state for your audience (e.g., "focus fully," "rest well," "create freely," "live joyfully").
+
+----
+
+2) Visibility vs. Virality
+
+"You don't need [huge result everyone chases]. You just need to get in front of [the specific audience that matters]."
+How to Customize
+[huge result everyone chases]: Swap in any overhyped metric (e.g., "100,000 followers," "media fame").
+[the specific audience that matters]: Identify your target market or the precise group that truly benefits from your work.
+
+----
+
+3) "Who Here Still…?"
+
+"Who here still [does a tradition/habit/practice]? [Emoji or call-to-action]."
+How to Customize
+[does a tradition/habit/practice]: Replace with any activity relevant to your audience's interests (e.g., "writes handwritten letters," "practices daily journaling," "uses paper planners").
+[Emoji or call-to-action]: Add a simple prompt or emoji to spark engagement (e.g., "🙋‍♀️," "Let me know in the comments!").
+
+----
+
+4) "Do It Anyway" Mini-Motivation
+
+"Do it [EMOTION/STATE].
+Do it [SITUATION].
+Do it [CONDITION].
+Do it even if [OBSTACLE].
+No matter what—just do it."
+How to Customize
+[EMOTION/STATE]: Fearful, uncertain, excited, etc.
+[SITUATION/CONDITION/OBSTACLE]: Fill in real-life challenges your audience faces (e.g., "with zero budget," "without validation," "when you feel stuck").
+
+----
+
+5) Learning by Doing
+
+"You only truly [RESULT/BENEFIT] once you start [ACTION]."
+How to Customize
+[RESULT/BENEFIT]: "master your craft," "grow," "improve," etc.
+[ACTION]: "creating," "implementing," "trying," "launching."
+
+----
+
+6) Rest & Recovery Reframe
+
+"[Concept 1] isn't [negative label]. It's [positive reframe].
+[Concept 2] isn't [negative label]. It's [beneficial quality].
+[Concept 3] isn't [negative label]. It's [empowering shift].
+Burnout doesn't mean you're [common misconception]. It means you're [real cause].
+Slow down. You'll [long-term benefit]."
+How to Customize
+[Concepts and negative labels]: Swap in different aspects of work or life people often misjudge (e.g., "delegating," "outsourcing," "saying no").
+[Positive reframe/beneficial quality/empowering shift]: Offer the new perspective you want your audience to adopt.
+
+----
+
+8) "Fun Fact" / Trivia
+Original:
+
+"A baby puffin is called a 'puffling.' I just thought someone might need to know that today. Carry on. 🐧✨"
+Template Version:
+
+"A [thing] is actually called a [funny/interesting name]. I just thought someone might need to know that today. Carry on. [Emoji]."
+How to Customize
+[thing]: Choose any surprising or fun fact relevant to your audience (e.g., "newborn hedgehog," "group of flamingos," "rare vintage car model").
+[funny/interesting name]: Insert a quirky, lesser-known term.
+[Emoji]: Add a themed emoji to keep it playful (e.g., animal emojis, confetti, sparkles).
+----
+
+**Short Note Guidelines (4 notes)**  
+1. **Hook Formula**: Start from the templates then go form there. Vary the hooks , be original, creative, engaging and even clickbaity if the context requires it. 
+2. Focus on what the primary feeling or insight you want to share. Adjust tone, add emojis, or style to match personality. Be authentic and genuine. 
 3. **Viral Elements**:  
    - Leverage psychological triggers (curiosity gap, FOMO, social proof)  
    - Include actionable takeaways  
