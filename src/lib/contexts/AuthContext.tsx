@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { supabase, UserProfile } from '../supabase';
@@ -254,48 +254,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (newProfile: UserProfile) => {
     try {
-      // Set loading state
-      setLoading(true);
       setError(null);
+      
+      if (!user) {
+        throw new Error('No user logged in');
+      }
 
-      // Update the database first
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          credits: newProfile.credits,
-          last_login: new Date().toISOString()
-        })
-        .eq('id', newProfile.id);
-
-      if (error) throw error;
-
-      // If database update successful, update local state immediately
+      // Update local state first for immediate UI feedback
       setProfile(newProfile);
 
-      // Verify the update by fetching the latest profile
-      const { data: updatedProfile, error: fetchError } = await supabase
+      // Then update the database
+      const { error } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('id', newProfile.id)
-        .single();
+        .update(newProfile)
+        .eq('id', user.id);
 
-      if (fetchError) throw fetchError;
+      if (error) {
+        // If database update fails, revert local state
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (currentProfile) {
+          setProfile(currentProfile);
+        }
+        throw error;
+      }
 
-      // Update local state with the fetched profile
-      setProfile(updatedProfile);
     } catch (error) {
       console.error('Error updating profile:', error);
-      // On error, refresh the profile from database to ensure consistency
-      if (user) {
-        await fetchProfile(user.id);
-      }
-      throw error; // Re-throw the error so the component can handle it
-    } finally {
-      setLoading(false);
+      setError((error as Error).message);
+      throw error;
     }
   };
 
-  const value = {
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
     user,
     profile,
     signIn,
@@ -306,9 +302,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     error,
     updateProfile
-  };
+  }), [user, profile, loading, error]);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
