@@ -58,7 +58,8 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
         return;
       }
 
-      const response = await fetch('/api/deepseek/generate-notes', {
+      console.log('Making API request...');
+      const response = await fetch('/api/groq/generate-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -128,7 +129,8 @@ export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps)
         return;
       }
 
-      const response = await fetch('/api/deepseek/generate-notes', {
+      console.log('Making API request...');
+      const response = await fetch('/api/groq/generate-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
