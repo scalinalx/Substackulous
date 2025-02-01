@@ -478,7 +478,7 @@ Use the following templates as inspiration on how to write viral notes that are 
 
 ----
 
-1) Modern Luxury Quote
+1) 
 
 "Modern [VALUE/IDEAL] is the ability to [KEY ACTION 1], [KEY ACTION 2], [KEY ACTION 3], and [KEY ACTION 4]—in a world designed to make it nearly impossible to do so."
 How to Customize
@@ -487,7 +487,7 @@ How to Customize
 
 ----
 
-2) Visibility vs. Virality
+2) 
 
 "You don't need [huge result everyone chases]. You just need to get in front of [the specific audience that matters]."
 How to Customize
@@ -496,7 +496,7 @@ How to Customize
 
 ----
 
-3) "Who Here Still…?"
+3) 
 
 "Who here still [does a tradition/habit/practice]? [Emoji or call-to-action]."
 How to Customize
@@ -505,7 +505,7 @@ How to Customize
 
 ----
 
-4) "Do It Anyway" Mini-Motivation
+4) 
 
 "Do it [EMOTION/STATE].
 Do it [SITUATION].
@@ -518,7 +518,7 @@ How to Customize
 
 ----
 
-5) Learning by Doing
+5) 
 
 "You only truly [RESULT/BENEFIT] once you start [ACTION]."
 How to Customize
@@ -527,7 +527,7 @@ How to Customize
 
 ----
 
-6) Rest & Recovery Reframe
+6) 
 
 "[Concept 1] isn't [negative label]. It's [positive reframe].
 [Concept 2] isn't [negative label]. It's [beneficial quality].
@@ -540,7 +540,7 @@ How to Customize
 
 ----
 
-8) "Fun Fact" / Trivia
+8) 
 Original:
 
 "A baby puffin is called a 'puffling.' I just thought someone might need to know that today. Carry on. 🐧✨"
@@ -598,9 +598,121 @@ ${coreTopics ? `- Core Topics: ${coreTopics}` : ''}
 ${targetAudience ? `- Target Audience: ${targetAudience}` : ''}  
 - Primary Intent: ${primaryIntent}  
 
+Deliver notes that convey a personal story in ways that make the readers relate, engage, communicate and connect.
+As reference, here 4 example GREAT personal story -type of Substack notes:
+
+---
+"At 16, I got rejected for a job at McDonald’s as a waitress.
+
+By 22, McDonald’s became my client.
+
+At 25, I packed my bags, moved to a new country, and started fresh after losing my mom.
+
+At 27, I became the youngest director in the company.
+
+By 30, I’d traveled to 120 countries for work.
+
+At 35, I left the corporate world, met the love of my life, and started from zero—no plan, just passion.
+
+At 36, I picked up art for the first time (because why not?).
+
+At 37, I opened an art gallery (what?!).
+
+At 38, I was selling $5 gigs on Fiverr
+
+But then I launched a copywriting agency and started building my portfolio career—learning as I went.
+
+At 39, Forbes came knocking, and I got published!
+
+At 40, I hit reset again and rebuilt a brand agency from scratch.
+
+At 41, we moved cities... again. New place, new vibes.
+
+And now? I’m on Substack, sharing this wild ride with you, helping you build your own portfolio career path.
+
+So, what’s your next move?
+
+Who knows?
+
+It’s never too late or too early to start.
+
+Your story now 👇"
+---
+"OMG, I didn’t even notice THIS happened.
+
+I’m a freakin Substack bestseller. 
+
+In less than 3 months in!!!
+
+THANK YOU THANK YOU THANK YOU
+
+How do I celebrate you?"
+---
+"Substack is my happy place.
+
+After a year of posting on LinkedIn, I thought I had it figured out.
+
+12,000 followers and counting, but...
+
+It was all just a numbers game.
+
+A never-ending cycle of posting, promoting, and pretending.
+
+But Substack is different.
+
+It's where I can be myself, without the noise and the nonsense.
+
+No more cheesy sales pitches, no more fake engagement.
+
+Just real people, having real conversations, and sharing real ideas.
+
+I've found my community, my tribe, my home.
+
+It's where I can create, connect, and contribute.
+
+Substack, if you're listening...
+
+Please, don't let the spammers and the self-promoters ruin it.
+
+Keep it real, keep it authentic, and keep it focused on the creators.
+
+We're the ones who will make this platform thrive."
+---
+"Confession: I quit Substack after one day.
+
+(I thought it wasn’t worth my time.)
+
+The first time I tried Substack, I wrote a single post, shrugged, and left. ""This isn’t working. No one’s reading. What’s the point?""
+
+I didn’t log back in for almost a year.
+
+Then, on September 5th, 2024, something changed. I gave it one real shot.
+
+Four and a half months later? 40K subscribers.
+
+Here’s what I did differently:
+
+I stopped trying to please everyone. My content got bold, specific, and unapologetically me.
+
+I showed up daily. Notes, posts, comments—I treated this like a job, not a hobby.
+
+I focused on connection. Instead of just posting, I started engaging. Real conversations, real relationships.
+
+Substack isn’t about going viral or hacking your way to success. It’s about doing the simple stuff: Write. Share. Connect. Repeat.
+
+Sometimes, the thing you quit is the thing that works—if you commit.
+
+Ever thought about quitting here? Don’t.
+
+You’re probably closer to a breakthrough than you think.
+
+This platform rewards those who keep going."
+---
+
+
 **Short Note Guidelines (4 notes)**  
-1. **Hook Formula**: Open with "Did you know?" / "Here's why X matters" / Controversial truth / Surprising statistic  
-2. **Value Structure**: Problem > Agitate > Solution > Proof  
+1. **Hook Formula**: Take inspiration from the examples. Aim for emotional connection and engagement. Aim for whispering strong feelings into existence.  
+2. **Value Structure**: Connect with the reader on an emotional level. Do not copy the or paraphrase the notes ad-literam. Be genuine, natural, human, charming and relatable. Above all, relatable.  
 3. **Viral Elements**:  
    - Leverage psychological triggers (curiosity gap, FOMO, social proof)  
    - Include actionable takeaways  
