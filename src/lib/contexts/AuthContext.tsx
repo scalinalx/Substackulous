@@ -177,13 +177,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     setError(null);
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      setUser(null);
+      setProfile(null);
+      router.push('/');
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred during sign out');
       throw error;
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   const signInWithGoogle = useCallback(async () => {
     setError(null);
