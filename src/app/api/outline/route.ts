@@ -43,7 +43,7 @@ const supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROL
 
 export async function POST(req: Request) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+  const timeoutId = setTimeout(() => controller.abort(), 240000); // 4 minute timeout for DeepSeek API
 
   try {
     const { userId, prompt } = await req.json();
@@ -99,7 +99,7 @@ export async function POST(req: Request) {
     }
 
     // Call DeepSeek API
-    console.log('Calling DeepSeek API...');
+    console.log('Calling DeepSeek API with timeout of 4 minutes...');
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -114,7 +114,8 @@ export async function POST(req: Request) {
         }],
         temperature: 0.7,
         max_tokens: 1200,
-        top_p: 1.0
+        top_p: 1.0,
+        timeout: 230 // Add explicit timeout in seconds for DeepSeek
       }),
       signal: controller.signal
     });
