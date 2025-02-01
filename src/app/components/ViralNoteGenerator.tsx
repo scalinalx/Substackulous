@@ -9,7 +9,7 @@ interface ViralNoteGeneratorProps {
   onClose?: () => void;
 }
 
-type PrimaryIntent = 'Growth' | 'Entertain' | 'Educate';
+type PrimaryIntent = 'Growth' | 'Entertain' | 'Educate' | 'Personal Story' ;
 
 export default function ViralNoteGenerator({ onClose }: ViralNoteGeneratorProps) {
   const router = useRouter();
