@@ -3,6 +3,7 @@ export const maxDuration = 300;
 
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import Groq from 'groq-sdk';
 
 // Check for required environment variables
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -13,8 +14,8 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not set');
 }
 
-if (!process.env.DEEPSEEK_API_KEY) {
-  throw new Error('DEEPSEEK_API_KEY is not set');
+if (!process.env.GROQ_API_KEY) {
+  throw new Error('GROQ_API_KEY is not set');
 }
 
 if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -23,7 +24,10 @@ if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const deepseekApiKey = process.env.DEEPSEEK_API_KEY;
+const groqApiKey = process.env.GROQ_API_KEY;
+
+// Initialize Groq client
+const groq = new Groq({ apiKey: groqApiKey });
 
 // Client for authentication
 const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -43,7 +47,7 @@ const supabaseAdmin = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROL
 
 export async function POST(req: Request) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 240000); // 4 minute timeout for DeepSeek API
+  const timeoutId = setTimeout(() => controller.abort(), 240000); // 4 minute timeout
 
   try {
     const { userId, prompt } = await req.json();
@@ -98,49 +102,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Insufficient credits' }, { status: 400 });
     }
 
-    // Call DeepSeek API
-    console.log('Calling DeepSeek API with timeout of 4 minutes...');
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${deepseekApiKey}`
-      },
-      body: JSON.stringify({
-        model: "deepseek-chat",
-        messages: [{
-          role: "user",
-          content: prompt
-        }],
-        temperature: 0.7,
-        max_tokens: 1200,
-        top_p: 1.0,
-        timeout: 230 // Add explicit timeout in seconds for DeepSeek
-      }),
-      signal: controller.signal
+    console.log('Calling Groq API...');
+    const completion = await groq.chat.completions.create({
+      messages: [{
+        role: "user",
+        content: prompt
+      }],
+      model: "deepseek-r1-distill-llama-70b",
+      temperature: 0.69,
+      max_tokens: 4096,
+      top_p: 0.95,
+      stream: false, // We'll handle streaming in a future update
+      stop: null
     });
 
-    console.log('DeepSeek API response status:', response.status);
-    const responseText = await response.text();
-    console.log('Raw response text:', responseText);
-
-    if (!response.ok) {
-      return NextResponse.json({ error: responseText }, { status: response.status });
-    }
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-      console.log('Parsed response data:', data);
-    } catch (error) {
-      console.error('Error parsing response:', error);
-      return NextResponse.json({ error: 'Invalid JSON response from AI service' }, { status: 500 });
-    }
-
-    const outline = data.choices[0]?.message?.content;
+    console.log('Groq API response received');
+    const outline = completion.choices[0]?.message?.content;
 
     if (!outline) {
-      console.error('No outline in response:', data);
+      console.error('No outline in response:', completion);
       return NextResponse.json({ error: 'No outline generated' }, { status: 500 });
     }
 
@@ -171,18 +151,18 @@ export async function POST(req: Request) {
       }, { status: 504 });
     }
 
-    // Handle fetch errors
-    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+    // Handle Groq specific errors
+    if (error.status === 429) {
       return NextResponse.json({
-        error: 'Failed to connect to the AI service',
-        details: 'The service may be temporarily unavailable.'
-      }, { status: 503 });
+        error: 'Rate limit exceeded',
+        details: 'Please try again in a few moments.'
+      }, { status: 429 });
     }
 
     return NextResponse.json({
       error: 'An unexpected error occurred',
       details: error.message || 'No additional details available'
-    }, { status: 500 });
+    }, { status: error.status || 500 });
   } finally {
     clearTimeout(timeoutId);
   }
