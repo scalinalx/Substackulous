@@ -112,12 +112,17 @@ Format the outline with clear hierarchical structure using markdown.`
 
       const data = await response.json();
       console.log('Raw API response:', data);
+      console.log('Response content:', data.content);
       
       if (!data.content) {
+        console.error('No content in response:', data);
         throw new Error('No outline was generated. Please try again.');
       }
       
+      console.log('Setting outline to:', data.content);
       setGeneratedOutline(data.content);
+      console.log('Outline state updated');
+
     } catch (err) {
       console.error('Error in outline generation:', err);
       setError((err as Error).message);
@@ -278,9 +283,12 @@ Format the outline with clear hierarchical structure using markdown.`
         <div className="mt-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Outline</h2>
           <div className="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
-            <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800">
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm]} 
+              className="prose prose-amber max-w-none"
+            >
               {generatedOutline}
-            </pre>
+            </ReactMarkdown>
           </div>
         </div>
       )}
