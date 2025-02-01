@@ -148,6 +148,7 @@ Output ONLY the titles, one per line. No explanations or frameworks needed.`;
     }
 
     const titles = content
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
       .split('\n')
       .filter((line: string) => line.trim())
       .map((title: string) => {
