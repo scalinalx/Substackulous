@@ -4,6 +4,7 @@ export interface User {
   uid: string;
   email?: string;
   displayName?: string;
+  credits: number;
 }
 
 export function useAuth() {
@@ -15,7 +16,8 @@ export function useAuth() {
     setUser({
       uid: 'mock-user-id',
       email: 'user@example.com',
-      displayName: 'Test User'
+      displayName: 'Test User',
+      credits: 10
     });
   }, []);
 
@@ -24,7 +26,8 @@ export function useAuth() {
     setUser({
       uid: 'mock-user-id',
       email: 'user@example.com',
-      displayName: 'Test User'
+      displayName: 'Test User',
+      credits: 10
     });
   };
 
