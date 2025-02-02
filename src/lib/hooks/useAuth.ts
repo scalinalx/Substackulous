@@ -19,5 +19,14 @@ export function useAuth() {
     });
   }, []);
 
-  return { user };
+  const signInWithGoogle = async () => {
+    // Mock sign in for now
+    setUser({
+      uid: 'mock-user-id',
+      email: 'user@example.com',
+      displayName: 'Test User'
+    });
+  };
+
+  return { user, signInWithGoogle };
 }
