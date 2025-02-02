@@ -20,7 +20,16 @@ interface ChatProps {
 
 export function Chat({ sessionId, initialContext }: ChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (initialContext) {
+      return [{
+        id: 'context',
+        role: 'system',
+        content: initialContext
+      }];
+    }
+    return [];
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -58,13 +67,16 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
       }
 
       const data = await response.json();
       setMessages(prev => [...prev, data]);
     } catch (error) {
       console.error('Chat error:', error);
+      // Reset input so user can try again
+      setInput(userMessage.content);
     } finally {
       setIsLoading(false);
     }
@@ -105,7 +117,7 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
           backgroundColor: 'white',
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {messages.map((message) => (
+            {messages.filter(m => m.role !== 'system').map((message) => (
               <div
                 key={message.id}
                 style={{
