@@ -1,64 +1,53 @@
-import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { createClientComponentClient, User as SupabaseUser } from '@supabase/auth-helpers-nextjs';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 // Create a custom event for credit updates
 const CREDITS_UPDATED_EVENT = 'credits-updated';
 
-export interface User {
+export interface Profile {
   id: string;
-  email?: string;
-  displayName?: string;
+  email: string;
   credits: number;
+  created_at: string;
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   const supabase = createClientComponentClient();
 
-  useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        updateUserState(session.user);
-      }
-    });
+  const updateUserState = useCallback(async (_event: AuthChangeEvent, session: Session | null) => {
+    if (session?.user) {
+      setUser(session.user);
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        updateUserState(session.user);
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        setProfile(null);
       } else {
-        setUser(null);
+        setProfile(profileData);
       }
-    });
+    } else {
+      setUser(null);
+      setProfile(null);
+    }
+  }, [supabase]);
 
-    return () => subscription.unsubscribe();
-  }, []);
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(updateUserState);
 
-  const updateUserState = async (supabaseUser: SupabaseUser) => {
-    // Fetch user profile data including credits
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', supabaseUser.id)
-      .single();
-
-    const updatedUser = {
-      id: supabaseUser.id,
-      email: supabaseUser.email,
-      displayName: profile?.full_name || supabaseUser.email,
-      credits: profile?.credits || 0
+    return () => {
+      subscription.unsubscribe();
     };
-
-    setUser(updatedUser);
-    // Dispatch event for credit updates
-    window.dispatchEvent(new CustomEvent(CREDITS_UPDATED_EVENT, { 
-      detail: { credits: profile?.credits || 0 }
-    }));
-  };
+  }, [supabase.auth, updateUserState]);
 
   const updateUserCredits = async (userId: string) => {
     const { data: profile } = await supabase

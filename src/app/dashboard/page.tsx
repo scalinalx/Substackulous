@@ -49,6 +49,13 @@ const features = [
     color: "from-red-500 to-pink-500"
   },
   {
+    title: "Substack PRO",
+    description: "Analyze and optimize your Substack newsletter for maximum growth and engagement.",
+    icon: "📈",
+    href: "/dashboard/substack-pro",
+    color: "from-emerald-500 to-teal-500"
+  },
+  {
     title: "Topic/Niche Research",
     description: "Coming Soon - Discover trending topics and untapped niches for your Substack.",
     icon: "🔍",
