@@ -7,6 +7,17 @@ import Link from 'next/link';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
 import type { SubstackAnalysis, SubstackOptimization, SubstackError } from '@/lib/types/substack';
+import Image from 'next/image';
+
+interface SubstackPost {
+  title: string;
+  likes: number;
+  comments: number;
+  restacks: number;
+  thumbnail: string;
+}
+
+type SortBy = 'likes' | 'comments' | 'restacks';
 
 export default function SubstackProContent() {
   const [mounted, setMounted] = useState(false);
@@ -16,8 +27,8 @@ export default function SubstackProContent() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<SubstackAnalysis | null>(null);
-  const [optimization, setOptimization] = useState<SubstackOptimization | null>(null);
+  const [posts, setPosts] = useState<SubstackPost[]>([]);
+  const [sortBy, setSortBy] = useState<SortBy>('likes');
 
   useEffect(() => {
     setMounted(true);
@@ -28,6 +39,68 @@ export default function SubstackProContent() {
       router.replace('/');
     }
   }, [mounted, loading, user, router]);
+
+  const handleAnalyzePosts = async () => {
+    if (!substackUrl.trim() || isAnalyzing) return;
+    setIsAnalyzing(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/substack-pro/analyze-posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: substackUrl }),
+      });
+
+      if (!response.ok) {
+        const errorData: SubstackError = await response.json();
+        throw new Error(errorData.message || 'Failed to analyze posts');
+      }
+
+      const data = await response.json();
+      setPosts(data.posts);
+    } catch (error) {
+      console.error('Analysis error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to analyze posts');
+      setPosts([]);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleAnalyzeNotes = async () => {
+    if (!substackUrl.trim() || isOptimizing) return;
+    setIsOptimizing(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/substack-pro/analyze-notes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: substackUrl }),
+      });
+
+      if (!response.ok) {
+        const errorData: SubstackError = await response.json();
+        throw new Error(errorData.message || 'Failed to analyze notes');
+      }
+
+      // Handle notes analysis response
+    } catch (error) {
+      console.error('Notes analysis error:', error);
+      setError(error instanceof Error ? error.message : 'Failed to analyze notes');
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  const getSortedPosts = () => {
+    return [...posts].sort((a, b) => b[sortBy] - a[sortBy]);
+  };
 
   if (!mounted || loading) {
     return (
@@ -40,66 +113,6 @@ export default function SubstackProContent() {
   if (!user) {
     return null;
   }
-
-  const handleAnalyze = async () => {
-    if (!substackUrl.trim() || isAnalyzing) return;
-    setIsAnalyzing(true);
-    setError(null);
-    
-    try {
-      const response = await fetch('/api/substack-pro/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: substackUrl }),
-      });
-
-      if (!response.ok) {
-        const errorData: SubstackError = await response.json();
-        throw new Error(errorData.message || 'Failed to analyze newsletter');
-      }
-
-      const data: SubstackAnalysis = await response.json();
-      setAnalysis(data);
-    } catch (error) {
-      console.error('Analysis error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to analyze newsletter');
-      setAnalysis(null);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleOptimize = async () => {
-    if (!substackUrl.trim() || isOptimizing) return;
-    setIsOptimizing(true);
-    setError(null);
-    
-    try {
-      const response = await fetch('/api/substack-pro/optimize', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: substackUrl }),
-      });
-
-      if (!response.ok) {
-        const errorData: SubstackError = await response.json();
-        throw new Error(errorData.message || 'Failed to optimize newsletter');
-      }
-
-      const data: SubstackOptimization = await response.json();
-      setOptimization(data);
-    } catch (error) {
-      console.error('Optimization error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to optimize newsletter');
-      setOptimization(null);
-    } finally {
-      setIsOptimizing(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -157,7 +170,7 @@ export default function SubstackProContent() {
 
             <div className="flex gap-4">
               <Button
-                onClick={handleAnalyze}
+                onClick={handleAnalyzePosts}
                 disabled={!substackUrl.trim() || isAnalyzing}
                 className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
               >
@@ -167,12 +180,12 @@ export default function SubstackProContent() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Analyzing...
+                    Analyzing Posts...
                   </span>
-                ) : 'Analyze Newsletter'}
+                ) : 'Analyze Posts'}
               </Button>
               <Button
-                onClick={handleOptimize}
+                onClick={handleAnalyzeNotes}
                 disabled={!substackUrl.trim() || isOptimizing}
                 className="flex-1 bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:from-teal-600 hover:to-emerald-600"
               >
@@ -182,27 +195,60 @@ export default function SubstackProContent() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Optimizing...
+                    Analyzing Notes...
                   </span>
-                ) : 'Optimize Newsletter'}
+                ) : 'Analyze Notes'}
               </Button>
             </div>
 
-            {(analysis || optimization) && (
+            {posts.length > 0 && (
               <div className="mt-8 space-y-6">
-                {analysis && (
-                  <div className="bg-gray-50 p-6 rounded-lg">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Analysis Results</h2>
-                    {/* Analysis results will be displayed here */}
-                  </div>
-                )}
-                
-                {optimization && (
-                  <div className="bg-gray-50 p-6 rounded-lg">
-                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Optimization Suggestions</h2>
-                    {/* Optimization results will be displayed here */}
-                  </div>
-                )}
+                <div className="flex gap-4">
+                  <Button
+                    onClick={() => setSortBy('likes')}
+                    variant={sortBy === 'likes' ? 'default' : 'outline'}
+                    className="flex-1"
+                  >
+                    Sort by Likes
+                  </Button>
+                  <Button
+                    onClick={() => setSortBy('comments')}
+                    variant={sortBy === 'comments' ? 'default' : 'outline'}
+                    className="flex-1"
+                  >
+                    Sort by Comments
+                  </Button>
+                  <Button
+                    onClick={() => setSortBy('restacks')}
+                    variant={sortBy === 'restacks' ? 'default' : 'outline'}
+                    className="flex-1"
+                  >
+                    Sort by Restacks
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  {getSortedPosts().map((post, index) => (
+                    <div key={index} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="relative w-24 h-24 flex-shrink-0">
+                        <Image
+                          src={post.thumbnail}
+                          alt={post.title}
+                          fill
+                          className="object-cover rounded-md"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900">{post.title}</h3>
+                        <div className="mt-2 flex gap-4 text-sm text-gray-600">
+                          <span>👍 {post.likes} likes</span>
+                          <span>💬 {post.comments} comments</span>
+                          <span>🔄 {post.restacks} restacks</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

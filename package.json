@@ -16,6 +16,7 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.48.1",
     "ai": "^4.1.16",
+    "cheerio": "^1.0.0",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "firebase": "^10.13.0",
