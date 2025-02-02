@@ -50,8 +50,7 @@ async function fetchArchivePage(baseUrl: string, offset: number = 0): Promise<st
   return response.text();
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractThumbnail($post: any): string {
+function extractThumbnail($post: ReturnType<CheerioAPI>): string {
   // Look for the webp source with the specific srcset format
   const webpSource = $post.find('source[type="image/webp"]');
   if (webpSource.length > 0) {
