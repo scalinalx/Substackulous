@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 type PrimaryIntent = 'Growth' | 'Educational' | 'Entertain' | 'Personal Story';
 
 export default function ViralNoteGenerator() {
-  const { user } = useAuth();
+  const { user, updateUserCredits } = useAuth();
   const [theme, setTheme] = useState('');
   const [coreTopics, setCoreTopics] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
@@ -54,6 +54,7 @@ export default function ViralNoteGenerator() {
 
       setGeneratedNotes(data.notes);
       toast.success('Notes generated successfully!');
+      await updateUserCredits(user.id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to generate notes');
     } finally {
@@ -92,6 +93,7 @@ export default function ViralNoteGenerator() {
 
       setGeneratedNotes([data.note]);
       toast.success('Note generated successfully!');
+      await updateUserCredits(user.id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to generate note');
     } finally {

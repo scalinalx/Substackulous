@@ -51,6 +51,21 @@ export function useAuth() {
     });
   };
 
+  const updateUserCredits = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+
+    if (profile && user) {
+      setUser({
+        ...user,
+        credits: profile.credits
+      });
+    }
+  };
+
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -65,5 +80,5 @@ export function useAuth() {
     }
   };
 
-  return { user, signInWithGoogle };
+  return { user, signInWithGoogle, updateUserCredits };
 }
