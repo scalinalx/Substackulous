@@ -5,7 +5,13 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
 
 interface ChatProps {
   sessionId: string;
@@ -14,20 +20,9 @@ interface ChatProps {
 
 export function Chat({ sessionId, initialContext }: ChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: '/api/groq/chat',
-    id: sessionId,
-    initialMessages: initialContext
-      ? [
-          {
-            id: 'context',
-            role: 'system',
-            content: initialContext,
-            createdAt: new Date(),
-          },
-        ]
-      : [],
-  });
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -35,6 +30,45 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = {
+      id: Math.random().toString(36).substring(7),
+      role: 'user' as const,
+      content: input.trim()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/groq/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage],
+          sessionId
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      const data = await response.json();
+      setMessages(prev => [...prev, data]);
+    } catch (error) {
+      console.error('Chat error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div style={{
@@ -88,6 +122,7 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
                         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                        color: 'black',
                       }
                   ),
                 }}
@@ -122,7 +157,7 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
           <Input
             placeholder="Type your message..."
             value={input}
-            onChange={handleInputChange}
+            onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
             style={{
               flex: 1,
