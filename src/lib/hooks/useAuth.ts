@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
+// Create a custom event for credit updates
+const CREDITS_UPDATED_EVENT = 'credits-updated';
+
 export interface User {
   id: string;
   email?: string;
@@ -43,12 +46,18 @@ export function useAuth() {
       .eq('id', supabaseUser.id)
       .single();
 
-    setUser({
+    const updatedUser = {
       id: supabaseUser.id,
       email: supabaseUser.email,
       displayName: profile?.full_name || supabaseUser.email,
       credits: profile?.credits || 0
-    });
+    };
+
+    setUser(updatedUser);
+    // Dispatch event for credit updates
+    window.dispatchEvent(new CustomEvent(CREDITS_UPDATED_EVENT, { 
+      detail: { credits: profile?.credits || 0 }
+    }));
   };
 
   const updateUserCredits = async (userId: string) => {
@@ -59,10 +68,15 @@ export function useAuth() {
       .single();
 
     if (profile && user) {
-      setUser({
+      const updatedUser = {
         ...user,
         credits: profile.credits
-      });
+      };
+      setUser(updatedUser);
+      // Dispatch event for credit updates
+      window.dispatchEvent(new CustomEvent(CREDITS_UPDATED_EVENT, { 
+        detail: { credits: profile.credits }
+      }));
     }
   };
 

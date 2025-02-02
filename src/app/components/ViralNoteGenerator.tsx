@@ -105,13 +105,13 @@ export default function ViralNoteGenerator() {
     <div className="max-w-4xl mx-auto space-y-6 p-4 bg-white">
       <div className="grid gap-6">
         <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-          <span className="text-amber-700">Credits required: 2</span>
+          <span className="text-amber-700">Credits required: {primaryIntent === 'Growth' ? 2 : 1}</span>
           <span className="font-medium text-amber-700">Your balance: {user?.credits ?? 0}</span>
         </div>
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="theme" className="flex items-center gap-1 text-[#181819]">
+            <Label htmlFor="theme" className="flex items-center gap-1 text-[#181819] font-medium">
               Theme <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -119,39 +119,39 @@ export default function ViralNoteGenerator() {
               value={theme}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTheme(e.target.value)}
               placeholder="e.g., Personal Finance for Millennials"
-              className="mt-1 bg-white text-[#181819] border-gray-200"
+              className="mt-1 bg-transparent text-[#181819] border-gray-200 focus:bg-white"
             />
           </div>
           <div>
-            <Label htmlFor="coreTopics" className="text-[#181819]">Core Topics (optional)</Label>
+            <Label htmlFor="coreTopics" className="text-[#181819] font-medium">Core Topics (optional)</Label>
             <Input
               id="coreTopics"
               value={coreTopics}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCoreTopics(e.target.value)}
               placeholder="e.g., INVESTING, BUDGETING, SIDE HUSTLES"
-              className="mt-1 bg-white text-[#181819] border-gray-200"
+              className="mt-1 bg-transparent text-[#181819] border-gray-200 focus:bg-white"
             />
           </div>
           <div>
-            <Label htmlFor="targetAudience" className="text-[#181819]">Target Audience (optional)</Label>
+            <Label htmlFor="targetAudience" className="text-[#181819] font-medium">Target Audience (optional)</Label>
             <Input
               id="targetAudience"
               value={targetAudience}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTargetAudience(e.target.value)}
               placeholder="e.g., Tech-savvy Millennials interested in financial independence"
-              className="mt-1 bg-white text-[#181819] border-gray-200"
+              className="mt-1 bg-transparent text-[#181819] border-gray-200 focus:bg-white"
             />
           </div>
           <div>
-            <Label htmlFor="primaryIntent" className="flex items-center gap-1 text-[#181819]">
+            <Label htmlFor="primaryIntent" className="flex items-center gap-1 text-[#181819] font-medium">
               Primary Intent <span className="text-red-500">*</span>
             </Label>
             <select
               id="primaryIntent"
               value={primaryIntent}
               onChange={(e) => setPrimaryIntent(e.target.value as PrimaryIntent)}
-              className="mt-1 block w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm 
-                       text-[#181819]
+              className="mt-1 block w-full rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm 
+                       text-[#181819] focus:bg-white
                        focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               <option value="Growth">Growth</option>
@@ -166,13 +166,13 @@ export default function ViralNoteGenerator() {
             className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
             size="lg"
           >
-            {isLoading ? 'Generating...' : 'Generate Notes (model 1)'}
+            {isLoading ? 'Generating...' : 'Generate Notes (2 credits)'}
           </Button>
         </div>
 
         <div className="mt-8 border-t border-gray-200 pt-6 space-y-4">
           <div>
-            <Label htmlFor="subject" className="flex items-center gap-1 text-[#181819]">
+            <Label htmlFor="subject" className="flex items-center gap-1 text-[#181819] font-medium">
               Subject (for single note generation) <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -180,7 +180,7 @@ export default function ViralNoteGenerator() {
               value={subject}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubject(e.target.value)}
               placeholder="Enter a subject for a viral note"
-              className="mt-1 bg-white text-[#181819] border-gray-200"
+              className="mt-1 bg-transparent text-[#181819] border-gray-200 focus:bg-white"
             />
           </div>
           <Button 
@@ -189,7 +189,7 @@ export default function ViralNoteGenerator() {
             className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
             size="lg"
           >
-            {isLoadingModel2 ? 'Generating...' : 'Generate Note (model 2)'}
+            {isLoadingModel2 ? 'Generating...' : 'Generate Note (1 credit)'}
           </Button>
         </div>
       </div>
