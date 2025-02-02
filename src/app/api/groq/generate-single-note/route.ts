@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 
-    const creditCost = 1; // Lower cost for single note
+    const creditCost = 2; // Changed from 1 to 2 credits
     if (profile.credits < creditCost) {
       console.log('Insufficient credits for user:', userId);
       return NextResponse.json({ error: 'Insufficient credits' }, { status: 400 });
