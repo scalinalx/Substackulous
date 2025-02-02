@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 export interface User {
-  uid: string;
+  id: string;
   email?: string;
   displayName?: string;
   credits: number;
@@ -14,7 +14,7 @@ export function useAuth() {
   useEffect(() => {
     // In a real app, this would be replaced with actual auth logic
     setUser({
-      uid: 'mock-user-id',
+      id: 'mock-user-id',
       email: 'user@example.com',
       displayName: 'Test User',
       credits: 10
@@ -24,7 +24,7 @@ export function useAuth() {
   const signInWithGoogle = async () => {
     // Mock sign in for now
     setUser({
-      uid: 'mock-user-id',
+      id: 'mock-user-id',
       email: 'user@example.com',
       displayName: 'Test User',
       credits: 10

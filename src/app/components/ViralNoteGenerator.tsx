@@ -8,7 +8,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { toast } from 'sonner';
 
-type PrimaryIntent = 'Growth' | 'Educational' | 'Entertain';
+type PrimaryIntent = 'Growth' | 'Educational' | 'Entertain' | 'Personal Story';
 
 export default function ViralNoteGenerator() {
   const { user } = useAuth();
@@ -44,7 +44,7 @@ export default function ViralNoteGenerator() {
           coreTopics,
           targetAudience,
           primaryIntent,
-          userId: user.uid,
+          userId: user.id,
         }),
       });
 
@@ -82,7 +82,7 @@ export default function ViralNoteGenerator() {
         },
         body: JSON.stringify({
           subject,
-          userId: user.uid,
+          userId: user.id,
         }),
       });
 
@@ -91,7 +91,7 @@ export default function ViralNoteGenerator() {
         throw new Error(data.error || 'Failed to generate note');
       }
 
-      setGeneratedNotes([data.note]); // Replace existing notes with the single note
+      setGeneratedNotes([data.note]);
       toast.success('Note generated successfully!');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to generate note');
@@ -156,6 +156,7 @@ export default function ViralNoteGenerator() {
               <option value="Growth">Growth</option>
               <option value="Educational">Educational</option>
               <option value="Entertain">Entertain</option>
+              <option value="Personal Story">Personal Story</option>
             </select>
           </div>
           <Button 
