@@ -53,25 +53,14 @@ function extractThumbnail($post: ReturnType<CheerioAPI>): string {
     if (webpSource.length > 0) {
       const srcset = webpSource.attr('srcset');
       if (srcset) {
-        // Get the highest quality image URL from srcset
-        const urls = srcset.split(',').map(part => {
-          const [url, width] = part.trim().split(' ');
-          return {
-            url,
-            width: parseInt(width || '0', 10)
-          };
-        });
-        
-        // Sort by width and get the highest quality
-        const highestQuality = urls.sort((a, b) => b.width - a.width)[0];
-        if (highestQuality?.url) {
-          return highestQuality.url;
-        }
+        // Just take the first URL from srcset which is typically the highest quality
+        const firstUrl = srcset.split(',')[0].trim().split(' ')[0];
+        return firstUrl;
       }
     }
 
     // Try the regular image source as fallback
-    const img = $post.find('img').first();
+    const img = $post.find('img[src*="substackcdn.com"]').first();
     const src = img.attr('src');
     if (src) {
       return src;
@@ -103,7 +92,7 @@ export async function POST(request: Request) {
     const $: CheerioAPI = cheerio.load(html);
     
     // Get all post elements
-    const postElements = $('.container-H2dyKk');
+    const postElements = $('.post-preview');
     console.log(`Found ${postElements.length} posts`);
 
     if (postElements.length === 0) {
@@ -116,15 +105,15 @@ export async function POST(request: Request) {
     const posts: SubstackPost[] = [];
     const processedUrls = new Set<string>();
     const maxPosts = Math.min(30, postElements.length);
-    const batchPromises: Promise<SubstackPost>[] = [];
+    const batchPromises: Promise<SubstackPost | null>[] = [];
 
     // Process posts in parallel
     for (let i = 0; i < maxPosts; i++) {
       const $post = $(postElements[i]);
       
-      const titleElement = $post.find('a[data-testid="post-preview-title"]');
+      const titleElement = $post.find('h2.post-preview-title');
       const title = titleElement.text().trim();
-      const postUrl = titleElement.attr('href');
+      const postUrl = $post.find('a.post-preview-title').attr('href');
       const fullPostUrl = postUrl ? (postUrl.startsWith('http') ? postUrl : `${baseUrl}${postUrl}`) : '';
       
       if (!title || !fullPostUrl || processedUrls.has(fullPostUrl)) continue;
@@ -132,38 +121,42 @@ export async function POST(request: Request) {
 
       // Create a promise for processing this post
       const postPromise = (async () => {
-        const likesText = $post.find('.like-button-container .label').text().trim();
-        const likes = parseInt(likesText || '0', 10);
+        try {
+          const likesText = $post.find('.like-button-container .label').text().trim();
+          const likes = parseInt(likesText || '0', 10);
 
-        const commentsText = $post.find('.post-ufi-comment-button .label').text().trim();
-        const comments = parseInt(commentsText || '0', 10);
+          const commentsText = $post.find('.post-ufi-comment-button .label').text().trim();
+          const comments = parseInt(commentsText || '0', 10);
 
-        const thumbnail = extractThumbnail($post);
-        const restacks = await getRestackCount(fullPostUrl);
+          const thumbnail = extractThumbnail($post);
+          const restacks = await getRestackCount(fullPostUrl);
 
-        return {
-          title,
-          url: fullPostUrl,
-          likes,
-          comments,
-          restacks,
-          thumbnail
-        };
+          return {
+            title,
+            url: fullPostUrl,
+            likes,
+            comments,
+            restacks,
+            thumbnail
+          };
+        } catch (error) {
+          console.error('Error processing post:', error);
+          return null;
+        }
       })();
 
       batchPromises.push(postPromise);
     }
 
-    // Process all posts in parallel
-    const results = await Promise.all(batchPromises);
-    posts.push(...results);
+    // Process all posts in parallel and filter out any nulls
+    const results = (await Promise.all(batchPromises)).filter((post): post is SubstackPost => post !== null);
 
-    console.log('Total posts processed:', posts.length);
+    console.log('Total posts processed:', results.length);
     return NextResponse.json({ 
-      posts,
+      posts: results,
       debugInfo: {
         ...debugInfo,
-        postsFound: posts.length
+        postsFound: results.length
       }
     });
   } catch (error) {
