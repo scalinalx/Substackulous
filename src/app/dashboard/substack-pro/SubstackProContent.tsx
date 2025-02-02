@@ -217,21 +217,21 @@ export default function SubstackProContent() {
                   <Button
                     onClick={() => setSortBy('likes')}
                     variant={sortBy === 'likes' ? 'default' : 'outline'}
-                    className="flex-1"
+                    className={`flex-1 ${sortBy === 'likes' ? 'bg-emerald-600 text-white' : 'text-emerald-600 hover:text-emerald-700'}`}
                   >
                     Sort by Likes
                   </Button>
                   <Button
                     onClick={() => setSortBy('comments')}
                     variant={sortBy === 'comments' ? 'default' : 'outline'}
-                    className="flex-1"
+                    className={`flex-1 ${sortBy === 'comments' ? 'bg-emerald-600 text-white' : 'text-emerald-600 hover:text-emerald-700'}`}
                   >
                     Sort by Comments
                   </Button>
                   <Button
                     onClick={() => setSortBy('restacks')}
                     variant={sortBy === 'restacks' ? 'default' : 'outline'}
-                    className="flex-1"
+                    className={`flex-1 ${sortBy === 'restacks' ? 'bg-emerald-600 text-white' : 'text-emerald-600 hover:text-emerald-700'}`}
                   >
                     Sort by Restacks
                   </Button>

@@ -29,10 +29,8 @@ async function getRestackCount(postUrl: string): Promise<number> {
   }
 }
 
-async function fetchArchivePage(baseUrl: string, offset: number = 0): Promise<string> {
-  // Substack loads more posts by appending a timestamp parameter
-  const timestamp = Date.now() - (offset * 24 * 60 * 60 * 1000); // Subtract days based on offset
-  const archiveUrl = `${baseUrl}/archive?sort=top&timestamp=${timestamp}`;
+async function fetchArchivePage(baseUrl: string): Promise<string> {
+  const archiveUrl = `${baseUrl}/archive?sort=top`;
   console.log('Fetching archive URL:', archiveUrl);
   
   const response = await fetch(archiveUrl, {
@@ -62,86 +60,90 @@ export async function POST(request: Request) {
       baseUrl,
     };
 
-    const posts: SubstackPost[] = [];
-    let offset = 0;
+    // Fetch the archive page
+    const html = await fetchArchivePage(baseUrl);
+    const $: CheerioAPI = cheerio.load(html);
     
-    // Keep fetching pages until we have at least 30 posts or hit a reasonable limit
-    while (posts.length < 30 && offset < 5) {
-      try {
-        // Fetch the archive page with the current offset
-        const html = await fetchArchivePage(baseUrl, offset);
-        const $: CheerioAPI = cheerio.load(html);
-        
-        // Find all post containers
-        const postElements = $('.container-H2dyKk');
-        console.log(`Found ${postElements.length} posts on page ${offset + 1}`);
+    // Find all post containers
+    const postElements = $('.container-H2dyKk');
+    console.log('Found post elements:', postElements.length);
 
-        if (postElements.length === 0) break;
-
-        // Process each post element
-        for (const element of postElements.toArray()) {
-          if (posts.length >= 30) break;
-
-          const $post = $(element);
-          
-          // Get title and URL
-          const titleElement = $post.find('a[data-testid="post-preview-title"]');
-          const title = titleElement.text().trim();
-          const postUrl = titleElement.attr('href');
-          const fullPostUrl = postUrl ? (postUrl.startsWith('http') ? postUrl : `${baseUrl}${postUrl}`) : '';
-          
-          if (!title || !fullPostUrl) continue;
-
-          // Get likes and comments
-          const likesText = $post.find('.like-button-container .label').text().trim();
-          const likes = parseInt(likesText || '0', 10);
-
-          const commentsText = $post.find('.post-ufi-comment-button .label').text().trim();
-          const comments = parseInt(commentsText || '0', 10);
-
-          // Get thumbnail
-          let thumbnail = '';
-          const imageContainer = $post.find('.image-tkPTAj.container-XxSyR3');
-          if (imageContainer.length > 0) {
-            const webpSource = imageContainer.find('source[type="image/webp"]');
-            const srcset = webpSource.attr('srcset');
-            if (srcset) {
-              // Get the highest quality image URL from srcset
-              const srcsetParts = srcset.split(',').map(part => part.trim());
-              const highestQuality = srcsetParts[srcsetParts.length - 1].split(' ')[0];
-              thumbnail = highestQuality;
-            } else {
-              // Fallback to regular img src
-              thumbnail = imageContainer.find('img').attr('src') || '/placeholder-image.jpg';
-            }
-          } else {
-            thumbnail = '/placeholder-image.jpg';
+    if (postElements.length === 0) {
+      return NextResponse.json({
+        error: 'No posts found on the page',
+        debugInfo: {
+          ...debugInfo,
+          htmlLength: html.length,
+          foundSelectors: {
+            containers: $('.container-H2dyKk').length,
+            anyLinks: $('a').length,
+            bodyContent: $('body').text().substring(0, 100) + '...',
           }
-
-          // Get restack count by visiting the post page
-          console.log(`Fetching restacks for post: ${title}`);
-          const restacks = await getRestackCount(fullPostUrl);
-
-          posts.push({
-            title,
-            likes,
-            comments,
-            restacks,
-            thumbnail,
-            url: fullPostUrl,
-          });
-
-          console.log(`Processed post ${posts.length}: ${title} (${restacks} restacks)`);
         }
+      }, { status: 404 });
+    }
 
-        offset++;
-        
-        // Add a small delay between requests to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error) {
-        console.error(`Error fetching page ${offset + 1}:`, error);
-        break;
+    const posts: SubstackPost[] = [];
+    const processedUrls = new Set<string>(); // Keep track of processed URLs to avoid duplicates
+
+    // Process each post element
+    for (const element of postElements.toArray()) {
+      const $post = $(element);
+      
+      // Get title and URL
+      const titleElement = $post.find('a[data-testid="post-preview-title"]');
+      const title = titleElement.text().trim();
+      const postUrl = titleElement.attr('href');
+      const fullPostUrl = postUrl ? (postUrl.startsWith('http') ? postUrl : `${baseUrl}${postUrl}`) : '';
+      
+      if (!title || !fullPostUrl || processedUrls.has(fullPostUrl)) continue;
+      processedUrls.add(fullPostUrl);
+
+      // Get likes and comments
+      const likesText = $post.find('.like-button-container .label').text().trim();
+      const likes = parseInt(likesText || '0', 10);
+
+      const commentsText = $post.find('.post-ufi-comment-button .label').text().trim();
+      const comments = parseInt(commentsText || '0', 10);
+
+      // Get thumbnail
+      let thumbnail = '';
+      const pictureElement = $post.find('picture');
+      if (pictureElement.length > 0) {
+        const webpSource = pictureElement.find('source[type="image/webp"]');
+        const srcset = webpSource.attr('srcset');
+        if (srcset) {
+          // Get the highest quality image URL from srcset
+          const srcsetUrls = srcset.split(',').map(part => {
+            const [url] = part.trim().split(' ');
+            return url;
+          });
+          thumbnail = srcsetUrls[srcsetUrls.length - 1]; // Get the last (highest quality) URL
+        } else {
+          // Fallback to regular img src
+          thumbnail = pictureElement.find('img').attr('src') || '/placeholder-image.jpg';
+        }
+      } else {
+        thumbnail = '/placeholder-image.jpg';
       }
+
+      // Get restack count by visiting the post page
+      console.log(`Fetching restacks for post: ${title}`);
+      const restacks = await getRestackCount(fullPostUrl);
+
+      posts.push({
+        title,
+        likes,
+        comments,
+        restacks,
+        thumbnail,
+        url: fullPostUrl,
+      });
+
+      console.log(`Processed post ${posts.length}: ${title} (${restacks} restacks)`);
+
+      // Stop if we have enough posts
+      if (posts.length >= 30) break;
     }
 
     if (posts.length === 0) {
@@ -156,8 +158,7 @@ export async function POST(request: Request) {
       posts,
       debugInfo: {
         ...debugInfo,
-        postsFound: posts.length,
-        pagesProcessed: offset
+        postsFound: posts.length
       }
     });
   } catch (error) {
