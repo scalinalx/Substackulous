@@ -1,6 +1,5 @@
 import { Groq } from 'groq-sdk';
 import { NextRequest } from 'next/server';
-import { manageContextHistory } from '@/lib/types/chat';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -16,7 +15,7 @@ export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, sessionId } = await req.json();
+    const { messages, sessionId }: { messages: ChatMessage[]; sessionId: string } = await req.json();
 
     // Format messages for Groq API
     const formattedMessages = messages.map((msg: ChatMessage) => ({
@@ -41,13 +40,19 @@ export async function POST(req: NextRequest) {
     // Log the response for debugging
     console.log('Groq response:', completion);
 
-    // Return the complete response
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from Groq API');
+    }
+
+    const responseMessage: ChatMessage = {
+      role: 'assistant',
+      content,
+      id: Math.random().toString(36).substring(7)
+    };
+
     return new Response(
-      JSON.stringify({ 
-        role: 'assistant',
-        content: completion.choices[0].message.content,
-        id: Math.random().toString(36).substring(7)
-      }), 
+      JSON.stringify(responseMessage), 
       { 
         headers: { 'Content-Type': 'application/json' } 
       }

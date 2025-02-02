@@ -1,6 +1,5 @@
 'use client';
 
-import { useChat } from 'ai/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import Link from 'next/link';
@@ -11,6 +10,11 @@ interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+}
+
+interface ErrorResponse {
+  error: string;
+  type?: string;
 }
 
 interface ChatProps {
@@ -40,13 +44,13 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
     }
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage = {
+    const userMessage: Message = {
       id: Math.random().toString(36).substring(7),
-      role: 'user' as const,
+      role: 'user',
       content: input.trim()
     };
 
@@ -67,11 +71,11 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData: ErrorResponse = await response.json();
         throw new Error(errorData.error || 'Failed to send message');
       }
 
-      const data = await response.json();
+      const data: Message = await response.json();
       setMessages(prev => [...prev, data]);
     } catch (error) {
       console.error('Chat error:', error);
@@ -80,6 +84,10 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
   };
 
   return (
@@ -169,7 +177,7 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
           <Input
             placeholder="Type your message..."
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={handleInputChange}
             disabled={isLoading}
             style={{
               flex: 1,
