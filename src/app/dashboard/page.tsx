@@ -43,11 +43,10 @@ const features = [
   },
   {
     title: "AI Chat",
-    description: "Coming Soon - Chat with an AI assistant trained on Substack best practices.",
+    description: "Chat with an AI assistant trained on Substack best practices.",
     icon: "💬",
-    href: "#",
-    color: "from-red-500 to-pink-500",
-    comingSoon: true
+    href: "/dashboard/chat",
+    color: "from-red-500 to-pink-500"
   },
   {
     title: "Topic/Niche Research",
