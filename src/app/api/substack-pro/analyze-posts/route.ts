@@ -111,23 +111,11 @@ export async function POST(request: Request) {
     const html = await fetchArchivePage(baseUrl);
     const $: CheerioAPI = cheerio.load(html);
     
-    // Try multiple selectors for post containers
-    const containerSelectors = [
-      '.container-H2dyKk',
-      '.post-preview',
-      'article'
-    ];
+    // Get all post elements - using the original working selector
+    const postElements = $('.container-H2dyKk');
+    console.log(`Found ${postElements.length} posts`);
 
-    let postElements;
-    for (const selector of containerSelectors) {
-      postElements = $(selector);
-      if (postElements.length > 12) {
-        console.log(`Found ${postElements.length} posts using selector: ${selector}`);
-        break;
-      }
-    }
-
-    if (!postElements || postElements.length === 0) {
+    if (postElements.length === 0) {
       return NextResponse.json({
         error: 'No posts found',
         debugInfo
@@ -143,25 +131,9 @@ export async function POST(request: Request) {
     for (let i = 0; i < maxPosts; i++) {
       const $post = $(postElements[i]);
       
-      // Try multiple selectors for title and URL
-      const titleSelectors = [
-        'a[data-testid="post-preview-title"]',
-        'h2.post-preview-title a',
-        'h3 a'
-      ];
-
-      let title = '';
-      let postUrl = '';
-      
-      for (const selector of titleSelectors) {
-        const titleElement = $post.find(selector);
-        if (titleElement.length > 0) {
-          title = titleElement.text().trim();
-          postUrl = titleElement.attr('href') || '';
-          break;
-        }
-      }
-
+      const titleElement = $post.find('a[data-testid="post-preview-title"]');
+      const title = titleElement.text().trim();
+      const postUrl = titleElement.attr('href');
       const fullPostUrl = postUrl ? (postUrl.startsWith('http') ? postUrl : `${baseUrl}${postUrl}`) : '';
       
       if (!title || !fullPostUrl || processedUrls.has(fullPostUrl)) continue;
