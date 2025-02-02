@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface User {
   id: string;
@@ -9,26 +11,58 @@ export interface User {
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
+  const supabase = createClientComponentClient();
 
-  // Mock authentication for now
   useEffect(() => {
-    // In a real app, this would be replaced with actual auth logic
-    setUser({
-      id: 'mock-user-id',
-      email: 'user@example.com',
-      displayName: 'Test User',
-      credits: 10
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        updateUserState(session.user);
+      }
     });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        updateUserState(session.user);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithGoogle = async () => {
-    // Mock sign in for now
+  const updateUserState = async (supabaseUser: SupabaseUser) => {
+    // Fetch user profile data including credits
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', supabaseUser.id)
+      .single();
+
     setUser({
-      id: 'mock-user-id',
-      email: 'user@example.com',
-      displayName: 'Test User',
-      credits: 10
+      id: supabaseUser.id,
+      email: supabaseUser.email,
+      displayName: profile?.full_name || supabaseUser.email,
+      credits: profile?.credits || 0
     });
+  };
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`
+      }
+    });
+    
+    if (error) {
+      console.error('Error signing in with Google:', error);
+      throw error;
+    }
   };
 
   return { user, signInWithGoogle };

@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth, User } from '@/lib/hooks/useAuth';
+import { useAuth } from '@/lib/hooks/useAuth';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
 import { toast } from 'sonner';
 
 type PrimaryIntent = 'Growth' | 'Educational' | 'Entertain' | 'Personal Story';
@@ -16,9 +15,7 @@ export default function ViralNoteGenerator() {
   const [coreTopics, setCoreTopics] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
   const [primaryIntent, setPrimaryIntent] = useState<PrimaryIntent>('Growth');
-  const [subject, setSubject] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingModel2, setIsLoadingModel2] = useState(false);
   const [generatedNotes, setGeneratedNotes] = useState<string[]>([]);
 
   const handleGenerate = async () => {
@@ -59,44 +56,6 @@ export default function ViralNoteGenerator() {
       toast.error(error instanceof Error ? error.message : 'Failed to generate notes');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGenerateModel2 = async () => {
-    if (!user) {
-      toast.error('Please sign in to generate notes');
-      return;
-    }
-
-    if (!subject) {
-      toast.error('Please enter a subject');
-      return;
-    }
-
-    setIsLoadingModel2(true);
-    try {
-      const response = await fetch('/api/groq/generate-single-note', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subject,
-          userId: user.id,
-        }),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate note');
-      }
-
-      setGeneratedNotes([data.note]);
-      toast.success('Note generated successfully!');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to generate note');
-    } finally {
-      setIsLoadingModel2(false);
     }
   };
 
@@ -165,30 +124,7 @@ export default function ViralNoteGenerator() {
             className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
             size="lg"
           >
-            {isLoading ? 'Generating...' : 'Generate Notes (Template-Based)'}
-          </Button>
-        </div>
-
-        <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4">
-          <div>
-            <Label htmlFor="subject" className="flex items-center gap-1">
-              Subject (for single note generation) <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="subject"
-              value={subject}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubject(e.target.value)}
-              placeholder="Enter a subject for a viral note"
-              className="mt-1"
-            />
-          </div>
-          <Button 
-            onClick={handleGenerateModel2} 
-            disabled={isLoadingModel2 || !subject}
-            className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
-            size="lg"
-          >
-            {isLoadingModel2 ? 'Generating...' : 'Generate Note (AI-Powered)'}
+            {isLoading ? 'Generating...' : 'Generate Notes'}
           </Button>
         </div>
       </div>
