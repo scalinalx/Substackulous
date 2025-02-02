@@ -29,8 +29,12 @@ async function getRestackCount(postUrl: string): Promise<number> {
   }
 }
 
-async function fetchArchivePage(baseUrl: string): Promise<string> {
-  const archiveUrl = `${baseUrl}/archive?sort=top`;
+async function fetchArchivePage(baseUrl: string, offset: number = 0): Promise<string> {
+  // For offset > 0, use the archive/posts endpoint that Substack uses for infinite scroll
+  const archiveUrl = offset === 0 
+    ? `${baseUrl}/archive?sort=top` 
+    : `${baseUrl}/archive?sort=top&offset=${offset}`;
+
   console.log('Fetching archive URL:', archiveUrl);
   
   const response = await fetch(archiveUrl, {
@@ -52,36 +56,56 @@ async function fetchArchivePage(baseUrl: string): Promise<string> {
 
 function extractThumbnail($post: ReturnType<CheerioAPI>): string {
   try {
-    // Try multiple selectors for images
+    // First try to find the image container
+    const imageContainer = $post.find('.image-container').first();
+    if (imageContainer.length > 0) {
+      // Try to get the webp source first
+      const webpSource = imageContainer.find('source[type="image/webp"]');
+      if (webpSource.length > 0) {
+        const srcset = webpSource.attr('srcset');
+        if (srcset) {
+          // Get the highest quality URL from srcset
+          const urls = srcset.split(',').map(part => {
+            const [url, width] = part.trim().split(' ');
+            return {
+              url,
+              width: parseInt(width?.replace('w', '') || '0', 10)
+            };
+          });
+          
+          // Sort by width and get the highest quality
+          const highestQuality = urls.sort((a, b) => b.width - a.width)[0];
+          if (highestQuality?.url) {
+            console.log('Found high quality webp:', highestQuality.url);
+            return highestQuality.url;
+          }
+        }
+      }
+
+      // Fallback to regular image
+      const img = imageContainer.find('img').first();
+      const src = img.attr('src');
+      if (src) {
+        console.log('Found regular image:', src);
+        return src;
+      }
+    }
+
+    // Try direct image selectors as fallback
     const imgSelectors = [
       '.image-nBNbRY',
       '.img-OACg1c',
       'img[src*="substackcdn.com"]',
-      'img[src*="substack-post-media"]',
-      'source[type="image/webp"]'
+      'img[src*="substack-post-media"]'
     ];
 
     for (const selector of imgSelectors) {
-      const element = $post.find(selector).first();
-      if (element.length > 0) {
-        // If it's a webp source, handle srcset
-        if (selector === 'source[type="image/webp"]') {
-          const srcset = element.attr('srcset');
-          if (srcset) {
-            // Take the first URL which is typically the highest quality
-            const firstUrl = srcset.split(',')[0].trim().split(' ')[0];
-            if (firstUrl) {
-              console.log('Found webp thumbnail:', firstUrl);
-              return firstUrl;
-            }
-          }
-        } else {
-          // Regular image, use src attribute
-          const src = element.attr('src');
-          if (src) {
-            console.log('Found image thumbnail:', src);
-            return src;
-          }
+      const img = $post.find(selector).first();
+      if (img.length > 0) {
+        const src = img.attr('src');
+        if (src) {
+          console.log('Found image via selector:', selector, src);
+          return src;
         }
       }
     }
@@ -107,76 +131,96 @@ export async function POST(request: Request) {
       baseUrl,
     };
 
-    // Fetch the archive page
-    const html = await fetchArchivePage(baseUrl);
-    const $: CheerioAPI = cheerio.load(html);
-    
-    // Get all post elements - using the original working selector
-    const postElements = $('.container-H2dyKk');
-    console.log(`Found ${postElements.length} posts`);
+    const posts: SubstackPost[] = [];
+    const processedUrls = new Set<string>();
+    let offset = 0;
+    let totalProcessed = 0;
 
-    if (postElements.length === 0) {
+    // Keep fetching pages until we have enough posts or no more are found
+    while (posts.length < 30 && offset < 100) {
+      // Fetch the archive page
+      const html = await fetchArchivePage(baseUrl, offset);
+      const $: CheerioAPI = cheerio.load(html);
+      
+      // Get all post elements
+      const postElements = $('.container-H2dyKk');
+      console.log(`Found ${postElements.length} posts at offset ${offset}`);
+
+      if (postElements.length === 0) break;
+
+      const batchPromises: Promise<SubstackPost | null>[] = [];
+
+      // Process posts in this batch
+      postElements.each((_, element) => {
+        const $post = $(element);
+        
+        const titleElement = $post.find('a[data-testid="post-preview-title"]');
+        const title = titleElement.text().trim();
+        const postUrl = titleElement.attr('href');
+        const fullPostUrl = postUrl ? (postUrl.startsWith('http') ? postUrl : `${baseUrl}${postUrl}`) : '';
+        
+        if (!title || !fullPostUrl || processedUrls.has(fullPostUrl)) return;
+        processedUrls.add(fullPostUrl);
+
+        // Create a promise for processing this post
+        const postPromise = (async () => {
+          try {
+            const likesText = $post.find('.like-button-container .label').text().trim();
+            const likes = parseInt(likesText || '0', 10);
+
+            const commentsText = $post.find('.post-ufi-comment-button .label').text().trim();
+            const comments = parseInt(commentsText || '0', 10);
+
+            const thumbnail = extractThumbnail($post);
+            const restacks = await getRestackCount(fullPostUrl);
+
+            return {
+              title,
+              url: fullPostUrl,
+              likes,
+              comments,
+              restacks,
+              thumbnail
+            };
+          } catch (error) {
+            console.error('Error processing post:', error);
+            return null;
+          }
+        })();
+
+        batchPromises.push(postPromise);
+      });
+
+      // Process all posts in this batch
+      const batchResults = (await Promise.all(batchPromises)).filter((post): post is SubstackPost => post !== null);
+      posts.push(...batchResults);
+      
+      totalProcessed += postElements.length;
+      offset += postElements.length;
+
+      // If we have enough posts, break
+      if (posts.length >= 30) break;
+    }
+
+    if (posts.length === 0) {
       return NextResponse.json({
         error: 'No posts found',
         debugInfo
       }, { status: 404 });
     }
 
-    const posts: SubstackPost[] = [];
-    const processedUrls = new Set<string>();
-    const maxPosts = Math.min(30, postElements.length);
-    const batchPromises: Promise<SubstackPost | null>[] = [];
+    // Take only the first 30 posts
+    const finalPosts = posts.slice(0, 30);
 
-    // Process posts in parallel
-    for (let i = 0; i < maxPosts; i++) {
-      const $post = $(postElements[i]);
-      
-      const titleElement = $post.find('a[data-testid="post-preview-title"]');
-      const title = titleElement.text().trim();
-      const postUrl = titleElement.attr('href');
-      const fullPostUrl = postUrl ? (postUrl.startsWith('http') ? postUrl : `${baseUrl}${postUrl}`) : '';
-      
-      if (!title || !fullPostUrl || processedUrls.has(fullPostUrl)) continue;
-      processedUrls.add(fullPostUrl);
-
-      // Create a promise for processing this post
-      const postPromise = (async () => {
-        try {
-          const likesText = $post.find('.like-button-container .label').text().trim();
-          const likes = parseInt(likesText || '0', 10);
-
-          const commentsText = $post.find('.post-ufi-comment-button .label').text().trim();
-          const comments = parseInt(commentsText || '0', 10);
-
-          const thumbnail = extractThumbnail($post);
-          const restacks = await getRestackCount(fullPostUrl);
-
-          return {
-            title,
-            url: fullPostUrl,
-            likes,
-            comments,
-            restacks,
-            thumbnail
-          };
-        } catch (error) {
-          console.error('Error processing post:', error);
-          return null;
-        }
-      })();
-
-      batchPromises.push(postPromise);
-    }
-
-    // Process all posts in parallel and filter out any nulls
-    const results = (await Promise.all(batchPromises)).filter((post): post is SubstackPost => post !== null);
-
-    console.log('Total posts processed:', results.length);
+    console.log('Total posts processed:', totalProcessed);
+    console.log('Posts returned:', finalPosts.length);
+    
     return NextResponse.json({ 
-      posts: results,
+      posts: finalPosts,
       debugInfo: {
         ...debugInfo,
-        postsFound: results.length
+        postsFound: finalPosts.length,
+        totalProcessed
       }
     });
   } catch (error) {
