@@ -51,7 +51,14 @@ function extractThumbnail($post: ReturnType<CheerioAPI>): string {
   if (webpSource.length > 0) {
     const srcset = webpSource.attr('srcset');
     if (srcset) {
-      const urls = srcset.split(',').map((part: string) => part.trim());
+      // The srcset format is like:
+      // https://substackcdn.com/image/fetch/w_424,c_fill,f_webp,q_auto:good,fl_progressive:steep,g_auto/https%3A%2F%2Fsubstack-post-media.s3.amazonaws.com%2Fpublic%2Fimages%2F4580fca0-b5d6-44c1-b197-aaadf3c55a8e_1200x630.png 424w, ...
+      const urls = srcset.split(',').map((part: string) => {
+        const [url] = part.trim().split(' ');
+        return url;
+      });
+
+      // Get the URL with the highest width parameter
       const highestQualityUrl = urls
         .map((url: string) => {
           const match = url.match(/w_(\d+)/);
@@ -60,14 +67,32 @@ function extractThumbnail($post: ReturnType<CheerioAPI>): string {
             width: match ? parseInt(match[1], 10) : 0
           };
         })
-        .sort((a: { url: string; width: number }, b: { url: string; width: number }) => b.width - a.width)[0]?.url || urls[0];
-      
-      return highestQualityUrl;
+        .sort((a: { url: string; width: number }, b: { url: string; width: number }) => b.width - a.width)[0]?.url;
+
+      if (highestQualityUrl) {
+        // Extract the actual image URL from the Substack CDN URL
+        const actualImageUrl = highestQualityUrl.split('/https%3A%2F%2F')[1];
+        if (actualImageUrl) {
+          return 'https://' + decodeURIComponent(actualImageUrl);
+        }
+        return highestQualityUrl;
+      }
     }
   }
 
+  // Fallback to regular img src
   const img = $post.find('img[src*="substackcdn.com"]');
-  return img.attr('src') || '/placeholder-image.jpg';
+  const imgSrc = img.attr('src');
+  if (imgSrc) {
+    // Handle the same URL transformation for regular img src if needed
+    const actualImageUrl = imgSrc.split('/https%3A%2F%2F')[1];
+    if (actualImageUrl) {
+      return 'https://' + decodeURIComponent(actualImageUrl);
+    }
+    return imgSrc;
+  }
+
+  return '/placeholder-image.jpg';
 }
 
 export async function POST(request: Request) {
