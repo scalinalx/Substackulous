@@ -57,9 +57,12 @@ export async function POST(req: NextRequest) {
     // Make call to Groq
     const completion = groq.chat.completions.create({
       messages: contextualMessages,
-      model: 'mixtral-8x7b-32768',
-      temperature: 0.7,
+      model: 'llama-3.3-70b-specdec',
+      temperature: 0.69,
+      max_tokens: 2048,
+      top_p: 0.95,
       stream: true,
+      stop: null
     });
 
     // Convert the response to a friendly stream

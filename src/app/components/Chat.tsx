@@ -3,7 +3,6 @@
 import { useChat } from 'ai/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
@@ -29,53 +28,58 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
   });
 
   return (
-    <div className="flex h-[600px] flex-col rounded-lg border bg-white">
-      <div className="border-b p-4">
-        <Link 
-          href="/dashboard" 
-          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
-        </Link>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                'flex w-max max-w-[80%] flex-col gap-2 rounded-lg px-3 py-2 text-sm',
-                message.role === 'user'
-                  ? 'ml-auto bg-primary text-primary-foreground'
-                  : 'bg-muted'
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {message.role === 'user' ? 'You' : 'Assistant'}
-                </span>
-              </div>
-              <p className="whitespace-pre-wrap">{message.content}</p>
-            </div>
-          ))}
+    <div className="max-w-4xl mx-auto space-y-6 p-4 bg-white">
+      <div className="grid gap-6">
+        <div className="flex items-center mb-4">
+          <Link 
+            href="/dashboard" 
+            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Link>
         </div>
+
+        <div className="h-[500px] overflow-y-auto border border-gray-200 rounded-lg p-4 bg-white">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={
+                  message.role === 'user'
+                    ? 'ml-auto max-w-[80%] rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 p-4 text-white'
+                    : 'max-w-[80%] rounded-lg border border-gray-200 p-4 bg-white shadow-sm'
+                }
+              >
+                <div className="mb-1 text-xs opacity-70">
+                  {message.role === 'user' ? 'You' : 'Assistant'}
+                </div>
+                <div className="whitespace-pre-wrap">{message.content}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="flex gap-4 mt-4"
+        >
+          <Input
+            placeholder="Type your message..."
+            value={input}
+            onChange={handleInputChange}
+            disabled={isLoading}
+            className="flex-1 bg-white text-[#181819] border-gray-200"
+          />
+          <Button 
+            type="submit" 
+            disabled={isLoading || !input.trim()}
+            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
+          >
+            {isLoading ? 'Sending...' : 'Send'}
+          </Button>
+        </form>
       </div>
-      <form
-        onSubmit={handleSubmit}
-        className="flex items-center gap-2 border-t p-4 bg-white"
-      >
-        <Input
-          placeholder="Type your message..."
-          value={input}
-          onChange={handleInputChange}
-          disabled={isLoading}
-          className="flex-1 bg-white text-black border-gray-200 focus:border-gray-300 focus:ring-gray-200"
-        />
-        <Button type="submit" disabled={isLoading || !input.trim()}>
-          {isLoading ? 'Sending...' : 'Send'}
-        </Button>
-      </form>
     </div>
   );
 } 
