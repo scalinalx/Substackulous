@@ -4,6 +4,8 @@ import { useChat } from 'ai/react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 interface ChatProps {
   sessionId: string;
@@ -27,7 +29,16 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
   });
 
   return (
-    <div className="flex h-[600px] flex-col rounded-lg border bg-background">
+    <div className="flex h-[600px] flex-col rounded-lg border bg-white">
+      <div className="border-b p-4">
+        <Link 
+          href="/dashboard" 
+          className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Dashboard
+        </Link>
+      </div>
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
           {messages.map((message) => (
@@ -52,14 +63,14 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
       </div>
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 border-t p-4"
+        className="flex items-center gap-2 border-t p-4 bg-white"
       >
         <Input
           placeholder="Type your message..."
           value={input}
           onChange={handleInputChange}
           disabled={isLoading}
-          className="flex-1"
+          className="flex-1 bg-white text-black border-gray-200 focus:border-gray-300 focus:ring-gray-200"
         />
         <Button type="submit" disabled={isLoading || !input.trim()}>
           {isLoading ? 'Sending...' : 'Send'}
