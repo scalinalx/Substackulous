@@ -35,7 +35,11 @@ async function fetchArchivePage(baseUrl: string): Promise<string> {
   
   const response = await fetch(archiveUrl, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
     }
   });
 
@@ -48,33 +52,38 @@ async function fetchArchivePage(baseUrl: string): Promise<string> {
 
 function extractThumbnail($post: ReturnType<CheerioAPI>): string {
   try {
-    // First try to get the webp source
-    const webpSource = $post.find('source[type="image/webp"]');
-    if (webpSource.length > 0) {
-      const srcset = webpSource.attr('srcset');
-      if (srcset) {
-        // Get the highest quality URL from srcset
-        const urls = srcset.split(',').map(part => {
-          const [url, width] = part.trim().split(' ');
-          return {
-            url,
-            width: parseInt(width?.replace('w', '') || '0', 10)
-          };
-        });
-        
-        // Sort by width and get the highest quality
-        const highestQuality = urls.sort((a, b) => b.width - a.width)[0];
-        if (highestQuality?.url) {
-          return highestQuality.url;
+    // Try multiple selectors for images
+    const imgSelectors = [
+      '.image-nBNbRY',
+      '.img-OACg1c',
+      'img[src*="substackcdn.com"]',
+      'img[src*="substack-post-media"]',
+      'source[type="image/webp"]'
+    ];
+
+    for (const selector of imgSelectors) {
+      const element = $post.find(selector).first();
+      if (element.length > 0) {
+        // If it's a webp source, handle srcset
+        if (selector === 'source[type="image/webp"]') {
+          const srcset = element.attr('srcset');
+          if (srcset) {
+            // Take the first URL which is typically the highest quality
+            const firstUrl = srcset.split(',')[0].trim().split(' ')[0];
+            if (firstUrl) {
+              console.log('Found webp thumbnail:', firstUrl);
+              return firstUrl;
+            }
+          }
+        } else {
+          // Regular image, use src attribute
+          const src = element.attr('src');
+          if (src) {
+            console.log('Found image thumbnail:', src);
+            return src;
+          }
         }
       }
-    }
-
-    // Try the regular image source as fallback
-    const img = $post.find('img[src*="substackcdn.com"]').first();
-    const src = img.attr('src');
-    if (src) {
-      return src;
     }
 
     return '';
@@ -102,11 +111,23 @@ export async function POST(request: Request) {
     const html = await fetchArchivePage(baseUrl);
     const $: CheerioAPI = cheerio.load(html);
     
-    // Get all post elements - using the original working selector
-    const postElements = $('.container-H2dyKk');
-    console.log(`Found ${postElements.length} posts`);
+    // Try multiple selectors for post containers
+    const containerSelectors = [
+      '.container-H2dyKk',
+      '.post-preview',
+      'article'
+    ];
 
-    if (postElements.length === 0) {
+    let postElements;
+    for (const selector of containerSelectors) {
+      postElements = $(selector);
+      if (postElements.length > 12) {
+        console.log(`Found ${postElements.length} posts using selector: ${selector}`);
+        break;
+      }
+    }
+
+    if (!postElements || postElements.length === 0) {
       return NextResponse.json({
         error: 'No posts found',
         debugInfo
@@ -122,9 +143,25 @@ export async function POST(request: Request) {
     for (let i = 0; i < maxPosts; i++) {
       const $post = $(postElements[i]);
       
-      const titleElement = $post.find('a[data-testid="post-preview-title"]');
-      const title = titleElement.text().trim();
-      const postUrl = titleElement.attr('href');
+      // Try multiple selectors for title and URL
+      const titleSelectors = [
+        'a[data-testid="post-preview-title"]',
+        'h2.post-preview-title a',
+        'h3 a'
+      ];
+
+      let title = '';
+      let postUrl = '';
+      
+      for (const selector of titleSelectors) {
+        const titleElement = $post.find(selector);
+        if (titleElement.length > 0) {
+          title = titleElement.text().trim();
+          postUrl = titleElement.attr('href') || '';
+          break;
+        }
+      }
+
       const fullPostUrl = postUrl ? (postUrl.startsWith('http') ? postUrl : `${baseUrl}${postUrl}`) : '';
       
       if (!title || !fullPostUrl || processedUrls.has(fullPostUrl)) continue;
