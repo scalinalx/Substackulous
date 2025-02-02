@@ -23,12 +23,22 @@ export async function POST(request: Request) {
     const baseUrl = url.replace(/\/$/, ''); // Remove trailing slash if present
     const archiveUrl = `${baseUrl}/archive?sort=top`;
     
+    // Return debugging info with the response
+    const debugInfo = {
+      originalUrl: url,
+      baseUrl,
+      archiveUrl,
+    };
+
     console.log('Fetching archive URL:', archiveUrl);
 
     // Fetch the archive page
     const response = await fetch(archiveUrl);
     if (!response.ok) {
-      throw new Error('Failed to fetch Substack archive');
+      return NextResponse.json({
+        error: `Failed to fetch Substack archive: ${response.status} ${response.statusText}`,
+        debugInfo,
+      }, { status: response.status });
     }
 
     const html = await response.text();
@@ -41,6 +51,22 @@ export async function POST(request: Request) {
     const postElements = $('.post-preview');
     
     console.log('Found post elements:', postElements.length);
+
+    // If no posts found, return early with debug info
+    if (postElements.length === 0) {
+      return NextResponse.json({
+        error: 'No posts found on the page',
+        debugInfo: {
+          ...debugInfo,
+          htmlLength: html.length,
+          foundSelectors: {
+            postPreview: $('.post-preview').length,
+            anyLinks: $('a').length,
+            bodyContent: $('body').text().substring(0, 100) + '...',
+          }
+        }
+      }, { status: 404 });
+    }
 
     for (let i = 0; i < postElements.length; i++) {
       const $post = $(postElements[i]);
@@ -92,7 +118,13 @@ export async function POST(request: Request) {
     }
 
     console.log('Total posts processed:', posts.length);
-    return NextResponse.json({ posts });
+    return NextResponse.json({ 
+      posts,
+      debugInfo: {
+        ...debugInfo,
+        postsFound: posts.length,
+      }
+    });
   } catch (error) {
     console.error('Error analyzing Substack posts:', error);
     return NextResponse.json(
@@ -100,6 +132,10 @@ export async function POST(request: Request) {
         error: error instanceof Error ? error.message : 'Failed to analyze posts',
         code: 'ANALYSIS_ERROR',
         details: error instanceof Error ? error.stack : undefined,
+        debugInfo: {
+          error: String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        }
       },
       { status: 500 }
     );

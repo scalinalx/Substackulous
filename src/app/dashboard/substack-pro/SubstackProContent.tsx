@@ -57,14 +57,20 @@ export default function SubstackProContent() {
         body: JSON.stringify({ url: substackUrl }),
       });
 
+      const data = await response.json();
+      console.log('API Response:', data);
+
       if (!response.ok) {
-        const errorData: SubstackError = await response.json();
-        throw new Error(errorData.message || 'Failed to analyze posts');
+        throw new Error(data.error || 'Failed to analyze posts');
       }
 
-      const data = await response.json();
-      console.log('Received posts:', data.posts.length);
-      setPosts(data.posts);
+      if (data.posts) {
+        console.log('Received posts:', data.posts.length);
+        setPosts(data.posts);
+      } else {
+        console.error('No posts data in response:', data);
+        setError('No posts found in the response');
+      }
     } catch (error) {
       console.error('Analysis error:', error);
       setError(error instanceof Error ? error.message : 'Failed to analyze posts');
