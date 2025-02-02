@@ -40,6 +40,30 @@ const features = [
     icon: "📝",
     href: "/dashboard/outline",
     color: "from-amber-500 to-orange-500"
+  },
+  {
+    title: "AI Chat",
+    description: "Coming Soon - Chat with an AI assistant trained on Substack best practices.",
+    icon: "💬",
+    href: "#",
+    color: "from-red-500 to-pink-500",
+    comingSoon: true
+  },
+  {
+    title: "Topic/Niche Research",
+    description: "Coming Soon - Discover trending topics and untapped niches for your Substack.",
+    icon: "🔍",
+    href: "#",
+    color: "from-teal-500 to-green-500",
+    comingSoon: true
+  },
+  {
+    title: "AI Coach",
+    description: "Coming Soon - Get personalized guidance to grow your Substack audience.",
+    icon: "🎯",
+    href: "#",
+    color: "from-violet-500 to-purple-500",
+    comingSoon: true
   }
 ];
 
@@ -75,12 +99,20 @@ export default function DashboardPage() {
             <Link 
               key={feature.title} 
               href={feature.href}
-              className="group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+              className={`group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden ${feature.comingSoon ? 'cursor-not-allowed opacity-75' : ''}`}
+              onClick={feature.comingSoon ? (e) => e.preventDefault() : undefined}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
               <div className="p-6">
                 <div className="text-4xl mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {feature.title}
+                  {feature.comingSoon && (
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Coming Soon
+                    </span>
+                  )}
+                </h3>
                 <p className="text-gray-600">{feature.description}</p>
               </div>
             </Link>
