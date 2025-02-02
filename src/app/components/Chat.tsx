@@ -40,7 +40,7 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
           </Link>
         </div>
 
-        <div className="h-[500px] overflow-y-auto border border-gray-200 rounded-lg p-4 bg-white">
+        <div className="h-[500px] overflow-y-auto border border-gray-200 rounded-lg p-4 bg-black">
           <div className="space-y-4">
             {messages.map((message) => (
               <div
