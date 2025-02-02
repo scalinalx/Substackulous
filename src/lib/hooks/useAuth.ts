@@ -50,21 +50,17 @@ export function useAuth() {
   }, [supabase.auth, updateUserState]);
 
   const updateUserCredits = async (userId: string) => {
-    const { data: profile } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('credits')
       .eq('id', userId)
       .single();
 
-    if (profile && user) {
-      const updatedUser = {
-        ...user,
-        credits: profile.credits
-      };
-      setUser(updatedUser);
+    if (profileData) {
+      setProfile(prev => prev ? { ...prev, credits: profileData.credits } : null);
       // Dispatch event for credit updates
       window.dispatchEvent(new CustomEvent(CREDITS_UPDATED_EVENT, { 
-        detail: { credits: profile.credits }
+        detail: { credits: profileData.credits }
       }));
     }
   };
@@ -83,5 +79,11 @@ export function useAuth() {
     }
   };
 
-  return { user, signInWithGoogle, updateUserCredits };
+  return { 
+    user, 
+    profile,
+    loading,
+    signInWithGoogle, 
+    updateUserCredits 
+  };
 }

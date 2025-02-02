@@ -10,15 +10,16 @@ import { toast } from 'sonner';
 type PrimaryIntent = 'Growth' | 'Educational' | 'Entertain' | 'Personal Story';
 
 export default function ViralNoteGenerator() {
-  const { user, updateUserCredits } = useAuth();
+  const { user, profile, updateUserCredits } = useAuth();
   const [theme, setTheme] = useState('');
   const [coreTopics, setCoreTopics] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
   const [primaryIntent, setPrimaryIntent] = useState<PrimaryIntent>('Growth');
   const [subject, setSubject] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingModel2, setIsLoadingModel2] = useState(false);
-  const [generatedNotes, setGeneratedNotes] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notes, setNotes] = useState<string[]>([]);
+  const creditCost = primaryIntent === 'Growth' ? 2 : 1;
 
   const handleGenerate = async () => {
     if (!user) {
@@ -31,7 +32,9 @@ export default function ViralNoteGenerator() {
       return;
     }
 
-    setIsLoading(true);
+    setIsGenerating(true);
+    setError(null);
+
     try {
       const response = await fetch('/api/groq/generate-notes', {
         method: 'POST',
@@ -52,13 +55,13 @@ export default function ViralNoteGenerator() {
         throw new Error(data.error || 'Failed to generate notes');
       }
 
-      setGeneratedNotes(data.notes);
+      setNotes(data.notes);
       toast.success('Notes generated successfully!');
       await updateUserCredits(user.id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to generate notes');
     } finally {
-      setIsLoading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -73,7 +76,9 @@ export default function ViralNoteGenerator() {
       return;
     }
 
-    setIsLoadingModel2(true);
+    setIsGenerating(true);
+    setError(null);
+
     try {
       const response = await fetch('/api/groq/generate-single-note', {
         method: 'POST',
@@ -91,13 +96,26 @@ export default function ViralNoteGenerator() {
         throw new Error(data.error || 'Failed to generate note');
       }
 
-      setGeneratedNotes([data.note]);
+      setNotes([data.note]);
       toast.success('Note generated successfully!');
       await updateUserCredits(user.id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to generate note');
     } finally {
-      setIsLoadingModel2(false);
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!theme || !user || !profile || profile.credits < creditCost) return;
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      // ... rest of the submit handler ...
+    } catch (error) {
+      // ... error handling ...
     }
   };
 
@@ -105,8 +123,8 @@ export default function ViralNoteGenerator() {
     <div className="max-w-4xl mx-auto space-y-6 p-4 bg-white">
       <div className="grid gap-6">
         <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-          <span className="text-amber-700">Credits required: {primaryIntent === 'Growth' ? 2 : 1}</span>
-          <span className="font-medium text-amber-700">Your balance: {user?.credits ?? 0}</span>
+          <span className="text-amber-700">Credits required: {creditCost}</span>
+          <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
         </div>
 
         <div className="space-y-4">
@@ -162,11 +180,11 @@ export default function ViralNoteGenerator() {
           </div>
           <Button 
             onClick={handleGenerate} 
-            disabled={isLoading || !theme || !primaryIntent}
+            disabled={isGenerating || !theme || !primaryIntent}
             className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
             size="lg"
           >
-            {isLoading ? 'Generating...' : 'Generate Notes (2 credits)'}
+            {isGenerating ? 'Generating...' : 'Generate Notes (2 credits)'}
           </Button>
         </div>
 
@@ -185,19 +203,19 @@ export default function ViralNoteGenerator() {
           </div>
           <Button 
             onClick={handleGenerateModel2} 
-            disabled={isLoadingModel2 || !subject}
+            disabled={isGenerating || !subject}
             className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
             size="lg"
           >
-            {isLoadingModel2 ? 'Generating...' : 'Generate Note (1 credit)'}
+            {isGenerating ? 'Generating...' : 'Generate Note (1 credit)'}
           </Button>
         </div>
       </div>
 
-      {generatedNotes.length > 0 && (
+      {notes.length > 0 && (
         <div className="mt-8 space-y-4">
           <h3 className="text-lg font-semibold text-[#181819]">Generated Notes:</h3>
-          {generatedNotes.map((note, index) => (
+          {notes.map((note, index) => (
             <div key={index} className="rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
               <pre className="whitespace-pre-wrap font-sans text-[#181819]">{note}</pre>
             </div>
