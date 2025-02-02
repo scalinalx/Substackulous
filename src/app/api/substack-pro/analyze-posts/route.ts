@@ -8,6 +8,7 @@ interface SubstackPost {
   comments: number;
   restacks: number;
   thumbnail: string;
+  url: string;
 }
 
 export async function POST(request: Request) {
@@ -21,6 +22,8 @@ export async function POST(request: Request) {
     // Clean and format the URL
     const baseUrl = url.replace(/\/$/, ''); // Remove trailing slash if present
     const archiveUrl = `${baseUrl}/archive?sort=top`;
+    
+    console.log('Fetching archive URL:', archiveUrl);
 
     // Fetch the archive page
     const response = await fetch(archiveUrl);
@@ -30,20 +33,65 @@ export async function POST(request: Request) {
 
     const html = await response.text();
     const $: CheerioAPI = cheerio.load(html);
+    
+    console.log('Successfully loaded archive page');
 
     // Extract posts data
-    const posts: SubstackPost[] = $('.post-preview').map((_, element) => {
-      const $post = $(element);
-      
-      return {
-        title: $post.find('.post-preview-title').text().trim(),
-        likes: parseInt($post.find('.like-count').text().trim() || '0', 10),
-        comments: parseInt($post.find('.comment-count').text().trim() || '0', 10),
-        restacks: parseInt($post.find('.restack-count').text().trim() || '0', 10),
-        thumbnail: $post.find('.post-preview-image img').attr('src') || '/placeholder-image.jpg',
-      };
-    }).get();
+    const posts: SubstackPost[] = [];
+    const postElements = $('.post-preview');
+    
+    console.log('Found post elements:', postElements.length);
 
+    for (let i = 0; i < postElements.length; i++) {
+      const $post = $(postElements[i]);
+      
+      // Get post URL for restack count
+      const postUrl = $post.find('a.post-preview-title').attr('href');
+      console.log(`Processing post ${i + 1}:`, postUrl);
+
+      const title = $post.find('.post-preview-title').text().trim();
+      console.log('Title:', title);
+
+      const likes = parseInt($post.find('.like-button-container .label').text().trim() || '0', 10);
+      console.log('Likes:', likes);
+
+      const comments = parseInt($post.find('.post-ufi-comment-button .label').text().trim() || '0', 10);
+      console.log('Comments:', comments);
+
+      // Get restack count by fetching the individual post page
+      let restacks = 0;
+      if (postUrl) {
+        try {
+          console.log('Fetching post page for restacks:', postUrl);
+          const postResponse = await fetch(postUrl);
+          if (postResponse.ok) {
+            const postHtml = await postResponse.text();
+            const $post = cheerio.load(postHtml);
+            const restackText = $post('.post-ufi-button[aria-label="View repost options"] .label').text().trim();
+            restacks = parseInt(restackText || '0', 10);
+            console.log('Restacks:', restacks);
+          }
+        } catch (error) {
+          console.error('Error fetching restack count:', error);
+        }
+      }
+
+      const thumbnail = $post.find('.post-preview-image img').attr('src') || '/placeholder-image.jpg';
+      console.log('Thumbnail:', thumbnail);
+
+      posts.push({
+        title,
+        likes,
+        comments,
+        restacks,
+        thumbnail,
+        url: postUrl || '',
+      });
+
+      console.log('-------------------');
+    }
+
+    console.log('Total posts processed:', posts.length);
     return NextResponse.json({ posts });
   } catch (error) {
     console.error('Error analyzing Substack posts:', error);
