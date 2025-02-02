@@ -53,9 +53,20 @@ function extractThumbnail($post: ReturnType<CheerioAPI>): string {
     if (webpSource.length > 0) {
       const srcset = webpSource.attr('srcset');
       if (srcset) {
-        // Just take the first URL from srcset which is typically the highest quality
-        const firstUrl = srcset.split(',')[0].trim().split(' ')[0];
-        return firstUrl;
+        // Get the highest quality URL from srcset
+        const urls = srcset.split(',').map(part => {
+          const [url, width] = part.trim().split(' ');
+          return {
+            url,
+            width: parseInt(width?.replace('w', '') || '0', 10)
+          };
+        });
+        
+        // Sort by width and get the highest quality
+        const highestQuality = urls.sort((a, b) => b.width - a.width)[0];
+        if (highestQuality?.url) {
+          return highestQuality.url;
+        }
       }
     }
 
@@ -91,8 +102,8 @@ export async function POST(request: Request) {
     const html = await fetchArchivePage(baseUrl);
     const $: CheerioAPI = cheerio.load(html);
     
-    // Get all post elements
-    const postElements = $('.post-preview');
+    // Get all post elements - using the original working selector
+    const postElements = $('.container-H2dyKk');
     console.log(`Found ${postElements.length} posts`);
 
     if (postElements.length === 0) {
@@ -111,9 +122,9 @@ export async function POST(request: Request) {
     for (let i = 0; i < maxPosts; i++) {
       const $post = $(postElements[i]);
       
-      const titleElement = $post.find('h2.post-preview-title');
+      const titleElement = $post.find('a[data-testid="post-preview-title"]');
       const title = titleElement.text().trim();
-      const postUrl = $post.find('a.post-preview-title').attr('href');
+      const postUrl = titleElement.attr('href');
       const fullPostUrl = postUrl ? (postUrl.startsWith('http') ? postUrl : `${baseUrl}${postUrl}`) : '';
       
       if (!title || !fullPostUrl || processedUrls.has(fullPostUrl)) continue;
