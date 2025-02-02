@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface ChatProps {
   sessionId: string;
@@ -12,6 +13,7 @@ interface ChatProps {
 }
 
 export function Chat({ sessionId, initialContext }: ChatProps) {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: '/api/groq/chat',
     id: sessionId,
@@ -27,54 +29,122 @@ export function Chat({ sessionId, initialContext }: ChatProps) {
       : [],
   });
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6 p-4 bg-white">
-      <div className="grid gap-6">
-        <div className="flex items-center mb-4">
-          <Link 
-            href="/dashboard" 
-            className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
-          </Link>
-        </div>
+  // Auto scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
-        <div className="h-[500px] overflow-y-auto border border-gray-200 rounded-lg p-4 bg-black">
-          <div className="space-y-4">
+  return (
+    <div style={{
+      maxWidth: '4xl',
+      margin: '0 auto',
+      padding: '1rem',
+      backgroundColor: 'white',
+    }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1.5rem',
+      }}>
+        <Link 
+          href="/dashboard" 
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            fontSize: '0.875rem',
+            color: '#666',
+            textDecoration: 'none',
+          }}
+        >
+          <ArrowLeft style={{ width: '1rem', height: '1rem', marginRight: '0.5rem' }} />
+          Back to Dashboard
+        </Link>
+
+        <div style={{
+          height: '500px',
+          overflowY: 'auto',
+          border: '1px solid #e5e7eb',
+          borderRadius: '0.5rem',
+          padding: '1rem',
+          backgroundColor: 'white',
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={
-                  message.role === 'user'
-                    ? 'ml-auto max-w-[80%] rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 p-4 text-white'
-                    : 'max-w-[80%] rounded-lg border border-gray-200 p-4 bg-white shadow-sm'
-                }
+                style={{
+                  maxWidth: '80%',
+                  marginLeft: message.role === 'user' ? 'auto' : '0',
+                  padding: '1rem',
+                  borderRadius: '0.5rem',
+                  ...(message.role === 'user' 
+                    ? {
+                        background: 'linear-gradient(to right, #f59e0b, #d97706)',
+                        color: 'white',
+                      }
+                    : {
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                      }
+                  ),
+                }}
               >
-                <div className="mb-1 text-xs opacity-70">
+                <div style={{
+                  marginBottom: '0.25rem',
+                  fontSize: '0.75rem',
+                  opacity: 0.7,
+                }}>
                   {message.role === 'user' ? 'You' : 'Assistant'}
                 </div>
-                <div className="whitespace-pre-wrap">{message.content}</div>
+                <div style={{
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}>
+                  {message.content}
+                </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="flex gap-4 mt-4"
+          style={{
+            display: 'flex',
+            gap: '1rem',
+            marginTop: '1rem',
+          }}
         >
           <Input
             placeholder="Type your message..."
             value={input}
             onChange={handleInputChange}
             disabled={isLoading}
-            className="flex-1 bg-white text-[#181819] border-gray-200"
+            style={{
+              flex: 1,
+              backgroundColor: 'white',
+              color: '#181819',
+              border: '1px solid #e5e7eb',
+              borderRadius: '0.375rem',
+              padding: '0.5rem 1rem',
+            }}
           />
           <Button 
             type="submit" 
             disabled={isLoading || !input.trim()}
-            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
+            style={{
+              background: 'linear-gradient(to right, #f59e0b, #d97706)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              padding: '0.5rem 1rem',
+              cursor: 'pointer',
+              minWidth: '100px',
+            }}
           >
             {isLoading ? 'Sending...' : 'Send'}
           </Button>
