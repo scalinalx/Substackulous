@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx playwright install chromium && next build",
+  "buildCommand": "next build",
   "installCommand": "npm install",
   "framework": "nextjs"
 } 
