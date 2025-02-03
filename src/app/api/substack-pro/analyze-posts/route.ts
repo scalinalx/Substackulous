@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { Page } from 'puppeteer-core';
-import chromium from 'chrome-aws-lambda';
+import { chromium } from '@playwright/test';
 
 interface SubstackPost {
   title: string;
@@ -11,7 +10,7 @@ interface SubstackPost {
   url: string;
 }
 
-async function autoScroll(page: Page) {
+async function autoScroll(page: any) {
   await page.evaluate(async () => {
     await new Promise<void>((resolve) => {
       let totalHeight = 0;
@@ -30,7 +29,7 @@ async function autoScroll(page: Page) {
   });
 }
 
-async function extractPostData(page: Page): Promise<SubstackPost[]> {
+async function extractPostData(page: any): Promise<SubstackPost[]> {
   return page.evaluate(() => {
     const posts: SubstackPost[] = [];
     const postElements = document.querySelectorAll('.container-H2dyKk');
@@ -98,14 +97,13 @@ async function extractPostData(page: Page): Promise<SubstackPost[]> {
   });
 }
 
-async function getRestackCount(page: Page, url: string): Promise<number> {
+async function getRestackCount(page: any, url: string): Promise<number> {
   try {
-    await page.goto(url, { waitUntil: 'networkidle0' });
-    const restackCount = await page.$eval(
-      'a[aria-label="View repost options"].post-ufi-button.style-button .label',
-      (el: Element) => parseInt(el.textContent?.trim() || '0', 10)
-    );
-    return restackCount;
+    await page.goto(url);
+    await page.waitForLoadState('networkidle');
+    const restackElement = await page.locator('a[aria-label="View repost options"].post-ufi-button.style-button .label').first();
+    const restackText = await restackElement.textContent();
+    return parseInt(restackText?.trim() || '0', 10);
   } catch (error) {
     console.error('Error fetching restack count:', error);
     return 0;
@@ -127,33 +125,30 @@ export async function POST(request: Request) {
       baseUrl,
     };
 
-    // Launch browser with Chrome AWS Lambda
-    browser = await chromium.puppeteer.launch({
-      args: [...chromium.args, '--no-sandbox'],
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
+    // Launch browser
+    browser = await chromium.launch({
+      args: ['--no-sandbox']
+    });
+
+    // Create a new context
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 800 }
     });
 
     // Create a new page
-    const page = await browser.newPage();
-    
-    // Set viewport to a reasonable size
-    await page.setViewport({ width: 1280, height: 800 });
+    const page = await context.newPage();
 
     // Navigate to the archive page
     console.log('Navigating to archive page...');
-    await page.goto(`${baseUrl}/archive?sort=top`, {
-      waitUntil: 'networkidle0',
-      timeout: 30000,
-    });
+    await page.goto(`${baseUrl}/archive?sort=top`);
+    await page.waitForLoadState('networkidle');
 
     // Scroll to load more posts
     console.log('Scrolling to load more posts...');
     await autoScroll(page);
 
     // Wait a bit for any final loading
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await page.waitForTimeout(2000);
 
     // Extract post data
     console.log('Extracting post data...');
@@ -164,7 +159,7 @@ export async function POST(request: Request) {
     posts = posts.slice(0, 30);
 
     // Create a new page for fetching restack counts
-    const restackPage = await browser.newPage();
+    const restackPage = await context.newPage();
     
     // Fetch restack counts in parallel
     console.log('Fetching restack counts...');
