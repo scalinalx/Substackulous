@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { chromium } from '@playwright/test';
+import { chromium } from 'playwright';
 
 interface SubstackPost {
   title: string;
@@ -125,14 +125,24 @@ export async function POST(request: Request) {
       baseUrl,
     };
 
-    // Launch browser
+    // Launch browser with specific configuration for serverless environment
     browser = await chromium.launch({
-      args: ['--no-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu'
+      ]
     });
 
-    // Create a new context
+    // Create a new context with specific viewport
     const context = await browser.newContext({
-      viewport: { width: 1280, height: 800 }
+      viewport: { width: 1280, height: 800 },
+      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     });
 
     // Create a new page
@@ -140,8 +150,10 @@ export async function POST(request: Request) {
 
     // Navigate to the archive page
     console.log('Navigating to archive page...');
-    await page.goto(`${baseUrl}/archive?sort=top`);
-    await page.waitForLoadState('networkidle');
+    await page.goto(`${baseUrl}/archive?sort=top`, {
+      waitUntil: 'networkidle',
+      timeout: 30000
+    });
 
     // Scroll to load more posts
     console.log('Scrolling to load more posts...');
