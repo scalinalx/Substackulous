@@ -1,8 +1,5 @@
 {
   "buildCommand": "next build",
   "installCommand": "npm install",
-  "framework": "nextjs",
-  "env": {
-    "PLAYWRIGHT_BROWSERS_PATH": "0"
-  }
+  "framework": "nextjs"
 } 
