@@ -1,6 +1,31 @@
 import { NextResponse } from 'next/server';
 import { chromium } from 'playwright';
-import chromiumPath from '@sparticuz/chromium';
+import chromium_ from '@sparticuz/chromium';
+
+// Configure chromium for serverless environment
+const getChromium = async () => {
+  if (process.env.VERCEL) {
+    chromium_.setHeadlessMode = true;
+    const executablePath = await chromium_.executablePath();
+    
+    if (process.platform === 'win32') {
+      chromium_.setGraphicsMode = false;
+    }
+    
+    return {
+      args: chromium_.args,
+      executablePath,
+      headless: true
+    };
+  }
+  
+  // For local development, use default configuration
+  return {
+    args: [],
+    executablePath: undefined,
+    headless: true
+  };
+};
 
 interface SubstackPost {
   title: string;
@@ -126,12 +151,16 @@ export async function POST(request: Request) {
       baseUrl,
     };
 
-    // Launch browser with specific configuration for serverless environment
-    browser = await chromium.launch({
-      args: chromiumPath.args,
-      executablePath: process.env.VERCEL ? await chromiumPath.executablePath() : undefined,
-      headless: true
+    // Get chromium configuration
+    const chromiumConfig = await getChromium();
+    console.log('Chromium config:', {
+      args: chromiumConfig.args,
+      executablePath: chromiumConfig.executablePath,
+      headless: chromiumConfig.headless
     });
+
+    // Launch browser with specific configuration for serverless environment
+    browser = await chromium.launch(chromiumConfig);
 
     // Create a new context with specific viewport
     const context = await browser.newContext({
