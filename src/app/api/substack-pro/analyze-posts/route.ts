@@ -129,10 +129,10 @@ export async function POST(request: Request) {
 
     // Launch browser with Chrome AWS Lambda
     browser = await chromium.puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, '--no-sandbox'],
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath,
-      headless: true,
+      headless: chromium.headless,
     });
 
     // Create a new page
@@ -145,6 +145,7 @@ export async function POST(request: Request) {
     console.log('Navigating to archive page...');
     await page.goto(`${baseUrl}/archive?sort=top`, {
       waitUntil: 'networkidle0',
+      timeout: 30000,
     });
 
     // Scroll to load more posts
