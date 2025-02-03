@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { chromium } from 'playwright';
+import path from 'path';
 
 interface SubstackPost {
   title: string;
@@ -9,6 +10,18 @@ interface SubstackPost {
   thumbnail: string;
   url: string;
 }
+
+// Get the correct executable path based on the environment
+const getExecutablePath = () => {
+  // Check if we're in a Vercel environment
+  if (process.env.VERCEL) {
+    return process.env.PLAYWRIGHT_BROWSERS_PATH 
+      ? path.join(process.env.PLAYWRIGHT_BROWSERS_PATH, 'chromium-1055/chrome-linux/chrome')
+      : '/var/task/node_modules/playwright-core/.local-browsers/chromium-1055/chrome-linux/chrome';
+  }
+  // For local development, let Playwright handle it
+  return undefined;
+};
 
 async function autoScroll(page: any) {
   await page.evaluate(async () => {
@@ -125,6 +138,10 @@ export async function POST(request: Request) {
       baseUrl,
     };
 
+    // Get the executable path
+    const executablePath = getExecutablePath();
+    console.log('Using executable path:', executablePath);
+
     // Launch browser with specific configuration for serverless environment
     browser = await chromium.launch({
       args: [
@@ -136,7 +153,8 @@ export async function POST(request: Request) {
         '--no-zygote',
         '--single-process',
         '--disable-gpu'
-      ]
+      ],
+      executablePath
     });
 
     // Create a new context with specific viewport
