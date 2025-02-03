@@ -12,6 +12,15 @@ const nextConfig = {
       { module: /node_modules\/chrome-aws-lambda/ }
     ];
 
+    // Prevent bundling of chrome-aws-lambda and puppeteer-core on server
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push({
+        'chrome-aws-lambda': 'commonjs chrome-aws-lambda',
+        'puppeteer-core': 'commonjs puppeteer-core'
+      });
+    }
+
     return config;
   },
   // Increase serverless function timeout
