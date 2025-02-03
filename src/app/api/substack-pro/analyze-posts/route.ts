@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import type { Page, Browser } from 'puppeteer';
-import puppeteer from 'puppeteer';
+import type { Page } from 'puppeteer-core';
+import chromium from 'chrome-aws-lambda';
 
 interface SubstackPost {
   title: string;
@@ -113,10 +113,7 @@ async function getRestackCount(page: Page, url: string): Promise<number> {
 }
 
 export async function POST(request: Request) {
-  const browser = await puppeteer.launch({
-    headless: true,
-  });
-
+  let browser;
   try {
     const { url } = await request.json();
 
@@ -129,6 +126,14 @@ export async function POST(request: Request) {
       originalUrl: url,
       baseUrl,
     };
+
+    // Launch browser with Chrome AWS Lambda
+    browser = await chromium.puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath,
+      headless: true,
+    });
 
     // Create a new page
     const page = await browser.newPage();
@@ -195,6 +200,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   } finally {
-    await browser.close();
+    if (browser) {
+      await browser.close();
+    }
   }
 } 
