@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import chromium from 'chrome-aws-lambda';
+import chromium from '@sparticuz/chromium';
 import puppeteer from 'puppeteer-core';
 
 interface SubstackPost {
@@ -131,8 +131,8 @@ export async function POST(request: Request) {
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless === 'new',
     });
 
     // Create a new page
