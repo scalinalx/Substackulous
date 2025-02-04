@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import Groq from 'groq-sdk';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client with service role key for admin operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 // -------------------------------
 // Type Definitions
@@ -171,13 +184,43 @@ export async function POST(request: Request) {
     await init();
 
     const body = await request.json();
-    const { userTopic, model = 'llama' } = body;
+    const { userTopic, model = 'llama', userId } = body;
 
     if (!userTopic) {
       return NextResponse.json(
         { error: 'Missing required parameter: userTopic' },
         { status: 400 }
       );
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user has enough credits
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      return NextResponse.json({ 
+        error: 'Failed to fetch user profile',
+        details: profileError.message 
+      }, { status: 404 });
+    }
+
+    if (!profile) {
+      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
+    }
+
+    const creditCost = 1;
+    if (profile.credits < creditCost) {
+      return NextResponse.json({ error: 'Insufficient credits' }, { status: 400 });
     }
 
     // Retrieve the top 3 examples similar to the user topic.
@@ -188,6 +231,19 @@ export async function POST(request: Request) {
 
     // Call the Groq API to generate the viral notes.
     const generatedNotes = await callGroqAPI(prompt, model as 'llama' | 'deepseek');
+
+    // Deduct credits
+    const { error: updateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ credits: profile.credits - creditCost })
+      .eq('id', userId);
+
+    if (updateError) {
+      return NextResponse.json({ 
+        error: 'Failed to update credits',
+        details: updateError.message 
+      }, { status: 500 });
+    }
 
     // Return the generated notes.
     return NextResponse.json({ 

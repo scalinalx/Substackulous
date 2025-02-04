@@ -52,7 +52,8 @@ export default function NotesRagContent() {
         },
         body: JSON.stringify({ 
           userTopic: topic.trim(),
-          model
+          model,
+          userId: user.id // Add userId for credit deduction
         }),
       });
 
@@ -67,7 +68,7 @@ export default function NotesRagContent() {
       }
 
       setResult(data.result);
-      await subtractCredits(1);
+      // Credit deduction is handled on the server side
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {

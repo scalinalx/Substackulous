@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
-import { db } from '@/lib/firebase/firebase';
-import { User } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export function useCredits() {
   const { user } = useAuth();
@@ -18,10 +22,14 @@ export function useCredits() {
 
     const fetchCredits = async () => {
       try {
-        const userDoc = await getDoc(doc(db, 'users', user.id));
-        if (userDoc.exists()) {
-          setCredits(userDoc.data().credits || 0);
-        }
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('credits')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        setCredits(data?.credits || 0);
       } catch (error) {
         console.error('Error fetching credits:', error);
       } finally {
@@ -36,10 +44,12 @@ export function useCredits() {
     if (!user) return;
     
     try {
-      const userRef = doc(db, 'users', user.id);
-      await updateDoc(userRef, {
-        credits: increment(-amount)
-      });
+      const { error } = await supabase
+        .from('profiles')
+        .update({ credits: credits - amount })
+        .eq('id', user.id);
+
+      if (error) throw error;
       setCredits(prev => prev - amount);
     } catch (error) {
       console.error('Error subtracting credits:', error);
@@ -51,10 +61,12 @@ export function useCredits() {
     if (!user) return;
     
     try {
-      const userRef = doc(db, 'users', user.id);
-      await updateDoc(userRef, {
-        credits: increment(amount)
-      });
+      const { error } = await supabase
+        .from('profiles')
+        .update({ credits: credits + amount })
+        .eq('id', user.id);
+
+      if (error) throw error;
       setCredits(prev => prev + amount);
     } catch (error) {
       console.error('Error adding credits:', error);
