@@ -19,6 +19,8 @@ interface ErrorResponse {
   error: string;
 }
 
+const BATCH_SIZE = 5; // Process 5 posts at a time
+
 async function fetchPageData(url: string): Promise<{ html: string; error?: string }> {
   try {
     const controller = new AbortController();
@@ -115,12 +117,34 @@ async function extractPostData(html: string, url: string): Promise<SubstackPost 
   }
 }
 
+async function processBatch(urls: string[]): Promise<SubstackPost[]> {
+  const results = await Promise.all(
+    urls.map(async (url) => {
+      const { html, error } = await fetchPageData(url);
+      if (error || !html) {
+        console.error(`Failed to fetch ${url}:`, error);
+        return null;
+      }
+      return extractPostData(html, url);
+    })
+  );
+  return results.filter((post): post is SubstackPost => post !== null);
+}
+
 export async function POST(request: Request) {
+  const encoder = new TextEncoder();
+  let stream = new TransformStream();
+  const writer = stream.writable.getWriter();
+  
+  const writeChunk = async (chunk: any) => {
+    await writer.write(encoder.encode(JSON.stringify(chunk) + '\n'));
+  };
+
   try {
     const { url } = await request.json();
 
     if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+      throw new Error('URL is required');
     }
 
     const baseUrl = url.replace(/\/$/, '');
@@ -157,65 +181,67 @@ export async function POST(request: Request) {
 
     console.log(`Found ${postUrls.length} post URLs`);
 
-    // Fetch and process each post in parallel with timeout
-    console.log('Fetching post data...');
-    const postsData = await Promise.all(
-      postUrls.map(async (postUrl: string) => {
-        const { html, error } = await fetchPageData(postUrl);
-        if (error || !html) {
-          console.error(`Failed to fetch ${postUrl}:`, error);
-          return null;
-        }
-        return extractPostData(html, postUrl);
-      })
-    );
+    // Process posts in batches
+    const allPosts: SubstackPost[] = [];
+    for (let i = 0; i < postUrls.length; i += BATCH_SIZE) {
+      const batchUrls = postUrls.slice(i, i + BATCH_SIZE);
+      const batchPosts = await processBatch(batchUrls);
+      allPosts.push(...batchPosts);
+      
+      // Send progress update
+      await writeChunk({
+        type: 'progress',
+        processed: Math.min(i + BATCH_SIZE, postUrls.length),
+        total: postUrls.length,
+        posts: batchPosts
+      });
+    }
 
-    // Filter out null results and sort by engagement
-    const validPosts = postsData.filter((post): post is SubstackPost => post !== null);
-    const sortedPosts = validPosts.sort((a: SubstackPost, b: SubstackPost) => 
+    // Sort all posts by engagement
+    const sortedPosts = allPosts.sort((a, b) => 
       (b.likes + b.comments + b.restacks) - (a.likes + a.comments + a.restacks)
     );
 
     const endTime = Date.now();
-    console.log('Total posts processed:', sortedPosts.length);
-    console.log('Processing time:', endTime - debugInfo.startTime, 'ms');
     
-    return new NextResponse(
-      JSON.stringify({ 
-        posts: sortedPosts,
-        debugInfo: {
-          ...debugInfo,
-          postsFound: sortedPosts.length,
-          processingTimeMs: endTime - debugInfo.startTime
-        }
-      }),
-      { 
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store'
-        }
+    // Send final result
+    await writeChunk({
+      type: 'complete',
+      posts: sortedPosts,
+      debugInfo: {
+        ...debugInfo,
+        postsFound: sortedPosts.length,
+        processingTimeMs: endTime - debugInfo.startTime
       }
-    );
+    });
+
+    await writer.close();
+    return new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
+    });
   } catch (error) {
     console.error('Error analyzing Substack posts:', error);
-    return new NextResponse(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to analyze posts',
-        code: 'ANALYSIS_ERROR',
-        details: error instanceof Error ? error.stack : undefined,
-        debugInfo: {
-          error: String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        }
-      }),
-      { 
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-store'
-        }
+    await writeChunk({
+      type: 'error',
+      error: error instanceof Error ? error.message : 'Failed to analyze posts',
+      code: 'ANALYSIS_ERROR',
+      details: error instanceof Error ? error.stack : undefined,
+      debugInfo: {
+        error: String(error),
+        stack: error instanceof Error ? error.stack : undefined,
       }
-    );
+    });
+    await writer.close();
+    return new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
+    });
   }
 } 

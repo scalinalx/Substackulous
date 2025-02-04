@@ -67,55 +67,67 @@ export default function SubstackProContent() {
     setPosts([]);
     setProgress('Starting analysis...');
     
-    let retries = 0;
-    
-    while (retries < MAX_RETRIES) {
-      try {
-        setProgress(`Attempt ${retries + 1}/${MAX_RETRIES}: Analyzing posts...`);
-        
-        const response = await fetchWithTimeout('/api/substack-pro/analyze-posts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ url: substackUrl.trim() }),
-        });
+    try {
+      const response = await fetch('/api/substack-pro/analyze-posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: substackUrl.trim() }),
+      });
 
-        if (response.status === 504) {
-          // Gateway timeout, retry
-          retries++;
-          if (retries < MAX_RETRIES) {
-            setProgress(`Timeout occurred. Retrying... (${retries}/${MAX_RETRIES})`);
-            continue;
-          }
-          throw new Error('Analysis timed out after multiple attempts. Please try again.');
-        }
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setPosts(data.posts);
-        setProgress('');
-        break; // Success, exit the retry loop
-      } catch (err) {
-        console.error('Analysis error:', err);
-        if (err instanceof Error && err.name === 'AbortError') {
-          retries++;
-          if (retries < MAX_RETRIES) {
-            setProgress(`Request timed out. Retrying... (${retries}/${MAX_RETRIES})`);
-            continue;
-          }
-        }
-        setError(err instanceof Error ? err.message : 'Failed to analyze posts');
-        setProgress('');
-        break;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Failed to get response reader');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          
+          try {
+            const chunk = JSON.parse(line);
+            
+            switch (chunk.type) {
+              case 'progress':
+                setProgress(`Analyzing posts... ${chunk.processed}/${chunk.total}`);
+                setPosts(prevPosts => [...prevPosts, ...chunk.posts]);
+                break;
+              
+              case 'complete':
+                setPosts(chunk.posts);
+                setProgress('');
+                break;
+              
+              case 'error':
+                throw new Error(chunk.error);
+            }
+          } catch (e) {
+            console.error('Error parsing chunk:', e);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Analysis error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze posts');
+      setProgress('');
+    } finally {
+      setIsAnalyzing(false);
     }
-    
-    setIsAnalyzing(false);
   };
 
   if (!mounted || loading) {
