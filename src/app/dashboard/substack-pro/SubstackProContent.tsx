@@ -21,7 +21,8 @@ type SortBy = 'likes' | 'comments' | 'restacks';
 
 const TIMEOUT_DURATION = 300000; // 5 minutes
 const MAX_RETRIES = 3;
-const POLL_INTERVAL = 2000; // Poll every 2 seconds
+const POLL_INTERVAL = 5000; // Poll every 5 seconds
+const MAX_POLL_TIME = 300000; // Stop polling after 5 minutes
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = TIMEOUT_DURATION) {
   const controller = new AbortController();
@@ -50,6 +51,7 @@ export default function SubstackProContent() {
   const [crawlResponse, setCrawlResponse] = useState<any>(null);
   const [progress, setProgress] = useState<string>('');
   const [crawlId, setCrawlId] = useState<string | null>(null);
+  const [pollStartTime, setPollStartTime] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -63,7 +65,16 @@ export default function SubstackProContent() {
 
   // Poll for crawl status
   useEffect(() => {
-    if (!crawlId || !isAnalyzing) return;
+    if (!crawlId || !isAnalyzing || !pollStartTime) return;
+
+    // Stop polling if we've exceeded the maximum time
+    if (Date.now() - pollStartTime > MAX_POLL_TIME) {
+      setError('Analysis timed out after 5 minutes. Please try again.');
+      setIsAnalyzing(false);
+      setCrawlId(null);
+      setPollStartTime(null);
+      return;
+    }
 
     const pollStatus = async () => {
       try {
@@ -83,12 +94,14 @@ export default function SubstackProContent() {
 
         if (data.type === 'status') {
           const status = data.status;
+          console.log('Received status:', status);
           
           if (status.status === 'completed') {
             setCrawlResponse(status.data);
             setProgress('');
             setIsAnalyzing(false);
             setCrawlId(null);
+            setPollStartTime(null);
           } else if (status.status === 'failed') {
             throw new Error(status.error || 'Crawl failed');
           } else {
@@ -101,12 +114,13 @@ export default function SubstackProContent() {
         setProgress('');
         setIsAnalyzing(false);
         setCrawlId(null);
+        setPollStartTime(null);
       }
     };
 
     const intervalId = setInterval(pollStatus, POLL_INTERVAL);
     return () => clearInterval(intervalId);
-  }, [crawlId, isAnalyzing]);
+  }, [crawlId, isAnalyzing, pollStartTime]);
 
   const handleAnalyzePosts = async () => {
     if (!substackUrl.trim() || isAnalyzing) return;
@@ -114,6 +128,7 @@ export default function SubstackProContent() {
     setError(null);
     setCrawlResponse(null);
     setCrawlId(null);
+    setPollStartTime(null);
     setProgress('Starting analysis...');
     
     try {
@@ -131,9 +146,13 @@ export default function SubstackProContent() {
         throw new Error(data.error || 'Failed to start analysis');
       }
 
-      if (data.type === 'start') {
+      if (data.type === 'start' && data.crawlId) {
+        console.log('Started crawl with ID:', data.crawlId);
         setCrawlId(data.crawlId);
+        setPollStartTime(Date.now());
         setProgress('Crawl started, waiting for results...');
+      } else {
+        throw new Error('Invalid response from server');
       }
     } catch (err) {
       console.error('Analysis error:', err);
