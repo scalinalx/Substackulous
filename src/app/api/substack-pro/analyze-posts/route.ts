@@ -27,7 +27,7 @@ interface ErrorResponse {
 interface CrawlResponse {
   success: boolean;
   error?: string;
-  id?: string;
+  data: CrawlResult[];
 }
 
 interface StatusResponse {
@@ -38,9 +38,10 @@ interface StatusResponse {
 }
 
 interface CrawlResult {
-  success: boolean;
+  success?: boolean;
   error?: string;
   markdown?: string;
+  metadata?: any;
 }
 
 interface MapResult {
@@ -120,13 +121,20 @@ export async function POST(request: Request) {
         scrapeOptions: {
           formats: ["markdown"],
         }
-      }) as CrawlResult;
+      }) as unknown as CrawlResult[];
 
-      if (!crawlResult.success || !crawlResult.markdown) {
-        throw new Error(`Failed to crawl notes: ${crawlResult.error || 'No markdown content'}`);
+      // The API returns an array of results
+      if (!crawlResult || !Array.isArray(crawlResult) || crawlResult.length === 0) {
+        throw new Error('Failed to crawl notes: No results returned');
       }
 
-      const noteUrls = extractNoteUrls(crawlResult.markdown);
+      // Get the first result which contains the markdown
+      const firstResult = crawlResult[0];
+      if (!firstResult.markdown) {
+        throw new Error('Failed to crawl notes: No markdown content in response');
+      }
+
+      const noteUrls = extractNoteUrls(firstResult.markdown);
       console.log(`Found ${noteUrls.length} note URLs`);
 
       return NextResponse.json({ 
