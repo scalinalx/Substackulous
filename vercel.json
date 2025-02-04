@@ -6,5 +6,11 @@
     "src/app/api/substack-pro/analyze-posts/route.ts": {
       "maxDuration": 300
     }
-  }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  },
+  "regions": ["iad1"]
 } 
