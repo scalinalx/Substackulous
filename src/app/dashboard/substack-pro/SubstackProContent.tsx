@@ -19,6 +19,26 @@ interface SubstackPost {
 
 type SortBy = 'likes' | 'comments' | 'restacks';
 
+const TIMEOUT_DURATION = 300000; // 5 minutes
+const MAX_RETRIES = 3;
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = TIMEOUT_DURATION) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw error;
+  }
+}
+
 export default function SubstackProContent() {
   const [mounted, setMounted] = useState(false);
   const { user, loading } = useAuth();
@@ -28,6 +48,7 @@ export default function SubstackProContent() {
   const [error, setError] = useState<string | null>(null);
   const [posts, setPosts] = useState<SubstackPost[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>('likes');
+  const [progress, setProgress] = useState<string>('');
 
   useEffect(() => {
     setMounted(true);
@@ -44,29 +65,57 @@ export default function SubstackProContent() {
     setIsAnalyzing(true);
     setError(null);
     setPosts([]);
+    setProgress('Starting analysis...');
     
-    try {
-      const response = await fetch('/api/substack-pro/analyze-posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: substackUrl.trim() }),
-      });
+    let retries = 0;
+    
+    while (retries < MAX_RETRIES) {
+      try {
+        setProgress(`Attempt ${retries + 1}/${MAX_RETRIES}: Analyzing posts...`);
+        
+        const response = await fetchWithTimeout('/api/substack-pro/analyze-posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url: substackUrl.trim() }),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        if (response.status === 504) {
+          // Gateway timeout, retry
+          retries++;
+          if (retries < MAX_RETRIES) {
+            setProgress(`Timeout occurred. Retrying... (${retries}/${MAX_RETRIES})`);
+            continue;
+          }
+          throw new Error('Analysis timed out after multiple attempts. Please try again.');
+        }
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Failed to parse error response' }));
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setPosts(data.posts);
+        setProgress('');
+        break; // Success, exit the retry loop
+      } catch (err) {
+        console.error('Analysis error:', err);
+        if (err instanceof Error && err.name === 'AbortError') {
+          retries++;
+          if (retries < MAX_RETRIES) {
+            setProgress(`Request timed out. Retrying... (${retries}/${MAX_RETRIES})`);
+            continue;
+          }
+        }
+        setError(err instanceof Error ? err.message : 'Failed to analyze posts');
+        setProgress('');
+        break;
       }
-
-      const data = await response.json();
-      setPosts(data.posts);
-    } catch (err) {
-      console.error('Analysis error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to analyze posts');
-    } finally {
-      setIsAnalyzing(false);
     }
+    
+    setIsAnalyzing(false);
   };
 
   if (!mounted || loading) {
@@ -114,6 +163,22 @@ export default function SubstackProContent() {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {progress && (
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-blue-700">{progress}</p>
                   </div>
                 </div>
               </div>
