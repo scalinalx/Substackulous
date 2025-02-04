@@ -19,6 +19,7 @@
     "@stripe/stripe-js": "^5.5.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.48.1",
+    "@xenova/transformers": "^2.17.2",
     "ai": "^4.1.16",
     "cheerio": "^1.0.0",
     "clsx": "^2.1.1",

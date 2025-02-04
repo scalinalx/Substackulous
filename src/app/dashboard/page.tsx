@@ -56,6 +56,13 @@ const features = [
     color: "from-emerald-500 to-teal-500"
   },
   {
+    title: "Notes with RAG",
+    description: "Ask questions about your Substack notes using AI with RAG (Retrieval Augmented Generation).",
+    icon: "🤖",
+    href: "/dashboard/notes-rag",
+    color: "from-cyan-500 to-blue-500"
+  },
+  {
     title: "Topic/Niche Research",
     description: "Coming Soon - Discover trending topics and untapped niches for your Substack.",
     icon: "🔍",
