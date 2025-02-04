@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import chromium from '@sparticuz/chromium';
-import puppeteer from 'puppeteer-core';
+import FireCrawlApp from '@mendable/firecrawl-js';
+import * as cheerio from 'cheerio';
 
 interface SubstackPost {
   title: string;
@@ -11,109 +11,94 @@ interface SubstackPost {
   url: string;
 }
 
-async function autoScroll(page: puppeteer.Page) {
-  await page.evaluate(async () => {
-    await new Promise<void>((resolve) => {
-      let totalHeight = 0;
-      const distance = 100;
-      const timer = setInterval(() => {
-        const scrollHeight = document.body.scrollHeight;
-        window.scrollBy(0, distance);
-        totalHeight += distance;
-
-        if (totalHeight >= scrollHeight) {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 100);
-    });
-  });
+interface MapResponse {
+  urls: string[];
 }
 
-async function extractPostData(page: puppeteer.Page): Promise<SubstackPost[]> {
-  return page.evaluate(() => {
-    const posts: SubstackPost[] = [];
-    const postElements = document.querySelectorAll('.container-H2dyKk');
-    
-    postElements.forEach((element) => {
-      try {
-        // Extract title and URL
-        const titleElement = element.querySelector('a[data-testid="post-preview-title"]');
-        if (!titleElement) return;
-        
-        const title = titleElement.textContent?.trim() || '';
-        const url = (titleElement as HTMLAnchorElement).href;
-        
-        // Extract likes
-        const likesElement = element.querySelector('.like-button-container .label');
-        const likes = parseInt(likesElement?.textContent?.trim() || '0', 10);
-        
-        // Extract comments
-        const commentsElement = element.querySelector('.post-ufi-comment-button .label');
-        const comments = parseInt(commentsElement?.textContent?.trim() || '0', 10);
-        
-        // Extract thumbnail
-        let thumbnail = '';
-        const imgSelectors = [
-          '.image-nBNbRY',
-          '.img-OACg1c',
-          'img[src*="substackcdn.com"]',
-          'img[src*="substack-post-media"]'
-        ];
-
-        for (const selector of imgSelectors) {
-          const imgElement = element.querySelector(selector);
-          if (imgElement && 'src' in imgElement) {
-            thumbnail = (imgElement as HTMLImageElement).src;
-            break;
-          }
-        }
-
-        // If no direct image found, try webp source
-        if (!thumbnail) {
-          const webpSource = element.querySelector('source[type="image/webp"]');
-          if (webpSource && webpSource.hasAttribute('srcset')) {
-            const srcset = webpSource.getAttribute('srcset') || '';
-            const firstUrl = srcset.split(',')[0].trim().split(' ')[0];
-            if (firstUrl) {
-              thumbnail = firstUrl;
-            }
-          }
-        }
-
-        posts.push({
-          title,
-          url,
-          likes,
-          comments,
-          restacks: 0, // We'll fetch this separately
-          thumbnail
-        });
-      } catch (error) {
-        console.error('Error processing post:', error);
-      }
-    });
-
-    return posts;
-  });
+interface ErrorResponse {
+  error: string;
 }
 
-async function getRestackCount(page: puppeteer.Page, url: string): Promise<number> {
+async function fetchPageData(url: string): Promise<{ html: string; error?: string }> {
   try {
-    await page.goto(url, { waitUntil: 'networkidle0' });
-    const restackCount = await page.$eval(
-      'a[aria-label="View repost options"].post-ufi-button.style-button .label',
-      (el: Element) => parseInt(el.textContent?.trim() || '0', 10)
-    );
-    return restackCount;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const html = await response.text();
+    return { html };
   } catch (error) {
-    console.error('Error fetching restack count:', error);
-    return 0;
+    return { 
+      html: '', 
+      error: error instanceof Error ? error.message : 'Failed to fetch page' 
+    };
+  }
+}
+
+async function extractPostData(html: string, url: string): Promise<SubstackPost | null> {
+  try {
+    const $ = cheerio.load(html);
+    
+    // Extract title
+    const title = $('h1.post-title').text().trim();
+    if (!title) return null;
+
+    // Extract likes
+    const likesText = $('.like-button-container .label').text().trim();
+    const likes = parseInt(likesText) || 0;
+
+    // Extract comments
+    const commentsText = $('.post-ufi-comment-button .label').text().trim();
+    const comments = parseInt(commentsText) || 0;
+
+    // Extract restacks
+    const restacksText = $('a[aria-label="View repost options"].post-ufi-button .label').text().trim();
+    const restacks = parseInt(restacksText) || 0;
+
+    // Extract thumbnail
+    let thumbnail = '';
+    const imgSelectors = [
+      '.image-nBNbRY',
+      '.img-OACg1c',
+      'img[src*="substackcdn.com"]',
+      'img[src*="substack-post-media"]'
+    ];
+
+    for (const selector of imgSelectors) {
+      const imgElement = $(selector).first();
+      if (imgElement.length && imgElement.attr('src')) {
+        thumbnail = imgElement.attr('src') || '';
+        break;
+      }
+    }
+
+    // If no direct image found, try webp source
+    if (!thumbnail) {
+      const webpSource = $('source[type="image/webp"]').first();
+      if (webpSource.length && webpSource.attr('srcset')) {
+        const srcset = webpSource.attr('srcset') || '';
+        const firstUrl = srcset.split(',')[0].trim().split(' ')[0];
+        if (firstUrl) {
+          thumbnail = firstUrl;
+        }
+      }
+    }
+
+    return {
+      title,
+      likes,
+      comments,
+      restacks,
+      thumbnail,
+      url
+    };
+  } catch (error) {
+    console.error('Error extracting post data:', error);
+    return null;
   }
 }
 
 export async function POST(request: Request) {
-  let browser = null;
   try {
     const { url } = await request.json();
 
@@ -127,62 +112,54 @@ export async function POST(request: Request) {
       baseUrl,
     };
 
-    // Launch browser with chrome-aws-lambda
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless === 'new',
+    // Initialize FireCrawl
+    const app = new FireCrawlApp({
+      apiKey: "fc-f395371cd0614b3cb105a364c0891b0e"
     });
 
-    // Create a new page
-    const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    // Get all URLs from the archive page
+    console.log('Mapping URLs...');
+    const mapResponse = await app.mapUrl(`${baseUrl}/archive?sort=top`, {
+      includeSubdomains: true
+    }) as MapResponse | ErrorResponse;
 
-    // Navigate to the archive page
-    console.log('Navigating to archive page...');
-    await page.goto(`${baseUrl}/archive?sort=top`, {
-      waitUntil: 'networkidle0',
-      timeout: 30000
-    });
+    if ('error' in mapResponse) {
+      throw new Error(mapResponse.error);
+    }
 
-    // Scroll to load more posts
-    console.log('Scrolling to load more posts...');
-    await autoScroll(page);
+    // Filter for post URLs and take only the first 30
+    const postUrls = mapResponse.urls
+      .filter((url: string) => url.includes('/p/'))
+      .slice(0, 30);
 
-    // Wait a bit for any final loading
-    await page.waitForTimeout(2000);
+    console.log(`Found ${postUrls.length} post URLs`);
 
-    // Extract post data
-    console.log('Extracting post data...');
-    let posts = await extractPostData(page);
-    console.log(`Found ${posts.length} posts`);
+    // Fetch and process each post in parallel
+    console.log('Fetching post data...');
+    const postsData = await Promise.all(
+      postUrls.map(async (postUrl: string) => {
+        const { html, error } = await fetchPageData(postUrl);
+        if (error || !html) {
+          console.error(`Failed to fetch ${postUrl}:`, error);
+          return null;
+        }
+        return extractPostData(html, postUrl);
+      })
+    );
 
-    // Take only the first 30 posts
-    posts = posts.slice(0, 30);
+    // Filter out null results and sort by engagement
+    const validPosts = postsData.filter((post): post is SubstackPost => post !== null);
+    const sortedPosts = validPosts.sort((a: SubstackPost, b: SubstackPost) => 
+      (b.likes + b.comments + b.restacks) - (a.likes + a.comments + a.restacks)
+    );
 
-    // Create a new page for fetching restack counts
-    const restackPage = await browser.newPage();
-    await restackPage.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-    
-    // Fetch restack counts in parallel
-    console.log('Fetching restack counts...');
-    const restackPromises = posts.map(post => getRestackCount(restackPage, post.url));
-    const restackCounts = await Promise.all(restackPromises);
-
-    // Combine the data
-    const finalPosts = posts.map((post, index) => ({
-      ...post,
-      restacks: restackCounts[index]
-    }));
-
-    console.log('Total posts processed:', finalPosts.length);
+    console.log('Total posts processed:', sortedPosts.length);
     
     return NextResponse.json({ 
-      posts: finalPosts,
+      posts: sortedPosts,
       debugInfo: {
         ...debugInfo,
-        postsFound: finalPosts.length
+        postsFound: sortedPosts.length
       }
     });
   } catch (error) {
@@ -199,9 +176,5 @@ export async function POST(request: Request) {
       },
       { status: 500 }
     );
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 } 
