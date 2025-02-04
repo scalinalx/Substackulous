@@ -22,7 +22,7 @@ interface ErrorResponse {
 interface CrawlResponse {
   success: boolean;
   error?: string;
-  crawlId?: string;
+  id?: string;
 }
 
 interface StatusResponse {
@@ -191,11 +191,11 @@ export async function POST(request: Request) {
       throw new Error(`Failed to start crawl: ${crawlResponse.error}`);
     }
 
-    console.log('Crawl started with ID:', crawlResponse.crawlId);
+    console.log('Crawl started with ID:', crawlResponse.id);
     return NextResponse.json({ 
       success: true,
       type: 'start',
-      crawlId: crawlResponse.crawlId 
+      crawlId: crawlResponse.id 
     });
   } catch (error) {
     console.error('Error in crawl operation:', error);
