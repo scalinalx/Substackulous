@@ -16,81 +16,80 @@ type NoteExample = {
 };
 
 // -------------------------------
-// Global Caches
+// Initialization and Data Loading
 // -------------------------------
 
-let examples: NoteExample[] = [];       // Holds the list of note examples.
-let initialized = false;                  // Flag to ensure one-time initialization.
-
-// -------------------------------
-// Initialization Function
-// -------------------------------
+let initialized = false;
+let examples: NoteExample[] = [];
 
 /**
  * Initializes the system by loading examples from the JSONL file.
  */
-async function init(): Promise<void> {
+async function init() {
   if (initialized) return;
 
-  // Read the JSONL file from the "data" folder.
-  const filePath = path.join(process.cwd(), 'data', 'substack_examples.jsonl');
-  const content = await fs.readFile(filePath, 'utf8');
-  const lines = content.split('\n').filter(Boolean);
-  examples = lines.map(line => JSON.parse(line) as NoteExample);
-
-  initialized = true;
-  console.log('Initialization complete with', examples.length, 'examples');
+  try {
+    const filePath = path.join(process.cwd(), 'data', 'substack_examples.jsonl');
+    const fileContent = await fs.readFile(filePath, 'utf-8');
+    examples = fileContent
+      .split('\n')
+      .filter(Boolean)
+      .map(line => JSON.parse(line));
+    initialized = true;
+  } catch (error) {
+    console.error('Error loading examples:', error);
+    throw error;
+  }
 }
 
 // -------------------------------
-// Similarity Helpers
+// Text Processing Functions
 // -------------------------------
 
 /**
- * Simple text similarity based on word overlap and topic relevance.
- * This is a basic implementation that could be improved with proper embeddings.
+ * Calculates text similarity based on word overlap.
+ * @param text1 First text to compare
+ * @param text2 Second text to compare
+ * @returns Similarity score between 0 and 1
  */
-function getTextSimilarity(text1: string, text2: string): number {
-  const words1 = text1.toLowerCase().split(/\W+/);
-  const words2 = text2.toLowerCase().split(/\W+/);
+function calculateTextSimilarity(text1: string, text2: string): number {
+  const words1 = text1.toLowerCase().split(/\W+/).filter(Boolean);
+  const words2 = text2.toLowerCase().split(/\W+/).filter(Boolean);
   
-  // Convert arrays to Sets for unique values
-  const set1 = new Set(words1);
-  const set2 = new Set(words2);
+  const set1 = Array.from(new Set(words1));
+  const set2 = Array.from(new Set(words2));
   
-  // Calculate intersection
-  const intersection = words1.filter(word => set2.has(word));
-  const uniqueIntersection = new Set(intersection);
+  const intersection = set1.filter(word => set2.includes(word));
+  const union = Array.from(new Set([...set1, ...set2]));
   
-  // Calculate union
-  const allWords = [...words1, ...words2];
-  const uniqueUnion = new Set(allWords);
-  
-  return uniqueIntersection.size / uniqueUnion.size;
+  return intersection.length / union.length;
 }
 
 /**
- * Retrieves the top K note examples that are most similar to the provided query.
- * @param query The user-provided topic.
- * @param topK Number of examples to retrieve.
- * @returns An array of the top K note examples.
+ * Retrieves examples most similar to the user's topic.
+ * @param userTopic The user's input topic
+ * @param count Number of examples to retrieve
+ * @returns Array of most similar examples
  */
-function retrieveExamples(query: string, topK: number): NoteExample[] {
-  const similarities = examples.map((ex, idx) => ({
-    index: idx,
-    similarity: getTextSimilarity(query, ex.note)
-  }));
-  
-  similarities.sort((a, b) => b.similarity - a.similarity);
-  const topIndices = similarities.slice(0, topK).map(item => item.index);
-  return topIndices.map(i => examples[i]);
+function retrieveExamples(userTopic: string, count: number): NoteExample[] {
+  return examples
+    .map(example => ({
+      ...example,
+      similarity: calculateTextSimilarity(userTopic, example.note)
+    }))
+    .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
+    .slice(0, count);
 }
 
+// -------------------------------
+// Prompt Building
+// -------------------------------
+
 /**
- * Builds the complete prompt for the model by combining the retrieved examples and a fixed base prompt.
- * @param retrievedExamples The top note examples retrieved.
- * @param userTopic The user-provided topic.
- * @returns The complete prompt as a string.
+ * Builds the complete prompt for the Groq API.
+ * @param retrievedExamples Retrieved similar examples
+ * @param userTopic User's input topic
+ * @returns Complete prompt string
  */
 function buildPrompt(retrievedExamples: NoteExample[], userTopic: string): string {
   let prompt = 'Below are examples of viral Substack notes that have gathered high engagement:\n\n';
@@ -99,7 +98,7 @@ function buildPrompt(retrievedExamples: NoteExample[], userTopic: string): strin
   });
 
   const basePrompt = `
-Write 4 short, highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
+Write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
 
 The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
 
@@ -121,24 +120,40 @@ Ensure the tone is optimistic but grounded in reality—no empty inspiration, ju
 /**
  * Calls the Groq API using groq-sdk with streaming disabled.
  * @param prompt The complete prompt to send to the API.
+ * @param model The model to use ('llama' or 'deepseek').
  * @returns The generated viral notes as a string.
  */
-async function callGroqAPI(prompt: string): Promise<string> {
-  const groq = new Groq();
+async function callGroqAPI(prompt: string, model: 'llama' | 'deepseek'): Promise<string> {
+  const groq = new Groq({
+    apiKey: process.env.GROQ_API_KEY
+  });
+  
   const messages = [
     { role: 'user' as const, content: prompt }
   ];
 
-  // Call the Groq API with "stream": false so that the full response is returned at once.
-  const chatCompletion = await groq.chat.completions.create({
-    messages,
-    model: "llama-3.3-70b-specdec",
-    temperature: 1,
-    max_completion_tokens: 2090,
-    top_p: 1,
-    stream: false,
-    stop: null
-  });
+  // Call the Groq API with the specified model and parameters
+  const chatCompletion = await groq.chat.completions.create(
+    model === 'llama' 
+      ? {
+          messages,
+          model: "llama-3.3-70b-specdec",
+          temperature: 1,
+          max_tokens: 2090,
+          top_p: 1,
+          stream: false,
+          stop: null
+        }
+      : {
+          messages,
+          model: "deepseek-r1-distill-llama-70b",
+          temperature: 0.69,
+          max_tokens: 4096,
+          top_p: 0.95,
+          stream: false,
+          stop: null
+        }
+  );
 
   return chatCompletion.choices[0]?.message?.content || '';
 }
@@ -156,7 +171,7 @@ export async function POST(request: Request) {
     await init();
 
     const body = await request.json();
-    const { userTopic } = body;
+    const { userTopic, model = 'llama' } = body;
 
     if (!userTopic) {
       return NextResponse.json(
@@ -172,7 +187,7 @@ export async function POST(request: Request) {
     console.log('Constructed prompt:', prompt);
 
     // Call the Groq API to generate the viral notes.
-    const generatedNotes = await callGroqAPI(prompt);
+    const generatedNotes = await callGroqAPI(prompt, model as 'llama' | 'deepseek');
 
     // Return the generated notes.
     return NextResponse.json({ 
@@ -181,14 +196,16 @@ export async function POST(request: Request) {
       logs: {
         examplesCount: retrievedExamples.length,
         promptLength: prompt.length,
+        model
       }
     });
-  } catch (error: any) {
-    console.error('Error in notes-rag analyze:', error);
+  } catch (error) {
+    console.error('Error in note generation:', error);
     return NextResponse.json(
       { 
         success: false,
-        error: error.message || 'Internal Server Error',
+        error: error instanceof Error ? error.message : 'Failed to generate notes',
+        details: error instanceof Error ? error.stack : 'No stack trace available'
       },
       { status: 500 }
     );
