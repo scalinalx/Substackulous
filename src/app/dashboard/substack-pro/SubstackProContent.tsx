@@ -29,6 +29,9 @@ export default function SubstackProContent() {
   const [sortBy, setSortBy] = useState<SortBy>('total');
   const [rawResponse, setRawResponse] = useState<any>(null);
   const [showRawResponse, setShowRawResponse] = useState(false);
+  const [notesUrl, setNotesUrl] = useState('');
+  const [notes, setNotes] = useState<string[]>([]);
+  const [isAnalyzingNotes, setIsAnalyzingNotes] = useState(false);
 
   if (loading) {
     return (
@@ -73,6 +76,42 @@ export default function SubstackProContent() {
       setError(err instanceof Error ? err.message : 'Failed to analyze');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleAnalyzeNotes = async () => {
+    if (!notesUrl.trim() || isAnalyzingNotes) return;
+    
+    setIsAnalyzingNotes(true);
+    setError(null);
+    setNotes([]);
+    setRawResponse(null);
+    
+    try {
+      const response = await fetch('/api/substack-pro/analyze-posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          url: notesUrl.trim(),
+          type: 'notes'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to analyze notes');
+      }
+
+      setNotes(data.notes);
+      setRawResponse(data.rawResponse);
+    } catch (err) {
+      console.error('Notes analysis error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze notes');
+    } finally {
+      setIsAnalyzingNotes(false);
     }
   };
 
@@ -148,14 +187,68 @@ export default function SubstackProContent() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Analyzing...
+                      Analyzing Posts...
                     </span>
                   ) : (
-                    'Analyze'
+                    'Analyze Posts'
                   )}
                 </Button>
               </div>
             </div>
+
+            <div className="space-y-4 mt-8 pt-8 border-t">
+              <label htmlFor="notesUrl" className="block text-sm font-medium text-gray-700">
+                Enter Substack URL to analyze Notes (e.g., blog.substack.com)
+              </label>
+              <div className="flex gap-4">
+                <Input
+                  id="notesUrl"
+                  type="text"
+                  placeholder="blog.substack.com"
+                  value={notesUrl}
+                  onChange={(e) => setNotesUrl(e.target.value)}
+                  disabled={isAnalyzingNotes}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleAnalyzeNotes}
+                  disabled={isAnalyzingNotes || !notesUrl.trim()}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
+                >
+                  {isAnalyzingNotes ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Analyzing Notes...
+                    </span>
+                  ) : (
+                    'Analyze Notes'
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {notes.length > 0 && (
+              <div className="mt-8 space-y-6">
+                <h3 className="text-lg font-semibold text-gray-900">Found {notes.length} Notes</h3>
+                <div className="space-y-4">
+                  {notes.map((noteUrl, index) => (
+                    <div key={index} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <a
+                        href={noteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-600 hover:text-emerald-700 transition-colors"
+                      >
+                        {noteUrl}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {posts.length > 0 && (
               <>
