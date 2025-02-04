@@ -9,7 +9,7 @@ import { Button } from '@/app/components/ui/button';
 import { Textarea } from '@/app/components/ui/textarea';
 
 export default function NotesRagContent() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, updateUserCredits } = useAuth();
   const router = useRouter();
   const [topic, setTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -66,6 +66,8 @@ export default function NotesRagContent() {
       }
 
       setResult(data.result);
+      // Update credits in the UI
+      await updateUserCredits(user.id);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
@@ -76,8 +78,20 @@ export default function NotesRagContent() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-4xl mx-auto">
+        <div className="mb-4">
+          <Link
+            href="/dashboard"
+            className="text-emerald-600 hover:text-emerald-500 flex items-center gap-1"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Dashboard
+          </Link>
+        </div>
+
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h1 className="text-2xl font-bold mb-4">RAG-Based Viral Note Generator</h1>
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">RAG-Based Viral Note Generator</h1>
           <p className="text-gray-600 mb-6">
             Generate viral Substack notes using our RAG system trained on high-performing examples.
             Each generation costs 1 credit.
@@ -107,14 +121,14 @@ export default function NotesRagContent() {
             <Button
               onClick={() => handleGenerate('llama')}
               disabled={isGenerating || !topic.trim() || !profile?.credits || profile.credits < 1}
-              className="flex-1"
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               {isGenerating ? 'Generating...' : 'Generate with Llama'}
             </Button>
             <Button
               onClick={() => handleGenerate('deepseek')}
               disabled={isGenerating || !topic.trim() || !profile?.credits || profile.credits < 1}
-              className="flex-1"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isGenerating ? 'Generating...' : 'Generate with DS R1 Model'}
             </Button>
@@ -128,8 +142,8 @@ export default function NotesRagContent() {
 
           {result && (
             <div className="mt-8">
-              <h2 className="text-xl font-semibold mb-4">Generated Note</h2>
-              <div className="bg-white text-black border border-gray-200 rounded-lg p-6 whitespace-pre-wrap">
+              <h2 className="text-xl font-semibold mb-4 text-gray-900">Generated Note</h2>
+              <div className="bg-white text-gray-900 border border-gray-200 rounded-lg p-6 whitespace-pre-wrap">
                 {result}
               </div>
             </div>

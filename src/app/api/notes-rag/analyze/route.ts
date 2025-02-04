@@ -121,6 +121,7 @@ Tailor the note to that theme while maintaining a focus on progress, action, and
 For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
 
 Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
+Output only the notes with no additional explanation.
   `;
   prompt += basePrompt;
   return prompt;
@@ -232,6 +233,11 @@ export async function POST(request: Request) {
     // Call the Groq API to generate the viral notes.
     const generatedNotes = await callGroqAPI(prompt, model as 'llama' | 'deepseek');
 
+    // Remove content between <think> tags and clean up the output
+    const cleanedNotes = generatedNotes
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
+      .trim();
+
     // Deduct credits
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
@@ -248,7 +254,7 @@ export async function POST(request: Request) {
     // Return the generated notes.
     return NextResponse.json({ 
       success: true,
-      result: generatedNotes,
+      result: cleanedNotes,
       logs: {
         examplesCount: retrievedExamples.length,
         promptLength: prompt.length,

@@ -16,6 +16,7 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   updateProfile: (newProfile: UserProfile) => Promise<void>;
+  updateUserCredits: (userId: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -247,6 +248,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const updateUserCredits = useCallback(async (userId: string) => {
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      const updatedProfile = {
+        ...data,
+        credits: data.credits
+      };
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(updatedProfile)
+        .eq('id', userId);
+
+      if (updateError) throw updateError;
+
+      setProfile(updatedProfile);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An error occurred while updating user credits');
+      throw error;
+    }
+  }, []);
+
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
     user,
@@ -258,8 +289,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetPassword,
     loading,
     error,
-    updateProfile
-  }), [user, profile, loading, error, signIn, signUp, signOut, signInWithGoogle, resetPassword, updateProfile]);
+    updateProfile,
+    updateUserCredits
+  }), [user, profile, loading, error, signIn, signUp, signOut, signInWithGoogle, resetPassword, updateProfile, updateUserCredits]);
 
   return (
     <AuthContext.Provider value={contextValue}>
