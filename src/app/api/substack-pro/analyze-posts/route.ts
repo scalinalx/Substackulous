@@ -50,6 +50,12 @@ interface MapResult {
   links?: string[];
 }
 
+interface CrawlJobResponse {
+  success: boolean;
+  error?: string;
+  id?: string;
+}
+
 const BATCH_SIZE = 5; // Process 5 posts at a time
 
 // Set maximum duration for this API route to 25 seconds
@@ -98,6 +104,26 @@ function extractNoteUrls(markdown: string): string[] {
   return Array.from(new Set(matches));
 }
 
+async function waitForCrawlCompletion(app: FireCrawlApp, jobId: string, maxAttempts = 10): Promise<CrawlResult[]> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const statusResponse = await app.checkCrawlStatus(jobId);
+    console.log(`Checking crawl status (attempt ${attempt + 1}/${maxAttempts}):`, statusResponse);
+
+    if (!statusResponse.success) {
+      throw new Error(`Failed to check crawl status: ${statusResponse.error}`);
+    }
+
+    if (statusResponse.data && Array.isArray(statusResponse.data) && statusResponse.data.length > 0) {
+      return statusResponse.data as CrawlResult[];
+    }
+
+    // Wait for 2 seconds before next attempt
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+
+  throw new Error('Crawl timed out: Maximum attempts reached');
+}
+
 export async function POST(request: Request) {
   try {
     const { url, type = 'posts' } = await request.json();
@@ -114,24 +140,29 @@ export async function POST(request: Request) {
     if (type === 'notes') {
       // Handle notes crawling
       const notesUrl = `${url.replace(/\/$/, '')}/notes/`;
-      console.log('Crawling notes from:', notesUrl);
+      console.log('Submitting crawl job for:', notesUrl);
       
-      const crawlResult = await app.crawlUrl(notesUrl, {
+      // Submit the crawl job
+      const crawlJobResponse = await app.crawlUrl(notesUrl, {
         limit: 1,
         scrapeOptions: {
           formats: ["markdown"],
         }
-      }) as unknown as CrawlResult[];
+      }) as CrawlJobResponse;
 
-      // The API returns an array of results
-      if (!crawlResult || !Array.isArray(crawlResult) || crawlResult.length === 0) {
-        throw new Error('Failed to crawl notes: No results returned');
+      if (!crawlJobResponse.success || !crawlJobResponse.id) {
+        throw new Error(`Failed to submit crawl job: ${crawlJobResponse.error || 'No job ID returned'}`);
       }
 
+      console.log("Crawl job submitted, ID:", crawlJobResponse.id);
+
+      // Wait for crawl completion and get results
+      const crawlResults = await waitForCrawlCompletion(app, crawlJobResponse.id);
+      
       // Get the first result which contains the markdown
-      const firstResult = crawlResult[0];
+      const firstResult = crawlResults[0];
       if (!firstResult.markdown) {
-        throw new Error('Failed to crawl notes: No markdown content in response');
+        throw new Error('Crawl completed but no markdown content found in response');
       }
 
       const noteUrls = extractNoteUrls(firstResult.markdown);
@@ -140,7 +171,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ 
         success: true,
         notes: noteUrls,
-        rawResponse: crawlResult
+        rawResponse: crawlResults
       });
     } else {
       // Handle posts crawling (existing logic)
