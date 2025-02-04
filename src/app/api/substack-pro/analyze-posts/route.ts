@@ -34,46 +34,30 @@ interface StatusResponse {
   data?: any;
 }
 
+interface MapResult {
+  success: boolean;
+  error?: string;
+  links: string[];
+}
+
 const BATCH_SIZE = 5; // Process 5 posts at a time
 
 // Set maximum duration for this API route to 25 seconds
 export const maxDuration = 25;
 
-async function fetchPageData(url: string): Promise<{ html: string; error?: string }> {
+async function fetchPostData(url: string): Promise<SubstackPost | null> {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
     const response = await fetch(url, {
-      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     });
 
-    clearTimeout(timeoutId);
-
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    const html = await response.text();
-    return { html };
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return { 
-        html: '', 
-        error: 'Request timed out after 30 seconds'
-      };
-    }
-    return { 
-      html: '', 
-      error: error instanceof Error ? error.message : 'Failed to fetch page' 
-    };
-  }
-}
 
-async function extractPostData(html: string, url: string): Promise<SubstackPost | null> {
-  try {
+    const html = await response.text();
     const $ = cheerio.load(html);
     
     // Extract title
@@ -130,23 +114,9 @@ async function extractPostData(html: string, url: string): Promise<SubstackPost 
       url
     };
   } catch (error) {
-    console.error('Error extracting post data:', error);
+    console.error(`Error fetching post data for ${url}:`, error);
     return null;
   }
-}
-
-async function processBatch(urls: string[]): Promise<SubstackPost[]> {
-  const results = await Promise.all(
-    urls.map(async (url) => {
-      const { html, error } = await fetchPageData(url);
-      if (error || !html) {
-        console.error(`Failed to fetch ${url}:`, error);
-        return null;
-      }
-      return extractPostData(html, url);
-    })
-  );
-  return results.filter((post): post is SubstackPost => post !== null);
 }
 
 export async function POST(request: Request) {
@@ -169,22 +139,39 @@ export async function POST(request: Request) {
     
     const mapResult = await app.mapUrl(mapUrl, {
       includeSubdomains: true
-    });
+    }) as MapResult;
 
     if (!mapResult.success) {
       throw new Error(`Failed to map: ${mapResult.error}`);
     }
 
-    console.log('Map result:', mapResult);
+    // Filter for post URLs only
+    const postUrls = mapResult.links
+      .filter(url => url.includes('/p/'))
+      .filter(url => !url.includes('/comments'))
+      .slice(0, 30); // Limit to first 30 posts
+
+    console.log(`Found ${postUrls.length} post URLs`);
+
+    // Fetch post data in parallel
+    const posts = await Promise.all(
+      postUrls.map(url => fetchPostData(url))
+    );
+
+    // Filter out null results and sort by engagement
+    const validPosts = posts
+      .filter((post): post is SubstackPost => post !== null)
+      .sort((a, b) => (b.likes + b.comments + b.restacks) - (a.likes + a.comments + a.restacks));
+
     return NextResponse.json({ 
       success: true,
-      mapResult
+      posts: validPosts
     });
   } catch (error) {
-    console.error('Error mapping URLs:', error);
+    console.error('Error processing posts:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to map URLs',
+      error: error instanceof Error ? error.message : 'Failed to process posts',
     }, { status: 500 });
   }
 } 
