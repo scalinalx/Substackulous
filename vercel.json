@@ -2,15 +2,9 @@
   "buildCommand": "next build",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "functions": {
-    "src/app/api/substack-pro/analyze-posts/route.ts": {
-      "maxDuration": 100
-    }
-  },
   "git": {
     "deploymentEnabled": {
       "main": true
     }
-  },
-  "regions": ["iad1"]
+  }
 } 
