@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { pipeline } from '@xenova/transformers';
 import Groq from 'groq-sdk';
 
 // -------------------------------
@@ -21,8 +20,6 @@ type NoteExample = {
 // -------------------------------
 
 let examples: NoteExample[] = [];       // Holds the list of note examples.
-let exampleEmbeddings: number[][] = [];   // Holds computed embeddings for each note.
-let embeddingPipelineInstance: any = null; // The transformer pipeline instance.
 let initialized = false;                  // Flag to ensure one-time initialization.
 
 // -------------------------------
@@ -30,17 +27,10 @@ let initialized = false;                  // Flag to ensure one-time initializat
 // -------------------------------
 
 /**
- * Initializes the system by:
- * - Loading the transformer model.
- * - Reading the JSONL file from the data folder.
- * - Computing and caching embeddings for each note.
+ * Initializes the system by loading examples from the JSONL file.
  */
 async function init(): Promise<void> {
   if (initialized) return;
-
-  console.log('Loading transformer model...');
-  // Load the feature-extraction pipeline from @xenova/transformers with model "Xenova/all-mpnet-base-v2".
-  embeddingPipelineInstance = await pipeline('feature-extraction', 'Xenova/all-mpnet-base-v2');
 
   // Read the JSONL file from the "data" folder.
   const filePath = path.join(process.cwd(), 'data', 'substack_examples.jsonl');
@@ -48,67 +38,36 @@ async function init(): Promise<void> {
   const lines = content.split('\n').filter(Boolean);
   examples = lines.map(line => JSON.parse(line) as NoteExample);
 
-  console.log(`Loaded ${examples.length} examples. Computing embeddings...`);
-  // Compute embeddings for each note.
-  exampleEmbeddings = await Promise.all(
-    examples.map(async (ex) => await getEmbedding(ex.note))
-  );
-
   initialized = true;
-  console.log('Initialization complete.');
+  console.log('Initialization complete with', examples.length, 'examples');
 }
 
 // -------------------------------
-// Embedding Helpers
+// Similarity Helpers
 // -------------------------------
 
 /**
- * Computes the embedding for the provided text using the transformer pipeline.
- * Applies average pooling over token embeddings.
- * @param text The text to compute the embedding for.
- * @returns A numeric vector representing the embedding.
+ * Simple text similarity based on word overlap and topic relevance.
+ * This is a basic implementation that could be improved with proper embeddings.
  */
-async function getEmbedding(text: string): Promise<number[]> {
-  const tokenEmbeddings = (await embeddingPipelineInstance(text)) as number[][];
-  return averagePooling(tokenEmbeddings);
+function getTextSimilarity(text1: string, text2: string): number {
+  const words1 = text1.toLowerCase().split(/\W+/);
+  const words2 = text2.toLowerCase().split(/\W+/);
+  
+  // Convert arrays to Sets for unique values
+  const set1 = new Set(words1);
+  const set2 = new Set(words2);
+  
+  // Calculate intersection
+  const intersection = words1.filter(word => set2.has(word));
+  const uniqueIntersection = new Set(intersection);
+  
+  // Calculate union
+  const allWords = [...words1, ...words2];
+  const uniqueUnion = new Set(allWords);
+  
+  return uniqueIntersection.size / uniqueUnion.size;
 }
-
-/**
- * Averages token-level embeddings to create a single embedding vector.
- * @param tokenEmbeddings An array of embeddings (one per token).
- * @returns The averaged embedding vector.
- */
-function averagePooling(tokenEmbeddings: number[][]): number[] {
-  const tokenCount = tokenEmbeddings.length;
-  const dim = tokenEmbeddings[0].length;
-  const avg = new Array(dim).fill(0);
-  for (const token of tokenEmbeddings) {
-    for (let i = 0; i < dim; i++) {
-      avg[i] += token[i];
-    }
-  }
-  for (let i = 0; i < dim; i++) {
-    avg[i] /= tokenCount;
-  }
-  return avg;
-}
-
-/**
- * Computes cosine similarity between two vectors.
- * @param a Vector a.
- * @param b Vector b.
- * @returns The cosine similarity value.
- */
-function cosineSimilarity(a: number[], b: number[]): number {
-  const dot = a.reduce((sum, ai, i) => sum + ai * b[i], 0);
-  const normA = Math.sqrt(a.reduce((sum, ai) => sum + ai * ai, 0));
-  const normB = Math.sqrt(b.reduce((sum, bi) => sum + bi * bi, 0));
-  return dot / (normA * normB);
-}
-
-// -------------------------------
-// Retrieval and Prompt Building
-// -------------------------------
 
 /**
  * Retrieves the top K note examples that are most similar to the provided query.
@@ -116,12 +75,12 @@ function cosineSimilarity(a: number[], b: number[]): number {
  * @param topK Number of examples to retrieve.
  * @returns An array of the top K note examples.
  */
-async function retrieveExamples(query: string, topK: number): Promise<NoteExample[]> {
-  const queryEmbedding = await getEmbedding(query);
-  const similarities = exampleEmbeddings.map((emb, idx) => ({
+function retrieveExamples(query: string, topK: number): NoteExample[] {
+  const similarities = examples.map((ex, idx) => ({
     index: idx,
-    similarity: cosineSimilarity(queryEmbedding, emb)
+    similarity: getTextSimilarity(query, ex.note)
   }));
+  
   similarities.sort((a, b) => b.similarity - a.similarity);
   const topIndices = similarities.slice(0, topK).map(item => item.index);
   return topIndices.map(i => examples[i]);
@@ -207,7 +166,7 @@ export async function POST(request: Request) {
     }
 
     // Retrieve the top 3 examples similar to the user topic.
-    const retrievedExamples = await retrieveExamples(userTopic, 3);
+    const retrievedExamples = retrieveExamples(userTopic, 3);
     // Build the complete prompt using the retrieved examples and base instructions.
     const prompt = buildPrompt(retrievedExamples, userTopic);
     console.log('Constructed prompt:', prompt);
