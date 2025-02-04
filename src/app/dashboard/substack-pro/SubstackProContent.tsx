@@ -1,135 +1,39 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
-import Image from 'next/image';
-
-interface SubstackPost {
-  title: string;
-  likes: number;
-  comments: number;
-  restacks: number;
-  thumbnail: string;
-  url: string;
-}
-
-type SortBy = 'likes' | 'comments' | 'restacks';
-
-const TIMEOUT_DURATION = 300000; // 5 minutes
-const MAX_RETRIES = 3;
-const POLL_INTERVAL = 5000; // Poll every 5 seconds
-const MAX_POLL_TIME = 300000; // Stop polling after 5 minutes
-
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = TIMEOUT_DURATION) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    return response;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    throw error;
-  }
-}
 
 export default function SubstackProContent() {
-  const [mounted, setMounted] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
   const [substackUrl, setSubstackUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [crawlResponse, setCrawlResponse] = useState<any>(null);
-  const [progress, setProgress] = useState<string>('');
-  const [crawlId, setCrawlId] = useState<string | null>(null);
-  const [pollStartTime, setPollStartTime] = useState<number | null>(null);
+  const [mapResult, setMapResult] = useState<any>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (mounted && !loading && !user) {
-      router.replace('/');
-    }
-  }, [mounted, loading, user, router]);
-
-  // Poll for crawl status
-  useEffect(() => {
-    if (!crawlId || !isAnalyzing || !pollStartTime) return;
-
-    // Stop polling if we've exceeded the maximum time
-    if (Date.now() - pollStartTime > MAX_POLL_TIME) {
-      setError('Analysis timed out after 5 minutes. Please try again.');
-      setIsAnalyzing(false);
-      setCrawlId(null);
-      setPollStartTime(null);
-      return;
-    }
-
-    const pollStatus = async () => {
-      try {
-        const response = await fetch('/api/substack-pro/analyze-posts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ crawlId }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Failed to check status');
-        }
-
-        if (data.type === 'status') {
-          const status = data.status;
-          console.log('Received status:', status);
-          
-          if (status.status === 'completed') {
-            setCrawlResponse(status.data);
-            setProgress('');
-            setIsAnalyzing(false);
-            setCrawlId(null);
-            setPollStartTime(null);
-          } else if (status.status === 'failed') {
-            throw new Error(status.error || 'Crawl failed');
-          } else {
-            setProgress(`Crawling in progress... Status: ${status.status}`);
-          }
-        }
-      } catch (err) {
-        console.error('Status check error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to check status');
-        setProgress('');
-        setIsAnalyzing(false);
-        setCrawlId(null);
-        setPollStartTime(null);
-      }
-    };
-
-    const intervalId = setInterval(pollStatus, POLL_INTERVAL);
-    return () => clearInterval(intervalId);
-  }, [crawlId, isAnalyzing, pollStartTime]);
+  if (!user) {
+    router.replace('/');
+    return null;
+  }
 
   const handleAnalyzePosts = async () => {
     if (!substackUrl.trim() || isAnalyzing) return;
+    
     setIsAnalyzing(true);
     setError(null);
-    setCrawlResponse(null);
-    setCrawlId(null);
-    setPollStartTime(null);
-    setProgress('Starting analysis...');
+    setMapResult(null);
     
     try {
       const response = await fetch('/api/substack-pro/analyze-posts', {
@@ -143,36 +47,17 @@ export default function SubstackProContent() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to start analysis');
+        throw new Error(data.error || 'Failed to analyze');
       }
 
-      if (data.type === 'start' && data.crawlId) {
-        console.log('Started crawl with ID:', data.crawlId);
-        setCrawlId(data.crawlId);
-        setPollStartTime(Date.now());
-        setProgress('Crawl started, waiting for results...');
-      } else {
-        throw new Error('Invalid response from server');
-      }
+      setMapResult(data.mapResult);
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err instanceof Error ? err.message : 'Failed to analyze');
-      setProgress('');
+    } finally {
       setIsAnalyzing(false);
     }
   };
-
-  if (!mounted || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -212,22 +97,6 @@ export default function SubstackProContent() {
               </div>
             )}
 
-            {progress && (
-              <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-blue-700">{progress}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
             <div className="space-y-4">
               <label htmlFor="substackUrl" className="block text-sm font-medium text-gray-700">
                 Enter your Substack URL (e.g., https://yourblog.substack.com)
@@ -242,37 +111,39 @@ export default function SubstackProContent() {
                   disabled={isAnalyzing}
                   className="flex-1"
                 />
+                <Button
+                  onClick={handleAnalyzePosts}
+                  disabled={isAnalyzing || !substackUrl.trim()}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
+                >
+                  {isAnalyzing ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Analyzing...
+                    </span>
+                  ) : (
+                    'Analyze'
+                  )}
+                </Button>
               </div>
             </div>
 
-            <div className="flex gap-4">
-              <Button
-                onClick={handleAnalyzePosts}
-                disabled={isAnalyzing || !substackUrl.trim()}
-                className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
-              >
-                {isAnalyzing ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Analyzing...
-                  </span>
-                ) : (
-                  'Analyze'
-                )}
-              </Button>
-            </div>
-
-            {crawlResponse && (
+            {mapResult && (
               <div className="mt-8">
-                <h3 className="text-lg font-semibold mb-4">Crawl Response:</h3>
+                <h3 className="text-lg font-semibold mb-4">Map Result:</h3>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <pre className="whitespace-pre-wrap text-sm font-mono overflow-auto max-h-[500px]">
-                    {JSON.stringify(crawlResponse, null, 2)}
+                    {JSON.stringify(mapResult, null, 2)}
                   </pre>
                 </div>
+                {mapResult.urls && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-600">Found {mapResult.urls.length} URLs</p>
+                  </div>
+                )}
               </div>
             )}
 

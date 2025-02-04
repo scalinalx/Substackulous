@@ -12,7 +12,9 @@ interface SubstackPost {
 }
 
 interface MapResponse {
-  urls: string[];
+  success: boolean;
+  error?: string;
+  urls?: string[];
 }
 
 interface ErrorResponse {
@@ -33,6 +35,9 @@ interface StatusResponse {
 }
 
 const BATCH_SIZE = 5; // Process 5 posts at a time
+
+// Set maximum duration for this API route to 25 seconds
+export const maxDuration = 25;
 
 async function fetchPageData(url: string): Promise<{ html: string; error?: string }> {
   try {
@@ -146,63 +151,40 @@ async function processBatch(urls: string[]): Promise<SubstackPost[]> {
 
 export async function POST(request: Request) {
   try {
-    const { url, crawlId } = await request.json();
+    const { url } = await request.json();
+
+    if (!url) {
+      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+    }
 
     // Initialize FireCrawl
     const app = new FireCrawlApp({
       apiKey: "fc-f395371cd0614b3cb105a364c0891b0e"
     });
 
-    // If crawlId is provided, check status
-    if (crawlId) {
-      console.log('Checking crawl status for:', crawlId);
-      const statusResponse = await app.checkCrawlStatus(crawlId);
-      
-      if (!statusResponse.success) {
-        throw new Error(`Failed to check crawl status: ${statusResponse.error}`);
-      }
-
-      console.log('Status response:', statusResponse);
-      return NextResponse.json({ 
-        success: true,
-        type: 'status',
-        status: statusResponse 
-      });
-    }
-
-    // If no crawlId, start new crawl
-    if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
-    }
-
     // Ensure URL ends with /archive?sort=top
     const baseUrl = url.replace(/\/$/, '');
-    const crawlUrl = `${baseUrl}/archive?sort=top`;
-    console.log('Starting async crawl for:', crawlUrl);
+    const mapUrl = `${baseUrl}/archive?sort=top`;
+    console.log('Mapping URLs from:', mapUrl);
     
-    const crawlResponse = await app.asyncCrawlUrl(crawlUrl, {
-      limit: 100,
-      scrapeOptions: {
-        formats: ['markdown', 'html'],
-      }
+    const mapResult = await app.mapUrl(mapUrl, {
+      includeSubdomains: true
     });
 
-    if (!crawlResponse.success) {
-      throw new Error(`Failed to start crawl: ${crawlResponse.error}`);
+    if (!mapResult.success) {
+      throw new Error(`Failed to map: ${mapResult.error}`);
     }
 
-    console.log('Crawl started with ID:', crawlResponse.id);
+    console.log('Map result:', mapResult);
     return NextResponse.json({ 
       success: true,
-      type: 'start',
-      crawlId: crawlResponse.id 
+      mapResult
     });
   } catch (error) {
-    console.error('Error in crawl operation:', error);
+    console.error('Error mapping URLs:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to process request',
-      details: error instanceof Error ? error.stack : undefined
+      error: error instanceof Error ? error.message : 'Failed to map URLs',
     }, { status: 500 });
   }
 } 
