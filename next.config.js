@@ -26,7 +26,15 @@ const nextConfig = {
   // Increase serverless function timeout
   serverRuntimeConfig: {
     timeoutInSeconds: 60
-  }
+  },
+  images: {
+    domains: [
+      'images.unsplash.com',
+      'substackcdn.com',
+      'substack-post-media.s3.amazonaws.com',
+      'bucketeer-e05bbc84-baa3-437e-9518-adb32be77984.s3.amazonaws.com'
+    ],
+  },
 }
 
 module.exports = nextConfig 
