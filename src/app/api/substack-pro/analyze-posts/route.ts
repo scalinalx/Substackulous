@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     const postUrls = mapResult.links
       .filter(url => url.includes('/p/'))
       .filter(url => !url.includes('/comments'))
-      .slice(0, 30); // Limit to first 30 posts
+      .slice(0, 60); // Limit to first 60 posts
 
     console.log(`Found ${postUrls.length} post URLs`);
 
@@ -165,7 +165,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       success: true,
-      posts: validPosts
+      posts: validPosts,
+      rawResponse: mapResult // Include the raw FireCrawl response
     });
   } catch (error) {
     console.error('Error processing posts:', error);
