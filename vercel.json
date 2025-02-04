@@ -1,5 +1,10 @@
 {
   "buildCommand": "next build",
   "installCommand": "npm install",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "functions": {
+    "src/app/api/substack-pro/analyze-posts/route.ts": {
+      "maxDuration": 300
+    }
+  }
 } 

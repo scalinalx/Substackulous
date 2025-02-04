@@ -21,13 +21,30 @@ interface ErrorResponse {
 
 async function fetchPageData(url: string): Promise<{ html: string; error?: string }> {
   try {
-    const response = await fetch(url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const html = await response.text();
     return { html };
   } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { 
+        html: '', 
+        error: 'Request timed out after 30 seconds'
+      };
+    }
     return { 
       html: '', 
       error: error instanceof Error ? error.message : 'Failed to fetch page' 
@@ -110,6 +127,7 @@ export async function POST(request: Request) {
     const debugInfo = {
       originalUrl: url,
       baseUrl,
+      startTime: Date.now()
     };
 
     // Initialize FireCrawl
@@ -117,11 +135,16 @@ export async function POST(request: Request) {
       apiKey: "fc-f395371cd0614b3cb105a364c0891b0e"
     });
 
-    // Get all URLs from the archive page
+    // Get all URLs from the archive page with timeout
     console.log('Mapping URLs...');
-    const mapResponse = await app.mapUrl(`${baseUrl}/archive?sort=top`, {
-      includeSubdomains: true
-    }) as MapResponse | ErrorResponse;
+    const mapResponse = await Promise.race([
+      app.mapUrl(`${baseUrl}/archive?sort=top`, {
+        includeSubdomains: true
+      }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('FireCrawl mapping timed out after 60 seconds')), 60000)
+      )
+    ]) as MapResponse | ErrorResponse;
 
     if ('error' in mapResponse) {
       throw new Error(mapResponse.error);
@@ -134,7 +157,7 @@ export async function POST(request: Request) {
 
     console.log(`Found ${postUrls.length} post URLs`);
 
-    // Fetch and process each post in parallel
+    // Fetch and process each post in parallel with timeout
     console.log('Fetching post data...');
     const postsData = await Promise.all(
       postUrls.map(async (postUrl: string) => {
@@ -153,19 +176,31 @@ export async function POST(request: Request) {
       (b.likes + b.comments + b.restacks) - (a.likes + a.comments + a.restacks)
     );
 
+    const endTime = Date.now();
     console.log('Total posts processed:', sortedPosts.length);
+    console.log('Processing time:', endTime - debugInfo.startTime, 'ms');
     
-    return NextResponse.json({ 
-      posts: sortedPosts,
-      debugInfo: {
-        ...debugInfo,
-        postsFound: sortedPosts.length
+    return new NextResponse(
+      JSON.stringify({ 
+        posts: sortedPosts,
+        debugInfo: {
+          ...debugInfo,
+          postsFound: sortedPosts.length,
+          processingTimeMs: endTime - debugInfo.startTime
+        }
+      }),
+      { 
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        }
       }
-    });
+    );
   } catch (error) {
     console.error('Error analyzing Substack posts:', error);
-    return NextResponse.json(
-      {
+    return new NextResponse(
+      JSON.stringify({
         error: error instanceof Error ? error.message : 'Failed to analyze posts',
         code: 'ANALYSIS_ERROR',
         details: error instanceof Error ? error.stack : undefined,
@@ -173,8 +208,14 @@ export async function POST(request: Request) {
           error: String(error),
           stack: error instanceof Error ? error.stack : undefined,
         }
-      },
-      { status: 500 }
+      }),
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store'
+        }
+      }
     );
   }
 } 
