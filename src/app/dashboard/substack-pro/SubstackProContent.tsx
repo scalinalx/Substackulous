@@ -46,8 +46,7 @@ export default function SubstackProContent() {
   const [substackUrl, setSubstackUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [posts, setPosts] = useState<SubstackPost[]>([]);
-  const [sortBy, setSortBy] = useState<SortBy>('likes');
+  const [crawlResponse, setCrawlResponse] = useState<any>(null);
   const [progress, setProgress] = useState<string>('');
 
   useEffect(() => {
@@ -64,7 +63,7 @@ export default function SubstackProContent() {
     if (!substackUrl.trim() || isAnalyzing) return;
     setIsAnalyzing(true);
     setError(null);
-    setPosts([]);
+    setCrawlResponse(null);
     setProgress('Starting analysis...');
     
     try {
@@ -76,54 +75,17 @@ export default function SubstackProContent() {
         body: JSON.stringify({ url: substackUrl.trim() }),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to analyze');
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Failed to get response reader');
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ''; // Keep the last incomplete line in the buffer
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          
-          try {
-            const chunk = JSON.parse(line);
-            
-            switch (chunk.type) {
-              case 'progress':
-                setProgress(`Analyzing posts... ${chunk.processed}/${chunk.total}`);
-                setPosts(prevPosts => [...prevPosts, ...chunk.posts]);
-                break;
-              
-              case 'complete':
-                setPosts(chunk.posts);
-                setProgress('');
-                break;
-              
-              case 'error':
-                throw new Error(chunk.error);
-            }
-          } catch (e) {
-            console.error('Error parsing chunk:', e);
-          }
-        }
-      }
+      setCrawlResponse(data.crawlResponse);
+      setProgress('');
     } catch (err) {
       console.error('Analysis error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to analyze posts');
+      setError(err instanceof Error ? err.message : 'Failed to analyze');
       setProgress('');
     } finally {
       setIsAnalyzing(false);
@@ -225,95 +187,27 @@ export default function SubstackProContent() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Analyzing Posts...
+                    Analyzing...
                   </span>
                 ) : (
-                  'Analyze Posts'
+                  'Analyze'
                 )}
               </Button>
             </div>
 
-            {posts.length > 0 && (
-              <div className="mt-8 space-y-6">
-                <div className="flex gap-4">
-                  <Button
-                    onClick={() => setSortBy('likes')}
-                    variant="outline"
-                    className={`flex-1 ${sortBy === 'likes' ? 'bg-emerald-600 text-white' : 'text-emerald-600 hover:text-emerald-700'}`}
-                  >
-                    Sort by Likes
-                  </Button>
-                  <Button
-                    onClick={() => setSortBy('comments')}
-                    variant="outline"
-                    className={`flex-1 ${sortBy === 'comments' ? 'bg-emerald-600 text-white' : 'text-emerald-600 hover:text-emerald-700'}`}
-                  >
-                    Sort by Comments
-                  </Button>
-                  <Button
-                    onClick={() => setSortBy('restacks')}
-                    variant="outline"
-                    className={`flex-1 ${sortBy === 'restacks' ? 'bg-emerald-600 text-white' : 'text-emerald-600 hover:text-emerald-700'}`}
-                  >
-                    Sort by Restacks
-                  </Button>
-                </div>
-
-                <div className="space-y-4">
-                  {[...posts].sort((a, b) => b[sortBy] - a[sortBy]).map((post, index) => (
-                    <div key={index} className="flex gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="relative w-24 h-24 flex-shrink-0">
-                        <Image
-                          src={post.thumbnail}
-                          alt={post.title}
-                          fill
-                          className="object-cover rounded-md"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <a
-                          href={post.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold text-gray-900 hover:text-emerald-600 transition-colors"
-                        >
-                          {post.title}
-                        </a>
-                        <div className="mt-2 flex gap-4 text-sm text-gray-600">
-                          <span className="flex items-center gap-1">
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                            </svg>
-                            {post.likes}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-                            </svg>
-                            {post.comments}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M21 3v5h-5M21 8l-3-2.7c-1.3-1.2-2.9-1.9-4.6-2.2-1.7-0.3-3.5-0.1-5.1 0.6-1.6 0.7-2.9 1.9-3.8 3.3C3.5 8.6 3 10.3 3 12m0 9v-5h5m-5-4l3 2.7c1.3 1.2 2.9 1.9 4.6 2.2 1.7 0.3 3.5 0.1 5.1-0.6 1.6-0.7 2.9-1.9 3.8-3.3 1-1.4 1.5-3.1 1.5-4.8" />
-                            </svg>
-                            {post.restacks}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+            {crawlResponse && (
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold mb-4">Crawl Response:</h3>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <pre className="whitespace-pre-wrap text-sm font-mono overflow-auto max-h-[500px]">
+                    {JSON.stringify(crawlResponse, null, 2)}
+                  </pre>
                 </div>
               </div>
             )}
 
             <div className="text-sm text-gray-500">
-              <p>Enter your Substack URL to:</p>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Analyze your newsletter&apos;s performance metrics</li>
-                <li>Get insights on audience engagement</li>
-                <li>Receive personalized optimization recommendations</li>
-                <li>Identify growth opportunities</li>
-              </ul>
+              <p>Enter your Substack URL to analyze your newsletter.</p>
             </div>
           </div>
         </div>

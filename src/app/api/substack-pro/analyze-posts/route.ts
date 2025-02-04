@@ -24,7 +24,7 @@ const BATCH_SIZE = 5; // Process 5 posts at a time
 async function fetchPageData(url: string): Promise<{ html: string; error?: string }> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     const response = await fetch(url, {
       signal: controller.signal,
@@ -132,116 +132,42 @@ async function processBatch(urls: string[]): Promise<SubstackPost[]> {
 }
 
 export async function POST(request: Request) {
-  const encoder = new TextEncoder();
-  let stream = new TransformStream();
-  const writer = stream.writable.getWriter();
-  
-  const writeChunk = async (chunk: any) => {
-    await writer.write(encoder.encode(JSON.stringify(chunk) + '\n'));
-  };
-
   try {
     const { url } = await request.json();
 
     if (!url) {
-      throw new Error('URL is required');
+      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
     const baseUrl = url.replace(/\/$/, '');
-    const debugInfo = {
-      originalUrl: url,
-      baseUrl,
-      startTime: Date.now()
-    };
 
     // Initialize FireCrawl
     const app = new FireCrawlApp({
       apiKey: "fc-f395371cd0614b3cb105a364c0891b0e"
     });
 
-    // Get all URLs from the archive page with timeout
-    console.log('Mapping URLs...');
-    const mapResponse = await Promise.race([
-      app.mapUrl(`${baseUrl}/archive?sort=top`, {
-        includeSubdomains: true
-      }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('FireCrawl mapping timed out after 60 seconds')), 60000)
-      )
-    ]) as MapResponse | ErrorResponse;
-
-    if ('error' in mapResponse) {
-      throw new Error(mapResponse.error);
-    }
-
-    // Filter for post URLs and take only the first 30
-    const postUrls = mapResponse.urls
-      .filter((url: string) => url.includes('/p/'))
-      .slice(0, 30);
-
-    console.log(`Found ${postUrls.length} post URLs`);
-
-    // Process posts in batches
-    const allPosts: SubstackPost[] = [];
-    for (let i = 0; i < postUrls.length; i += BATCH_SIZE) {
-      const batchUrls = postUrls.slice(i, i + BATCH_SIZE);
-      const batchPosts = await processBatch(batchUrls);
-      allPosts.push(...batchPosts);
-      
-      // Send progress update
-      await writeChunk({
-        type: 'progress',
-        processed: Math.min(i + BATCH_SIZE, postUrls.length),
-        total: postUrls.length,
-        posts: batchPosts
-      });
-    }
-
-    // Sort all posts by engagement
-    const sortedPosts = allPosts.sort((a, b) => 
-      (b.likes + b.comments + b.restacks) - (a.likes + a.comments + a.restacks)
-    );
-
-    const endTime = Date.now();
-    
-    // Send final result
-    await writeChunk({
-      type: 'complete',
-      posts: sortedPosts,
-      debugInfo: {
-        ...debugInfo,
-        postsFound: sortedPosts.length,
-        processingTimeMs: endTime - debugInfo.startTime
+    console.log('Starting async crawl...');
+    const crawlResponse = await app.asyncCrawlUrl(baseUrl, {
+      limit: 100,
+      scrapeOptions: {
+        formats: ['markdown', 'html'],
       }
     });
 
-    await writer.close();
-    return new Response(stream.readable, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
+    if (!crawlResponse.success) {
+      throw new Error(`Failed to crawl: ${crawlResponse.error}`);
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      crawlResponse 
     });
   } catch (error) {
-    console.error('Error analyzing Substack posts:', error);
-    await writeChunk({
-      type: 'error',
-      error: error instanceof Error ? error.message : 'Failed to analyze posts',
-      code: 'ANALYSIS_ERROR',
-      details: error instanceof Error ? error.stack : undefined,
-      debugInfo: {
-        error: String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-      }
-    });
-    await writer.close();
-    return new Response(stream.readable, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive'
-      }
-    });
+    console.error('Error analyzing Substack:', error);
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to analyze',
+      details: error instanceof Error ? error.stack : undefined
+    }, { status: 500 });
   }
 } 
