@@ -54,6 +54,22 @@ interface CrawlJobResponse {
   success: boolean;
   error?: string;
   id?: string;
+  data?: any;
+}
+
+interface ApiResponse {
+  success: boolean;
+  error?: string;
+  notes?: string[];
+  posts?: SubstackPost[];
+  rawResponse?: any;
+  logs: string[];
+}
+
+interface CrawlStatusResponse {
+  success: boolean;
+  error?: string;
+  data: CrawlResult[];
 }
 
 const BATCH_SIZE = 5; // Process 5 posts at a time
@@ -93,7 +109,7 @@ async function fetchPostData(url: string): Promise<SubstackPost | null> {
       url
     };
   } catch (error) {
-    console.error(`Error fetching post data for ${url}:`, error);
+    // Just return null on error, consistent with our error handling approach
     return null;
   }
 }
@@ -104,32 +120,35 @@ function extractNoteUrls(markdown: string): string[] {
   return Array.from(new Set(matches));
 }
 
-async function waitForCrawlCompletion(app: FireCrawlApp, jobId: string, maxAttempts = 10): Promise<CrawlResult[]> {
+async function waitForCrawlCompletion(app: FireCrawlApp, jobId: string, maxAttempts = 10, logs: string[] = []): Promise<[CrawlResult[], string[]]> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const statusResponse = await app.checkCrawlStatus(jobId);
-    console.log(`Checking crawl status (attempt ${attempt + 1}/${maxAttempts}):`, statusResponse);
+    try {
+      const statusResponse = await app.checkCrawlStatus(jobId) as CrawlStatusResponse;
+      logs.push(`Checking crawl status (attempt ${attempt + 1}/${maxAttempts}): ${JSON.stringify(statusResponse)}`);
 
-    if (!statusResponse.success) {
-      throw new Error(`Failed to check crawl status: ${statusResponse.error}`);
+      if (statusResponse.data && Array.isArray(statusResponse.data) && statusResponse.data.length > 0) {
+        return [statusResponse.data, logs];
+      }
+
+      // Wait for 2 seconds before next attempt
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } catch (error) {
+      logs.push(`Error checking status (attempt ${attempt + 1}): ${error}`);
+      // Continue to next attempt
     }
-
-    if (statusResponse.data && Array.isArray(statusResponse.data) && statusResponse.data.length > 0) {
-      return statusResponse.data as CrawlResult[];
-    }
-
-    // Wait for 2 seconds before next attempt
-    await new Promise(resolve => setTimeout(resolve, 2000));
   }
 
   throw new Error('Crawl timed out: Maximum attempts reached');
 }
 
 export async function POST(request: Request) {
+  const logs: string[] = [];
+  
   try {
     const { url, type = 'posts' } = await request.json();
 
     if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+      return NextResponse.json({ error: 'URL is required', logs }, { status: 400 });
     }
 
     // Initialize FireCrawl
@@ -140,24 +159,47 @@ export async function POST(request: Request) {
     if (type === 'notes') {
       // Handle notes crawling
       const notesUrl = `${url.replace(/\/$/, '')}/notes/`;
-      console.log('Submitting crawl job for:', notesUrl);
+      logs.push(`Submitting crawl job for: ${notesUrl}`);
       
       // Submit the crawl job
-      const crawlJobResponse = await app.crawlUrl(notesUrl, {
+      const crawlResponse = await app.crawlUrl(notesUrl, {
         limit: 1,
         scrapeOptions: {
           formats: ["markdown"],
         }
       }) as CrawlJobResponse;
 
-      if (!crawlJobResponse.success || !crawlJobResponse.id) {
-        throw new Error(`Failed to submit crawl job: ${crawlJobResponse.error || 'No job ID returned'}`);
+      logs.push(`Crawl response: ${JSON.stringify(crawlResponse)}`);
+
+      // The response might already contain the data we need
+      if (crawlResponse.data && Array.isArray(crawlResponse.data) && crawlResponse.data.length > 0) {
+        const firstResult = crawlResponse.data[0];
+        if (firstResult.markdown) {
+          const noteUrls = extractNoteUrls(firstResult.markdown);
+          logs.push(`Found ${noteUrls.length} note URLs directly from response`);
+          
+          const response: ApiResponse = {
+            success: true,
+            notes: noteUrls,
+            rawResponse: crawlResponse.data,
+            logs
+          };
+          
+          return NextResponse.json(response);
+        }
       }
 
-      console.log("Crawl job submitted, ID:", crawlJobResponse.id);
+      // If we don't have data yet, we need to wait for the job to complete
+      if (!crawlResponse.id) {
+        logs.push(`Unexpected crawl response: ${JSON.stringify(crawlResponse)}`);
+        throw new Error('No job ID or immediate data returned from crawl');
+      }
+
+      logs.push(`Crawl job submitted, ID: ${crawlResponse.id}`);
 
       // Wait for crawl completion and get results
-      const crawlResults = await waitForCrawlCompletion(app, crawlJobResponse.id);
+      const [crawlResults, completionLogs] = await waitForCrawlCompletion(app, crawlResponse.id, 10, logs);
+      logs.push(...completionLogs);
       
       // Get the first result which contains the markdown
       const firstResult = crawlResults[0];
@@ -166,18 +208,21 @@ export async function POST(request: Request) {
       }
 
       const noteUrls = extractNoteUrls(firstResult.markdown);
-      console.log(`Found ${noteUrls.length} note URLs`);
+      logs.push(`Found ${noteUrls.length} note URLs after waiting for completion`);
 
-      return NextResponse.json({ 
+      const response: ApiResponse = {
         success: true,
         notes: noteUrls,
-        rawResponse: crawlResults
-      });
+        rawResponse: crawlResults,
+        logs
+      };
+
+      return NextResponse.json(response);
     } else {
       // Handle posts crawling (existing logic)
       const baseUrl = url.replace(/\/$/, '');
       const mapUrl = `${baseUrl}/archive?sort=top`;
-      console.log('Mapping URLs from:', mapUrl);
+      logs.push(`Mapping URLs from: ${mapUrl}`);
       
       const mapResult = await app.mapUrl(mapUrl, {
         includeSubdomains: true
@@ -193,7 +238,7 @@ export async function POST(request: Request) {
         .filter(url => !url.includes('/comments'))
         .slice(0, 60);
 
-      console.log(`Found ${postUrls.length} post URLs`);
+      logs.push(`Found ${postUrls.length} post URLs`);
 
       // Fetch post data in parallel
       const posts = await Promise.all(
@@ -205,17 +250,24 @@ export async function POST(request: Request) {
         .filter((post): post is SubstackPost => post !== null)
         .sort((a, b) => (b.likes + b.comments + b.restacks) - (a.likes + a.comments + a.restacks));
 
-      return NextResponse.json({ 
+      const response: ApiResponse = {
         success: true,
         posts: validPosts,
-        rawResponse: mapResult
-      });
+        rawResponse: mapResult,
+        logs
+      };
+
+      return NextResponse.json(response);
     }
   } catch (error) {
-    console.error('Error processing request:', error);
-    return NextResponse.json({
+    logs.push(`Error processing request: ${error}`);
+    
+    const response: ApiResponse = {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to process request',
-    }, { status: 500 });
+      logs
+    };
+
+    return NextResponse.json(response, { status: 500 });
   }
 } 
