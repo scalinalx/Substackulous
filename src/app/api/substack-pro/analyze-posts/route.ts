@@ -19,6 +19,19 @@ interface ErrorResponse {
   error: string;
 }
 
+interface CrawlResponse {
+  success: boolean;
+  error?: string;
+  crawlId?: string;
+}
+
+interface StatusResponse {
+  success: boolean;
+  error?: string;
+  status?: string;
+  data?: any;
+}
+
 const BATCH_SIZE = 5; // Process 5 posts at a time
 
 async function fetchPageData(url: string): Promise<{ html: string; error?: string }> {
@@ -133,40 +146,58 @@ async function processBatch(urls: string[]): Promise<SubstackPost[]> {
 
 export async function POST(request: Request) {
   try {
-    const { url } = await request.json();
-
-    if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
-    }
-
-    const baseUrl = url.replace(/\/$/, '');
+    const { url, crawlId } = await request.json();
 
     // Initialize FireCrawl
     const app = new FireCrawlApp({
       apiKey: "fc-f395371cd0614b3cb105a364c0891b0e"
     });
 
-    console.log('Starting async crawl...');
+    // If crawlId is provided, check status
+    if (crawlId) {
+      console.log('Checking crawl status for:', crawlId);
+      const statusResponse = await app.checkCrawlStatus(crawlId) as StatusResponse;
+      
+      if (!statusResponse.success) {
+        throw new Error(`Failed to check crawl status: ${statusResponse.error}`);
+      }
+
+      return NextResponse.json({ 
+        success: true,
+        type: 'status',
+        status: statusResponse 
+      });
+    }
+
+    // If no crawlId, start new crawl
+    if (!url) {
+      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+    }
+
+    const baseUrl = url.replace(/\/$/, '');
+    console.log('Starting async crawl for:', baseUrl);
+    
     const crawlResponse = await app.asyncCrawlUrl(baseUrl, {
       limit: 100,
       scrapeOptions: {
         formats: ['markdown', 'html'],
       }
-    });
+    }) as CrawlResponse;
 
     if (!crawlResponse.success) {
-      throw new Error(`Failed to crawl: ${crawlResponse.error}`);
+      throw new Error(`Failed to start crawl: ${crawlResponse.error}`);
     }
 
     return NextResponse.json({ 
       success: true,
-      crawlResponse 
+      type: 'start',
+      crawlId: crawlResponse.crawlId 
     });
   } catch (error) {
-    console.error('Error analyzing Substack:', error);
+    console.error('Error in crawl operation:', error);
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to analyze',
+      error: error instanceof Error ? error.message : 'Failed to process request',
       details: error instanceof Error ? error.stack : undefined
     }, { status: 500 });
   }

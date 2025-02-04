@@ -21,6 +21,7 @@ type SortBy = 'likes' | 'comments' | 'restacks';
 
 const TIMEOUT_DURATION = 300000; // 5 minutes
 const MAX_RETRIES = 3;
+const POLL_INTERVAL = 2000; // Poll every 2 seconds
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = TIMEOUT_DURATION) {
   const controller = new AbortController();
@@ -48,6 +49,7 @@ export default function SubstackProContent() {
   const [error, setError] = useState<string | null>(null);
   const [crawlResponse, setCrawlResponse] = useState<any>(null);
   const [progress, setProgress] = useState<string>('');
+  const [crawlId, setCrawlId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -59,11 +61,59 @@ export default function SubstackProContent() {
     }
   }, [mounted, loading, user, router]);
 
+  // Poll for crawl status
+  useEffect(() => {
+    if (!crawlId || !isAnalyzing) return;
+
+    const pollStatus = async () => {
+      try {
+        const response = await fetch('/api/substack-pro/analyze-posts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ crawlId }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to check status');
+        }
+
+        if (data.type === 'status') {
+          const status = data.status;
+          
+          if (status.status === 'completed') {
+            setCrawlResponse(status.data);
+            setProgress('');
+            setIsAnalyzing(false);
+            setCrawlId(null);
+          } else if (status.status === 'failed') {
+            throw new Error(status.error || 'Crawl failed');
+          } else {
+            setProgress(`Crawling in progress... Status: ${status.status}`);
+          }
+        }
+      } catch (err) {
+        console.error('Status check error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to check status');
+        setProgress('');
+        setIsAnalyzing(false);
+        setCrawlId(null);
+      }
+    };
+
+    const intervalId = setInterval(pollStatus, POLL_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [crawlId, isAnalyzing]);
+
   const handleAnalyzePosts = async () => {
     if (!substackUrl.trim() || isAnalyzing) return;
     setIsAnalyzing(true);
     setError(null);
     setCrawlResponse(null);
+    setCrawlId(null);
     setProgress('Starting analysis...');
     
     try {
@@ -78,16 +128,17 @@ export default function SubstackProContent() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to analyze');
+        throw new Error(data.error || 'Failed to start analysis');
       }
 
-      setCrawlResponse(data.crawlResponse);
-      setProgress('');
+      if (data.type === 'start') {
+        setCrawlId(data.crawlId);
+        setProgress('Crawl started, waiting for results...');
+      }
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err instanceof Error ? err.message : 'Failed to analyze');
       setProgress('');
-    } finally {
       setIsAnalyzing(false);
     }
   };
