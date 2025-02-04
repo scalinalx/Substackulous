@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -20,7 +20,7 @@ interface SubstackPost {
 type SortBy = 'likes' | 'comments' | 'restacks' | 'total';
 
 export default function SubstackProContent() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [substackUrl, setSubstackUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -33,7 +33,13 @@ export default function SubstackProContent() {
   const [notes, setNotes] = useState<string[]>([]);
   const [isAnalyzingNotes, setIsAnalyzingNotes] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/');
+    }
+  }, [authLoading, user, router]);
+
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
@@ -42,7 +48,6 @@ export default function SubstackProContent() {
   }
 
   if (!user) {
-    router.replace('/');
     return null;
   }
 
@@ -69,7 +74,11 @@ export default function SubstackProContent() {
         throw new Error(data.error || 'Failed to analyze');
       }
 
-      setPosts(data.posts);
+      if (data.logs) {
+        console.log('API Logs:', data.logs);
+      }
+
+      setPosts(data.posts || []);
       setRawResponse(data.rawResponse);
     } catch (err) {
       console.error('Analysis error:', err);
@@ -105,7 +114,11 @@ export default function SubstackProContent() {
         throw new Error(data.error || 'Failed to analyze notes');
       }
 
-      setNotes(data.notes);
+      if (data.logs) {
+        console.log('API Logs:', data.logs);
+      }
+
+      setNotes(data.notes || []);
       setRawResponse(data.rawResponse);
     } catch (err) {
       console.error('Notes analysis error:', err);
