@@ -4,7 +4,7 @@
   "framework": "nextjs",
   "functions": {
     "src/app/api/substack-pro/analyze-posts/route.ts": {
-      "maxDuration": 300
+      "maxDuration": 200
     }
   },
   "git": {
