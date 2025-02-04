@@ -7,19 +7,17 @@ import Link from 'next/link';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
 import { Textarea } from '@/app/components/ui/textarea';
-import { useCredits } from '@/lib/hooks/useCredits';
 
 export default function NotesRagContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { credits, loading: creditsLoading, subtractCredits } = useCredits();
   const [topic, setTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
 
   // Handle authentication
-  if (authLoading || creditsLoading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
@@ -35,7 +33,7 @@ export default function NotesRagContent() {
   const handleGenerate = async (model: 'llama' | 'deepseek') => {
     if (!topic.trim() || isGenerating) return;
     
-    if (credits < 1) {
+    if (!profile?.credits || profile.credits < 1) {
       setError('Not enough credits. Please purchase more credits to continue.');
       return;
     }
@@ -53,7 +51,7 @@ export default function NotesRagContent() {
         body: JSON.stringify({ 
           userTopic: topic.trim(),
           model,
-          userId: user.id // Add userId for credit deduction
+          userId: user.id
         }),
       });
 
@@ -68,7 +66,6 @@ export default function NotesRagContent() {
       }
 
       setResult(data.result);
-      // Credit deduction is handled on the server side
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {
@@ -88,7 +85,7 @@ export default function NotesRagContent() {
           
           <div className="mb-6">
             <p className="text-sm text-gray-600 mb-2">
-              Available Credits: <span className="font-semibold">{credits}</span>
+              Available Credits: <span className="font-semibold">{profile?.credits || 0}</span>
             </p>
           </div>
 
@@ -109,14 +106,14 @@ export default function NotesRagContent() {
           <div className="flex gap-4 mb-6">
             <Button
               onClick={() => handleGenerate('llama')}
-              disabled={isGenerating || !topic.trim() || credits < 1}
+              disabled={isGenerating || !topic.trim() || !profile?.credits || profile.credits < 1}
               className="flex-1"
             >
               {isGenerating ? 'Generating...' : 'Generate with Llama'}
             </Button>
             <Button
               onClick={() => handleGenerate('deepseek')}
-              disabled={isGenerating || !topic.trim() || credits < 1}
+              disabled={isGenerating || !topic.trim() || !profile?.credits || profile.credits < 1}
               className="flex-1"
             >
               {isGenerating ? 'Generating...' : 'Generate with DS R1 Model'}
