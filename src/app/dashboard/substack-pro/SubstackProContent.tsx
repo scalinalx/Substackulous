@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -15,6 +15,7 @@ interface SubstackPost {
   restacks: number;
   thumbnail: string;
   url: string;
+  preview?: string;
 }
 
 type SortBy = 'likes' | 'comments' | 'restacks' | 'total';
@@ -29,15 +30,6 @@ export default function SubstackProContent() {
   const [sortBy, setSortBy] = useState<SortBy>('total');
   const [rawResponse, setRawResponse] = useState<any>(null);
   const [showRawResponse, setShowRawResponse] = useState(false);
-  const [notesUrl, setNotesUrl] = useState('');
-  const [notes, setNotes] = useState<string[]>([]);
-  const [isAnalyzingNotes, setIsAnalyzingNotes] = useState(false);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.replace('/');
-    }
-  }, [authLoading, user, router]);
 
   if (authLoading) {
     return (
@@ -48,6 +40,7 @@ export default function SubstackProContent() {
   }
 
   if (!user) {
+    router.replace('/');
     return null;
   }
 
@@ -88,46 +81,6 @@ export default function SubstackProContent() {
     }
   };
 
-  const handleAnalyzeNotes = async () => {
-    if (!notesUrl.trim() || isAnalyzingNotes) return;
-    
-    setIsAnalyzingNotes(true);
-    setError(null);
-    setNotes([]);
-    setRawResponse(null);
-    
-    try {
-      const response = await fetch('/api/substack-pro/analyze-posts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          url: notesUrl.trim(),
-          type: 'notes'
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to analyze notes');
-      }
-
-      if (data.logs) {
-        console.log('API Logs:', data.logs);
-      }
-
-      setNotes(data.notes || []);
-      setRawResponse(data.rawResponse);
-    } catch (err) {
-      console.error('Notes analysis error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to analyze notes');
-    } finally {
-      setIsAnalyzingNotes(false);
-    }
-  };
-
   const getSortedPosts = () => {
     return [...posts].sort((a, b) => {
       if (sortBy === 'total') {
@@ -144,15 +97,15 @@ export default function SubstackProContent() {
           <div>
             <Link
               href="/dashboard"
-              className="text-emerald-600 hover:text-emerald-500 flex items-center gap-1"
+              className="text-black hover:text-gray-700 flex items-center gap-1"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">Substack PRO</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="mt-4 text-3xl font-bold text-black">Substack PRO</h1>
+            <p className="mt-2 text-black">
               Analyze your Substack newsletter for insights and optimization opportunities
             </p>
           </div>
@@ -176,7 +129,7 @@ export default function SubstackProContent() {
             )}
 
             <div className="space-y-4">
-              <label htmlFor="substackUrl" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="substackUrl" className="block text-sm font-medium text-black">
                 Enter your Substack URL (e.g., https://yourblog.substack.com)
               </label>
               <div className="flex gap-4">
@@ -187,12 +140,12 @@ export default function SubstackProContent() {
                   value={substackUrl}
                   onChange={(e) => setSubstackUrl(e.target.value)}
                   disabled={isAnalyzing}
-                  className="flex-1"
+                  className="flex-1 bg-white text-black placeholder-gray-500 border-gray-300 focus:border-black focus:ring-black"
                 />
                 <Button
                   onClick={handleAnalyzePosts}
                   disabled={isAnalyzing || !substackUrl.trim()}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 disabled:from-gray-400 disabled:to-gray-400"
                 >
                   {isAnalyzing ? (
                     <span className="flex items-center justify-center">
@@ -208,60 +161,6 @@ export default function SubstackProContent() {
                 </Button>
               </div>
             </div>
-
-            <div className="space-y-4 mt-8 pt-8 border-t">
-              <label htmlFor="notesUrl" className="block text-sm font-medium text-gray-700">
-                Enter Substack URL to analyze Notes (e.g., blog.substack.com)
-              </label>
-              <div className="flex gap-4">
-                <Input
-                  id="notesUrl"
-                  type="text"
-                  placeholder="blog.substack.com"
-                  value={notesUrl}
-                  onChange={(e) => setNotesUrl(e.target.value)}
-                  disabled={isAnalyzingNotes}
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleAnalyzeNotes}
-                  disabled={isAnalyzingNotes || !notesUrl.trim()}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600"
-                >
-                  {isAnalyzingNotes ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Analyzing Notes...
-                    </span>
-                  ) : (
-                    'Analyze Notes'
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {notes.length > 0 && (
-              <div className="mt-8 space-y-6">
-                <h3 className="text-lg font-semibold text-gray-900">Found {notes.length} Notes</h3>
-                <div className="space-y-4">
-                  {notes.map((noteUrl, index) => (
-                    <div key={index} className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <a
-                        href={noteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-600 hover:text-emerald-700 transition-colors"
-                      >
-                        {noteUrl}
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {posts.length > 0 && (
               <>
@@ -315,11 +214,16 @@ export default function SubstackProContent() {
                             href={post.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-semibold text-gray-900 hover:text-emerald-600 transition-colors"
+                            className="font-semibold text-black hover:text-emerald-600 transition-colors"
                           >
                             {post.title}
                           </a>
-                          <div className="mt-2 flex gap-4 text-sm text-gray-600">
+                          {post.preview && (
+                            <p className="mt-2 text-sm text-black line-clamp-3">
+                              {post.preview}
+                            </p>
+                          )}
+                          <div className="mt-2 flex gap-4 text-sm text-black">
                             <span className="flex items-center gap-1">
                               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
@@ -353,7 +257,7 @@ export default function SubstackProContent() {
 
                 <div className="mt-8 border-t pt-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">Raw FireCrawl Response</h3>
+                    <h3 className="text-lg font-semibold text-black">Raw FireCrawl Response</h3>
                     <Button
                       variant="outline"
                       onClick={() => setShowRawResponse(!showRawResponse)}
@@ -365,7 +269,7 @@ export default function SubstackProContent() {
                   
                   {showRawResponse && rawResponse && (
                     <div className="bg-gray-50 p-4 rounded-lg">
-                      <pre className="whitespace-pre-wrap text-sm font-mono overflow-auto max-h-[500px]">
+                      <pre className="whitespace-pre-wrap text-sm font-mono overflow-auto max-h-[500px] text-black">
                         {JSON.stringify(rawResponse, null, 2)}
                       </pre>
                     </div>
@@ -374,7 +278,7 @@ export default function SubstackProContent() {
               </>
             )}
 
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-black">
               <p>Enter your Substack URL to analyze your newsletter.</p>
             </div>
           </div>

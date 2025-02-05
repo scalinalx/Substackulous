@@ -8,6 +8,7 @@ interface SubstackPost {
   comments: number;
   restacks: number;
   url: string;
+  preview?: string;
 }
 
 interface SubstackNote {
@@ -96,6 +97,10 @@ async function fetchPostData(url: string): Promise<SubstackPost | null> {
     const title = $('h1.post-title').text().trim();
     if (!title) return null;
 
+    // Extract preview content (first 500 characters of the post content)
+    const content = $('.body.markup').text().trim();
+    const preview = content ? content.slice(0, 500) + (content.length > 500 ? '...' : '') : undefined;
+
     // Extract engagement metrics using more specific selectors
     const likes = parseInt($('.like-button-container .label').first().text().trim()) || 0;
     const comments = parseInt($('.post-ufi-comment-button .label').first().text().trim()) || 0;
@@ -106,7 +111,8 @@ async function fetchPostData(url: string): Promise<SubstackPost | null> {
       likes,
       comments,
       restacks,
-      url
+      url,
+      preview
     };
   } catch (error) {
     // Just return null on error, consistent with our error handling approach
