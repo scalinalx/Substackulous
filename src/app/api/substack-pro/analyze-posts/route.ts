@@ -76,7 +76,7 @@ interface CrawlStatusResponse {
 const BATCH_SIZE = 5; // Process 5 posts at a time
 
 // Set maximum duration for this API route to 25 seconds
-export const maxDuration = 25;
+export const maxDuration = 35;
 
 async function fetchPostData(url: string): Promise<SubstackPost | null> {
   try {
