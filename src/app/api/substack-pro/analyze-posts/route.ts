@@ -225,26 +225,50 @@ export async function POST(request: Request) {
 
       return NextResponse.json(response);
     } else {
-      // Handle posts crawling (existing logic)
+      // Handle posts crawling with fallback
       const baseUrl = url.replace(/\/$/, '');
       const mapUrl = `${baseUrl}/archive?sort=top`;
       logs.push(`Mapping URLs from: ${mapUrl}`);
       
+      // First attempt with /archive?sort=top
       const mapResult = await app.mapUrl(mapUrl, {
         includeSubdomains: true
       }) as MapResult;
 
-      if (!mapResult.success || !mapResult.links) {
-        throw new Error(`Failed to map: ${mapResult.error || 'No links found'}`);
+      let postUrls: string[] = [];
+
+      if (mapResult.success && mapResult.links) {
+        postUrls = mapResult.links
+          .filter(url => url.includes('/p/'))
+          .filter(url => !url.includes('/comments'))
+          .slice(0, 60);
       }
 
-      // Filter for post URLs only
-      const postUrls = mapResult.links
-        .filter(url => url.includes('/p/'))
-        .filter(url => !url.includes('/comments'))
-        .slice(0, 60);
+      logs.push(`Found ${postUrls.length} post URLs from top posts`);
 
-      logs.push(`Found ${postUrls.length} post URLs`);
+      // If we got less than 5 posts, try the fallback
+      if (postUrls.length < 5) {
+        logs.push('Insufficient posts from top sort, trying fallback crawl...');
+        
+        const fallbackMapResult = await app.mapUrl(baseUrl, {
+          includeSubdomains: true
+        }) as MapResult;
+
+        if (fallbackMapResult.success && fallbackMapResult.links) {
+          const fallbackUrls = fallbackMapResult.links
+            .filter(url => url.includes('/p/'))
+            .filter(url => !url.includes('/comments'))
+            .slice(0, 60);
+
+          // Combine URLs and remove duplicates
+          postUrls = Array.from(new Set([...postUrls, ...fallbackUrls]));
+          logs.push(`Added ${fallbackUrls.length} posts from fallback crawl. Total unique posts: ${postUrls.length}`);
+        }
+      }
+
+      if (postUrls.length === 0) {
+        throw new Error('No posts found after both crawl attempts');
+      }
 
       // Fetch post data in parallel
       const posts = await Promise.all(
@@ -256,10 +280,19 @@ export async function POST(request: Request) {
         .filter((post): post is SubstackPost => post !== null)
         .sort((a, b) => (b.likes + b.comments + b.restacks) - (a.likes + a.comments + a.restacks));
 
+      if (validPosts.length === 0) {
+        throw new Error('No valid posts could be processed');
+      }
+
+      logs.push(`Successfully processed ${validPosts.length} valid posts`);
+
       const response: ApiResponse = {
         success: true,
         posts: validPosts,
-        rawResponse: mapResult,
+        rawResponse: {
+          topPosts: mapResult,
+          fallback: postUrls.length < 5 ? 'used' : 'not needed'
+        },
         logs
       };
 
