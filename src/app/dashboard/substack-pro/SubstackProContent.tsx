@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
+import { Textarea } from '@/app/components/ui/textarea';
 
 interface SubstackPost {
   title: string;
@@ -28,8 +29,7 @@ export default function SubstackProContent() {
   const [error, setError] = useState<string | null>(null);
   const [posts, setPosts] = useState<SubstackPost[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>('total');
-  const [rawResponse, setRawResponse] = useState<any>(null);
-  const [showRawResponse, setShowRawResponse] = useState(false);
+  const [analysisOutput, setAnalysisOutput] = useState<string>('');
 
   if (authLoading) {
     return (
@@ -50,7 +50,7 @@ export default function SubstackProContent() {
     setIsAnalyzing(true);
     setError(null);
     setPosts([]);
-    setRawResponse(null);
+    setAnalysisOutput('');
     
     try {
       const response = await fetch('/api/substack-pro/analyze-posts', {
@@ -72,13 +72,28 @@ export default function SubstackProContent() {
       }
 
       setPosts(data.posts || []);
-      setRawResponse(data.rawResponse);
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err instanceof Error ? err.message : 'Failed to analyze');
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleAIAnalysis = () => {
+    const sortedPosts = getSortedPosts();
+    let output = '';
+    
+    sortedPosts.forEach((post, index) => {
+      const totalEngagement = post.likes + post.comments + post.restacks;
+      output += `Post ${index + 1}\n`;
+      output += `${post.title}\n`;
+      output += `${post.preview || 'No preview available'}\n`;
+      output += `Likes: ${post.likes} Comments: ${post.comments} Restacks: ${post.restacks} Total Engagement: ${totalEngagement}\n`;
+      output += '---\n\n';
+    });
+
+    setAnalysisOutput(output);
   };
 
   const getSortedPosts = () => {
@@ -255,23 +270,21 @@ export default function SubstackProContent() {
                   </div>
                 </div>
 
-                <div className="mt-8 border-t pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-black">Raw FireCrawl Response</h3>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowRawResponse(!showRawResponse)}
-                      className="text-sm"
-                    >
-                      {showRawResponse ? 'Hide' : 'Show'} Raw Response
-                    </Button>
-                  </div>
-                  
-                  {showRawResponse && rawResponse && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <pre className="whitespace-pre-wrap text-sm font-mono overflow-auto max-h-[500px] text-black">
-                        {JSON.stringify(rawResponse, null, 2)}
-                      </pre>
+                <div className="mt-8 pt-6 border-t">
+                  <Button
+                    onClick={handleAIAnalysis}
+                    className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
+                  >
+                    Find Patterns & Analyze with AI
+                  </Button>
+
+                  {analysisOutput && (
+                    <div className="mt-6">
+                      <Textarea
+                        value={analysisOutput}
+                        readOnly
+                        className="w-full h-[500px] font-mono text-black bg-white border-gray-200 p-4"
+                      />
                     </div>
                   )}
                 </div>
