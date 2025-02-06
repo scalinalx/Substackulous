@@ -3,7 +3,9 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
-import { supabase, UserProfile } from '../supabase';
+import { supabase } from '../supabase/clients';
+import { logoutUser } from '../supabase/authUtils';
+import { UserProfile } from '../supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -50,19 +52,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    const controller = new AbortController();
+    let mounted = true;
+    
     const initializeAuth = async () => {
       try {
-        // Get initial session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-
-        if (session?.user) {
-          setUser(session.user);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!mounted) return;
+        setUser(user);
+        if (user) {
           // Fetch user profile
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single();
 
           if (profileError) throw profileError;
@@ -78,8 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
 
     // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
+        if (!mounted) return;
         if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user);
           // Fetch user profile
@@ -104,7 +108,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
-      subscription.unsubscribe();
+      mounted = false;
+      controller.abort();
+      authListener?.subscription.unsubscribe();
     };
   }, [router]);
 
@@ -176,22 +182,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    setError(null);
+    setLoading(true);
     try {
-      setLoading(true);
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
+      await logoutUser();
       setUser(null);
       setProfile(null);
-      router.push('/');
+      setError(null);
+      // Clear any remaining auth state
+      window.dispatchEvent(new Event('local-storage'));
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'An error occurred during sign out');
-      throw error;
+      setError(error instanceof Error ? error.message : 'Logout failed');
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   const signInWithGoogle = useCallback(async () => {
     setError(null);

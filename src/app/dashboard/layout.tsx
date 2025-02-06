@@ -16,39 +16,20 @@ export default function DashboardLayout({
 
   useEffect(() => {
     setMounted(true);
+    return () => setMounted(false);
   }, []);
 
   useEffect(() => {
-    if (mounted && !loading) {
-      if (!user) {
-        console.log('No user found in DashboardLayout, redirecting to home');
-        router.replace('/');
-      }
+    if (mounted && !loading && !user) {
+      console.log('No user found in DashboardLayout, redirecting to home');
+      router.replace('/');
     }
   }, [mounted, loading, user, router]);
 
-  // Show loading state only during initial mount
-  if (!mounted) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
-          <p className="text-gray-500">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't show loading state for subsequent auth checks
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <DashboardNav />
-        <main className="pt-16">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-amber-500"></div>
-          </div>
-        </main>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     );
   }

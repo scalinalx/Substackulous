@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useDeepgram } from '../lib/contexts/DeepgramContext';
-import { addDocument } from '../lib/firebase/firebaseUtils';
+import { supabase } from '../lib/supabase/clients';
 import { motion } from 'framer-motion';
 
 export default function VoiceRecorder() {
@@ -18,12 +18,16 @@ export default function VoiceRecorder() {
     disconnectFromDeepgram();
     setIsRecording(false);
     
-    // Save the note to Firebase
+    // Save the note to Supabase
     if (realtimeTranscript) {
-      await addDocument('notes', {
-        text: realtimeTranscript,
-        timestamp: new Date().toISOString(),
-      });
+      const { data, error } = await supabase
+        .from('notes')
+        .insert([
+          {
+            text: realtimeTranscript,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
     }
   };
 
