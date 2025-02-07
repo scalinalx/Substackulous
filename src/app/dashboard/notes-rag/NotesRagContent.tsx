@@ -11,7 +11,7 @@ import remarkGfm from 'remark-gfm';
 
 export default function NotesRagContent() {
   const [mounted, setMounted] = useState(false);
-  const { user, profile, isLoading } = useAuth();
+  const { user, profile, isLoading, updateProfile } = useAuth();
   const router = useRouter();
   const [notes, setNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -70,14 +70,28 @@ export default function NotesRagContent() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate content');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate content');
       }
 
       const data = await response.json();
+      if (!data.content) {
+        throw new Error('No content received from the API');
+      }
+
+      // Update the profile credits after successful generation
+      if (profile) {
+        const updatedProfile = {
+          ...profile,
+          credits: profile.credits - creditCost
+        };
+        await updateProfile(updatedProfile);
+      }
+
       setGeneratedContent(data.content);
     } catch (err) {
       console.error('Error generating content:', err);
-      setError('Failed to generate content. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -176,16 +190,22 @@ export default function NotesRagContent() {
             </div>
           </div>
 
-          {generatedContent && (
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Content</h2>
-              <div className="prose prose-amber max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {generatedContent}
-                </ReactMarkdown>
+          <div className="mt-8">
+            {error && (
+              <div className="text-red-500 mb-4">{error}</div>
+            )}
+            {isGenerating && (
+              <div className="text-amber-600 mb-4">Generating content...</div>
+            )}
+            {generatedContent && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-[#181819]">Generated Content:</h3>
+                <div className="rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+                  <pre className="whitespace-pre-wrap font-sans text-[#181819]">{generatedContent}</pre>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
