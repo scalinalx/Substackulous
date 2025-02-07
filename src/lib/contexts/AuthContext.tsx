@@ -4,17 +4,28 @@ import { createContext, useContext, useEffect, useState, useMemo, useCallback } 
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '../supabase/clients';
-import { logoutUser, signInWithGoogle } from '../supabase/authUtils';
-import { UserProfile } from '../supabase';
+import { logoutUser, signInWithGoogle, resetPassword as resetPasswordUtil } from '../supabase/authUtils';
+
+interface UserProfile {
+  id: string;
+  email: string | null;
+  credits: number;
+  name: string | null;
+  avatar_url: string | null;
+}
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  profile: UserProfile | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,10 +33,28 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Fetch user profile
+  const fetchProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      setProfile(null);
+    }
+  }, []);
 
   // Handle navigation based on auth state
   const handleAuthNavigation = useCallback(async (isAuthenticated: boolean) => {
@@ -58,14 +87,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (initialSession) {
           setSession(initialSession);
           setUser(initialSession.user);
+          await fetchProfile(initialSession.user.id);
         } else {
           setSession(null);
           setUser(null);
+          setProfile(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         setSession(null);
         setUser(null);
+        setProfile(null);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -83,6 +115,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
+        if (currentSession?.user) {
+          await fetchProfile(currentSession.user.id);
+        } else {
+          setProfile(null);
+        }
+
         // Handle navigation after auth state changes
         if (event === 'SIGNED_IN') {
           await handleAuthNavigation(true);
@@ -96,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [handleAuthNavigation]);
+  }, [handleAuthNavigation, fetchProfile]);
 
   // Route protection effect
   useEffect(() => {
@@ -122,6 +160,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const signUp = useCallback(async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.signUp({ email, password });
+      
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { 
+        error: error instanceof Error 
+          ? error 
+          : new Error('Failed to sign up. Please try again.')
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   const handleGoogleSignIn = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -135,12 +191,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const handleResetPassword = useCallback(async (email: string) => {
+    try {
+      setIsLoading(true);
+      const { error } = await resetPasswordUtil(email);
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { 
+        error: error instanceof Error 
+          ? error 
+          : new Error('Failed to reset password. Please try again.')
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    if (!user) throw new Error('No user logged in');
+    
+    try {
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setProfile(prev => prev ? { ...prev, ...updates } : null);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
   const signOut = useCallback(async () => {
     try {
       setIsLoading(true);
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
+      setProfile(null);
       await router.push('/login');
       router.refresh();
     } catch (error) {
@@ -154,12 +249,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const contextValue = useMemo(() => ({
     user,
     session,
+    profile,
     isLoading,
     isAuthenticated: !!user,
     signIn,
+    signUp,
     signOut,
-    signInWithGoogle: handleGoogleSignIn
-  }), [user, session, isLoading, signIn, signOut, handleGoogleSignIn]);
+    signInWithGoogle: handleGoogleSignIn,
+    resetPassword: handleResetPassword,
+    updateProfile
+  }), [user, session, profile, isLoading, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile]);
 
   return (
     <AuthContext.Provider value={contextValue}>
