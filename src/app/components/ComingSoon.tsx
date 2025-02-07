@@ -10,9 +10,9 @@ interface ComingSoonProps {
 }
 
 export default function ComingSoon({ title, description, icon }: ComingSoonProps) {
-  const { user, profile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
-  if (!user || !profile) {
+  if (!user) {
     return null;
   }
 
@@ -28,9 +28,6 @@ export default function ComingSoon({ title, description, icon }: ComingSoonProps
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">
                 Welcome <span className="font-medium">{user.email}</span>
-              </div>
-              <div className="text-sm text-gray-600">
-                Credits: {profile.credits}
               </div>
               <button
                 onClick={() => signOut()}

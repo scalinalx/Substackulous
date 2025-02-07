@@ -2,9 +2,11 @@
 
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
+import { useState } from 'react';
 
 export default function DashboardNav() {
-  const { user, profile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handlePurchaseCredits = async () => {
     if (!user?.email) {
@@ -36,7 +38,19 @@ export default function DashboardNav() {
     }
   };
 
-  if (!user || !profile) return null;
+  const handleSignOut = async () => {
+    try {
+      setIsSigningOut(true);
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+      alert('Failed to sign out. Please try again.');
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
+  if (!user) return null;
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
@@ -51,9 +65,6 @@ export default function DashboardNav() {
             <div className="text-sm text-gray-600">
               Welcome <span className="font-medium">{user.email}</span>
             </div>
-            <div className="text-sm text-gray-600">
-              Credits: {profile?.credits ?? 0}
-            </div>
             <div className="relative">
               <button
                 onClick={handlePurchaseCredits}
@@ -65,10 +76,15 @@ export default function DashboardNav() {
               </button>
             </div>
             <button
-              onClick={() => signOut()}
-              className="text-sm text-gray-600 hover:text-gray-900"
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className={`text-sm ${
+                isSigningOut 
+                  ? 'text-gray-400 cursor-not-allowed'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              Sign Out
+              {isSigningOut ? 'Signing Out...' : 'Sign Out'}
             </button>
           </div>
         </div>

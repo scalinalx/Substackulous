@@ -8,6 +8,8 @@ import Image from 'next/image';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
 import { Textarea } from '@/app/components/ui/textarea';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface SubstackPost {
   title: string;
@@ -22,10 +24,11 @@ interface SubstackPost {
 type SortBy = 'likes' | 'comments' | 'restacks' | 'total';
 
 export default function SubstackProContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [substackUrl, setSubstackUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAnalyzingWithGroq, setIsAnalyzingWithGroq] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [posts, setPosts] = useState<SubstackPost[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>('total');
@@ -80,20 +83,34 @@ export default function SubstackProContent() {
     }
   };
 
-  const handleAIAnalysis = () => {
-    const sortedPosts = getSortedPosts();
-    let output = '';
+  const handleAIAnalysis = async () => {
+    if (isAnalyzingWithGroq || posts.length === 0) return;
     
-    sortedPosts.forEach((post, index) => {
-      const totalEngagement = post.likes + post.comments + post.restacks;
-      output += `Post ${index + 1}\n`;
-      output += `${post.title}\n`;
-      output += `${post.preview || 'No preview available'}\n`;
-      output += `Likes: ${post.likes} Comments: ${post.comments} Restacks: ${post.restacks} Total Engagement: ${totalEngagement}\n`;
-      output += '---\n\n';
-    });
+    setIsAnalyzingWithGroq(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/substack-pro/analyze-with-groq', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ posts }),
+      });
 
-    setAnalysisOutput(output);
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to analyze with AI');
+      }
+
+      setAnalysisOutput(data.analysis);
+    } catch (err) {
+      console.error('AI Analysis error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to analyze with AI');
+    } finally {
+      setIsAnalyzingWithGroq(false);
+    }
   };
 
   const getSortedPosts = () => {
@@ -211,6 +228,32 @@ export default function SubstackProContent() {
                     </Button>
                   </div>
 
+                  <Button
+                    onClick={handleAIAnalysis}
+                    disabled={isAnalyzingWithGroq}
+                    className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600 disabled:from-gray-400 disabled:to-gray-400"
+                  >
+                    {isAnalyzingWithGroq ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Finding Patterns & Analyzing with AI...
+                      </span>
+                    ) : (
+                      'Find Patterns & Analyze with AI'
+                    )}
+                  </Button>
+
+                  {analysisOutput && (
+                    <div className="mt-8 p-6 bg-gray-50 rounded-lg prose prose-emerald max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {analysisOutput}
+                      </ReactMarkdown>
+                    </div>
+                  )}
+
                   <div className="space-y-4">
                     {getSortedPosts().map((post, index) => (
                       <div key={index} className="flex gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
@@ -253,15 +296,20 @@ export default function SubstackProContent() {
                             </span>
                             <span className="flex items-center gap-1">
                               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M21 3v5h-5M21 8l-3-2.7c-1.3-1.2-2.9-1.9-4.6-2.2-1.7-0.3-3.5-0.1-5.1 0.6-1.6 0.7-2.9 1.9-3.8 3.3C3.5 8.6 3 10.3 3 12m0 9v-5h5m-5-4l3 2.7c1.3 1.2 2.9 1.9 4.6 2.2 1.7 0.3 3.5 0.1 5.1-0.6 1.6-0.7 2.9-1.9 3.8-3.3 1-1.4 1.5-3.1 1.5-4.8" />
+                                <path d="M17 1l4 4-4 4" />
+                                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                                <path d="M7 23l-4-4 4-4" />
+                                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
                               </svg>
                               {post.restacks}
                             </span>
-                            <span className="flex items-center gap-1 text-emerald-600">
+                            <span className="flex items-center gap-1">
                               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M13 17l5-5-5-5M6 17l5-5-5-5" />
+                                <path d="M12 20V10" />
+                                <path d="M18 20V4" />
+                                <path d="M6 20v-4" />
                               </svg>
-                              {post.likes + post.comments + post.restacks} total
+                              {post.likes + post.comments + post.restacks}
                             </span>
                           </div>
                         </div>
@@ -269,31 +317,8 @@ export default function SubstackProContent() {
                     ))}
                   </div>
                 </div>
-
-                <div className="mt-8 pt-6 border-t">
-                  <Button
-                    onClick={handleAIAnalysis}
-                    className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
-                  >
-                    Find Patterns & Analyze with AI
-                  </Button>
-
-                  {analysisOutput && (
-                    <div className="mt-6">
-                      <Textarea
-                        value={analysisOutput}
-                        readOnly
-                        className="w-full h-[500px] font-mono text-black bg-white border-gray-200 p-4"
-                      />
-                    </div>
-                  )}
-                </div>
               </>
             )}
-
-            <div className="text-sm text-black">
-              <p>Enter your Substack URL to analyze your newsletter.</p>
-            </div>
           </div>
         </div>
       </div>

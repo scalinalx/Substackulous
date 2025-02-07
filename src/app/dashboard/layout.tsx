@@ -11,22 +11,24 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
-  const { user, loading } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
-    return () => setMounted(false);
   }, []);
 
   useEffect(() => {
-    if (mounted && !loading && !user) {
-      console.log('No user found in DashboardLayout, redirecting to home');
-      router.replace('/');
-    }
-  }, [mounted, loading, user, router]);
+    if (!mounted || isLoading) return;
 
-  if (!mounted || loading) {
+    if (!isAuthenticated) {
+      console.log('No authenticated user found in DashboardLayout, redirecting to login');
+      router.replace('/login');
+    }
+  }, [mounted, isLoading, isAuthenticated, router]);
+
+  // Show loading state
+  if (!mounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
@@ -35,7 +37,7 @@ export default function DashboardLayout({
   }
 
   // If not authenticated, render nothing (redirect will happen)
-  if (!user) {
+  if (!isAuthenticated) {
     return null;
   }
 

@@ -7,7 +7,7 @@ import supabase from '@/lib/supabase';
 
 export default function TitleGenerator() {
   const router = useRouter();
-  const { profile, updateProfile } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
   const [topic, setTopic] = useState('');
@@ -29,12 +29,12 @@ export default function TitleGenerator() {
     e.preventDefault();
     setError(null);
 
-    if (!profile) {
+    if (!user) {
       setError('User profile not found');
       return;
     }
 
-    if (profile.credits < creditCost) {
+    if (user.credits < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
       return;
     }
@@ -56,7 +56,7 @@ export default function TitleGenerator() {
         },
         body: JSON.stringify({
           theme: topic,
-          userId: profile.id
+          userId: user.id
         }),
       });
 
@@ -69,11 +69,11 @@ export default function TitleGenerator() {
       setGeneratedTitles(data.titles);
       
       // Update credits only after successful completion
-      const updatedProfile = {
-        ...profile,
-        credits: profile.credits - creditCost,
+      const updatedUser = {
+        ...user,
+        credits: user.credits - creditCost,
       };
-      await updateProfile(updatedProfile);
+      // await updateProfile(updatedUser);
     } catch (err) {
       console.error('Error in title generation:', err);
       setError((err as Error).message);
@@ -87,7 +87,7 @@ export default function TitleGenerator() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
         <span className="text-amber-700">Credits required: {creditCost}</span>
-        <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+        <span className="font-medium text-amber-700">Your balance: {user?.credits ?? 0}</span>
       </div>
 
       {error && (

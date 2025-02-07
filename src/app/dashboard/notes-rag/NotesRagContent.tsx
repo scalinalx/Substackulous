@@ -1,30 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
 import { Textarea } from '@/app/components/ui/textarea';
+import supabase from '@/lib/supabase';
 
 export default function NotesRagContent() {
-  const { user, profile, loading: authLoading, updateUserCredits } = useAuth();
+  const { user } = useAuth();
+  const [credits, setCredits] = useState(0);
   const router = useRouter();
   const [topic, setTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
 
-  // Handle authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const fetchCredits = async () => {
+      if (user?.id) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('credits')
+          .eq('id', user.id)
+          .single();
+        setCredits(data?.credits || 0);
+      }
+    };
+    fetchCredits();
+  }, [user]);
 
+  // Handle authentication
   if (!user) {
     router.replace('/');
     return null;
@@ -33,15 +41,10 @@ export default function NotesRagContent() {
   const handleGenerate = async (model: 'llama' | 'deepseek') => {
     if (!topic.trim() || isGenerating) return;
     
-    console.log('Current profile:', profile); // Debug log
+    console.log('Current credits:', credits); // Debug log
     
-    if (!profile) {
-      setError('User profile not found. Please try refreshing the page.');
-      return;
-    }
-    
-    if (typeof profile.credits !== 'number' || profile.credits < 1) {
-      setError(`Not enough credits. Current balance: ${profile.credits}. Please purchase more credits to continue.`);
+    if (credits < 1) {
+      setError('Not enough credits. Please purchase more credits to continue.');
       return;
     }
     
@@ -75,8 +78,8 @@ export default function NotesRagContent() {
       setResult(data.result);
       
       // Immediately update credits in the UI
-      await updateUserCredits(user.id);
-      console.log('Credits updated, new profile:', profile); // Debug log
+      setCredits(credits - 1);
+      console.log('Credits updated, new credits:', credits); // Debug log
     } catch (error) {
       console.error('Generation error:', error); // Debug log
       setError(error instanceof Error ? error.message : 'An error occurred');
@@ -109,7 +112,7 @@ export default function NotesRagContent() {
           
           <div className="mb-6">
             <p className="text-black mb-2">
-              Available Credits: <span className="font-semibold">{profile?.credits ?? 0}</span>
+              Available Credits: <span className="font-semibold">{credits}</span>
             </p>
           </div>
 
@@ -130,14 +133,14 @@ export default function NotesRagContent() {
           <div className="flex gap-4 mb-6">
             <Button
               onClick={() => handleGenerate('llama')}
-              disabled={isGenerating || !topic.trim() || !profile?.credits || profile.credits < 1}
+              disabled={isGenerating || !topic.trim() || credits < 1}
               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-300"
             >
               {isGenerating ? 'Generating...' : 'Generate Model1'}
             </Button>
             <Button
               onClick={() => handleGenerate('deepseek')}
-              disabled={isGenerating || !topic.trim() || !profile?.credits || profile.credits < 1}
+              disabled={isGenerating || !topic.trim() || credits < 1}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300"
             >
               {isGenerating ? 'Generating...' : 'Generate Model2'}

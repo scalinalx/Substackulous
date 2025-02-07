@@ -14,7 +14,7 @@ interface GenerationOptions {
 
 export default function ThumbnailGenerator() {
   const router = useRouter();
-  const { profile, updateProfile } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<{ urls: string[] } | null>(null);
   const [options, setOptions] = useState<GenerationOptions>({
@@ -29,13 +29,8 @@ export default function ThumbnailGenerator() {
   const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
-    if (!profile) {
-      setError('User profile not found');
-      return;
-    }
-
-    if (profile.credits < creditCost) {
-      setError(`Not enough credits. You need ${creditCost} credits to generate thumbnails.`);
+    if (!user) {
+      setError('User not found');
       return;
     }
 
@@ -63,7 +58,7 @@ export default function ThumbnailGenerator() {
           prompt,
           model: 'ideogram-ai/ideogram-v2-turbo',
           aspectRatio: options.aspectRatio,
-          userId: profile.id
+          userId: user.id
         }),
       });
 
@@ -100,14 +95,6 @@ export default function ThumbnailGenerator() {
                 case 'success':
                   tempImages[data.index] = data.imageUrl;
                   setGeneratedImages({ urls: tempImages });
-                  // Deduct credits after first successful image generation
-                  if (tempImages.length === 1) {
-                    const updatedProfile = {
-                      ...profile,
-                      credits: (profile?.credits || 0) - creditCost,
-                    };
-                    await updateProfile(updatedProfile);
-                  }
                   break;
                 case 'error':
                   setError(data.message);
@@ -167,7 +154,7 @@ export default function ThumbnailGenerator() {
         {/* Credit Cost Display */}
         <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
           <span className="text-amber-700">Credits required: {creditCost}</span>
-          <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+          <span className="font-medium text-amber-700">Your balance: {user?.credits ?? 0}</span>
         </div>
 
         <div className="space-y-4">
