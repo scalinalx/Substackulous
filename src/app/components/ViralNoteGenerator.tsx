@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 type PrimaryIntent = 'Growth' | 'Educational' | 'Entertain' | 'Personal Story';
 
 export default function ViralNoteGenerator() {
-  const { user, profile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const [theme, setTheme] = useState('');
   const [coreTopics, setCoreTopics] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
@@ -19,6 +19,18 @@ export default function ViralNoteGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const handleCopyToClipboard = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      toast.success('Note copied to clipboard!');
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
 
   const handleGenerate = async () => {
     if (!user) {
@@ -57,6 +69,14 @@ export default function ViralNoteGenerator() {
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Failed to generate notes');
+      }
+
+      // Update credits after successful generation
+      if (profile) {
+        await updateProfile({
+          ...profile,
+          credits: profile.credits - 2
+        });
       }
 
       setNotes(data.notes);
@@ -104,6 +124,14 @@ export default function ViralNoteGenerator() {
         throw new Error(data.error || 'Failed to generate note');
       }
 
+      // Update credits after successful generation
+      if (profile) {
+        await updateProfile({
+          ...profile,
+          credits: profile.credits - 1
+        });
+      }
+
       setNotes([data.note]);
       toast.success('Note generated successfully!');
     } catch (error) {
@@ -117,7 +145,7 @@ export default function ViralNoteGenerator() {
     <div className="max-w-4xl mx-auto space-y-6 p-4 bg-white">
       <div className="grid gap-6">
         <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-          <span className="text-amber-700">Credits required: {primaryIntent === 'Growth' ? 2 : 1}</span>
+          <span className="text-amber-700">Credits required: 2</span>
           <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
         </div>
 
@@ -167,18 +195,18 @@ export default function ViralNoteGenerator() {
                        focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               <option value="Growth">Growth (2 credits)</option>
-              <option value="Educational">Educational (1 credit)</option>
-              <option value="Entertain">Entertain (1 credit)</option>
-              <option value="Personal Story">Personal Story (1 credit)</option>
+              <option value="Educational">Educational (2 credits)</option>
+              <option value="Entertain">Entertain (2 credits)</option>
+              <option value="Personal Story">Personal Story (2 credits)</option>
             </select>
           </div>
           <Button 
             onClick={handleGenerate} 
-            disabled={isGenerating || !theme || !primaryIntent || (profile?.credits ?? 0) < (primaryIntent === 'Growth' ? 2 : 1)}
+            disabled={isGenerating || !theme || !primaryIntent || (profile?.credits ?? 0) < 2}
             className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
             size="lg"
           >
-            {isGenerating ? 'Generating...' : `Generate Notes (${primaryIntent === 'Growth' ? 2 : 1} credits)`}
+            {isGenerating ? 'Generating...' : 'Generate Notes (2 credits)'}
           </Button>
         </div>
 
@@ -209,11 +237,34 @@ export default function ViralNoteGenerator() {
       {notes.length > 0 && (
         <div className="mt-8 space-y-4">
           <h3 className="text-lg font-semibold text-[#181819]">Generated Notes:</h3>
-          {notes.map((note, index) => (
-            <div key={index} className="rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
-              <pre className="whitespace-pre-wrap font-sans text-[#181819]">{note}</pre>
-            </div>
-          ))}
+          <div className="grid gap-4">
+            {notes.map((note, index) => (
+              <div 
+                key={index} 
+                className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
+              >
+                <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note}</pre>
+                <button
+                  onClick={() => handleCopyToClipboard(note, index)}
+                  className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
+                    copiedIndex === index
+                      ? 'text-green-600 bg-green-50'
+                      : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
+                  }`}
+                >
+                  {copiedIndex === index ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

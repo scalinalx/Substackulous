@@ -8,6 +8,7 @@ import { Button } from '@/app/components/ui/button';
 import { Textarea } from '@/app/components/ui/textarea';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { toast } from 'sonner';
 
 export default function NotesRagContent() {
   const [mounted, setMounted] = useState(false);
@@ -18,6 +19,7 @@ export default function NotesRagContent() {
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const creditCost = 1;
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -95,6 +97,22 @@ export default function NotesRagContent() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleCopyToClipboard = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      toast.success('Note copied to clipboard!');
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
+  // Split the content into individual notes
+  const splitNotes = (content: string): string[] => {
+    return content.split(/Note \d+:\n/).filter(note => note.trim());
   };
 
   return (
@@ -199,10 +217,35 @@ export default function NotesRagContent() {
               <div className="text-amber-600 mb-4">Generating content...</div>
             )}
             {generatedContent && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-[#181819]">Generated Content:</h3>
-                <div className="rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
-                  <pre className="whitespace-pre-wrap font-sans text-[#181819]">{generatedContent}</pre>
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
+                <div className="grid gap-4">
+                  {splitNotes(generatedContent).map((note, index) => (
+                    <div
+                      key={index}
+                      className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note.trim()}</pre>
+                      <button
+                        onClick={() => handleCopyToClipboard(note.trim(), index)}
+                        className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
+                          copiedIndex === index
+                            ? 'text-green-600 bg-green-50'
+                            : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
+                        }`}
+                      >
+                        {copiedIndex === index ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
