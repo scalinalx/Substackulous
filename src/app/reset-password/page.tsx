@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-function ResetPasswordForm() {
+export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +99,7 @@ function ResetPasswordForm() {
   // If success, show only the success message
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-400 flex items-center justify-center px-4">
+      <div className="flex items-center justify-center px-4 h-screen">
         <div className="max-w-md w-full">
           <div className="bg-white rounded-xl shadow-2xl p-8">
             <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-700 text-center">
@@ -113,7 +113,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-400 flex items-center justify-center px-4">
+    <div className="flex items-center justify-center px-4 h-screen">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-xl shadow-2xl p-8 space-y-6">
           <div className="text-center">
@@ -209,19 +209,5 @@ function ResetPasswordForm() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function ResetPasswordPage() {
-  return (
-    <Suspense 
-      fallback={
-        <div className="min-h-screen bg-gradient-to-br from-amber-300 via-yellow-400 to-orange-400 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
-        </div>
-      }
-    >
-      <ResetPasswordForm />
-    </Suspense>
   );
 } 
