@@ -33,6 +33,7 @@ export default function SubstackProContent() {
   const [posts, setPosts] = useState<SubstackPost[]>([]);
   const [sortBy, setSortBy] = useState<SortBy>('total');
   const [analysisOutput, setAnalysisOutput] = useState<string>('');
+  const creditCost = 1;
 
   if (authLoading) {
     return (

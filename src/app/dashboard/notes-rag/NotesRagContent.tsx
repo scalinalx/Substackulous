@@ -17,7 +17,7 @@ export default function NotesRagContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
-  const creditCost = 5;
+  const creditCost = 1;
 
   useEffect(() => {
     setMounted(true);
