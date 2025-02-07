@@ -63,7 +63,7 @@ export default function NotesRagContent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          notes,
+          userTopic: notes,
           userId: user.id,
           model
         }),
