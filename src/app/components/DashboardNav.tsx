@@ -64,10 +64,10 @@ export default function DashboardNav() {
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-600">
-              <span className="font-medium">{user.email}</span>
+              <span className="font-medium">Welcome {user.email}</span>
             </div>
             <div className="text-sm text-gray-600">
-              <span className="font-medium">{profile?.credits ?? 0} credits</span>
+              <span className="font-medium">Available credits: {profile?.credits ?? 0}</span>
             </div>
             <div className="relative">
               <button

@@ -14,9 +14,9 @@ export default function NotesRagContent() {
   const { user, profile, isLoading } = useAuth();
   const router = useRouter();
   const [notes, setNotes] = useState('');
-  const [analyzing, setAnalyzing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
   const creditCost = 5;
 
   useEffect(() => {
@@ -41,20 +41,20 @@ export default function NotesRagContent() {
     return null;
   }
 
-  const handleAnalyze = async () => {
+  const handleGenerate = async (model: 'llama' | 'deepseek') => {
     if (!notes.trim()) {
-      setError('Please enter some notes to analyze');
+      setError('Please enter some notes to generate from');
       return;
     }
 
     if ((profile?.credits || 0) < creditCost) {
-      setError(`Not enough credits. You need ${creditCost} credits to analyze notes.`);
+      setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
       return;
     }
 
     setError(null);
-    setAnalyzing(true);
-    setAnalysis(null);
+    setIsGenerating(true);
+    setGeneratedContent(null);
 
     try {
       const response = await fetch('/api/notes-rag/analyze', {
@@ -65,20 +65,21 @@ export default function NotesRagContent() {
         body: JSON.stringify({
           notes,
           userId: user.id,
+          model
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to analyze notes');
+        throw new Error('Failed to generate content');
       }
 
       const data = await response.json();
-      setAnalysis(data.analysis);
+      setGeneratedContent(data.content);
     } catch (err) {
-      console.error('Error analyzing notes:', err);
-      setError('Failed to analyze notes. Please try again.');
+      console.error('Error generating content:', err);
+      setError('Failed to generate content. Please try again.');
     } finally {
-      setAnalyzing(false);
+      setIsGenerating(false);
     }
   };
 
@@ -96,9 +97,9 @@ export default function NotesRagContent() {
               </svg>
               Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">Notes RAG</h1>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">Notes with RAG</h1>
             <p className="mt-2 text-gray-600">
-              Analyze your notes using AI and get insights.
+              Generate content from your notes using different AI models
             </p>
           </div>
         </div>
@@ -137,31 +138,50 @@ export default function NotesRagContent() {
               />
             </div>
 
-            <Button
-              onClick={handleAnalyze}
-              disabled={analyzing || !notes.trim() || (profile?.credits || 0) < creditCost}
-              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700"
-            >
-              {analyzing ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Analyzing...
-                </span>
-              ) : (
-                'Analyze Notes'
-              )}
-            </Button>
+            <div className="flex gap-4">
+              <Button
+                onClick={() => handleGenerate('llama')}
+                disabled={isGenerating || !notes.trim() || (profile?.credits || 0) < creditCost}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
+              >
+                {isGenerating ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating...
+                  </span>
+                ) : (
+                  'Generate (Model 1 - Llama)'
+                )}
+              </Button>
+              <Button
+                onClick={() => handleGenerate('deepseek')}
+                disabled={isGenerating || !notes.trim() || (profile?.credits || 0) < creditCost}
+                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+              >
+                {isGenerating ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating...
+                  </span>
+                ) : (
+                  'Generate (Model 2 - Deepseek)'
+                )}
+              </Button>
+            </div>
           </div>
 
-          {analysis && (
+          {generatedContent && (
             <div className="mt-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Analysis</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Content</h2>
               <div className="prose prose-amber max-w-none">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {analysis}
+                  {generatedContent}
                 </ReactMarkdown>
               </div>
             </div>
