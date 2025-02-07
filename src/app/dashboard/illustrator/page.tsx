@@ -10,11 +10,15 @@ const IllustratorContent = dynamic(() => import('./IllustratorContent'), {
   ),
 });
 
-export const metadata = {
-  title: 'Idea Illustrator | Substackulous',
+export const metadata: Metadata = {
+  title: 'Idea Illustrator',
   description: 'Generate unique illustrations for your Substack posts using AI.',
 };
 
 export default function IllustratorPage() {
-  return <IllustratorContent />;
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <IllustratorContent />
+    </div>
+  );
 } 
