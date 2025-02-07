@@ -58,20 +58,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Handle navigation based on auth state
   const handleAuthNavigation = useCallback(async (isAuthenticated: boolean) => {
+    if (!isInitialized) return;
+
     const isAuthRoute = ['/login', '/signup', '/reset-password'].includes(pathname || '');
     const isPublicRoute = ['/', '/about', '/contact'].includes(pathname || '');
+    const isDashboardRoute = pathname?.startsWith('/dashboard');
 
     if (isAuthenticated) {
       if (isAuthRoute) {
-        await router.push('/dashboard');
+        await router.replace('/dashboard');
       }
     } else {
-      if (!isAuthRoute && !isPublicRoute) {
-        await router.push('/login');
+      if (isDashboardRoute) {
+        await router.replace('/login');
       }
     }
-    router.refresh();
-  }, [pathname, router]);
+  }, [pathname, router, isInitialized]);
 
   // Handle auth state initialization and changes
   useEffect(() => {
@@ -88,16 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(initialSession);
           setUser(initialSession.user);
           await fetchProfile(initialSession.user.id);
-        } else {
-          setSession(null);
-          setUser(null);
-          setProfile(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        setSession(null);
-        setUser(null);
-        setProfile(null);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -127,6 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (event === 'SIGNED_OUT') {
           await handleAuthNavigation(false);
         }
+
+        setIsLoading(false);
       }
     );
 
@@ -134,13 +131,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [handleAuthNavigation, fetchProfile]);
+  }, [fetchProfile, handleAuthNavigation]);
 
   // Route protection effect
   useEffect(() => {
-    if (!isInitialized || isLoading) return;
+    if (!isInitialized) return;
     handleAuthNavigation(!!user);
-  }, [user, isInitialized, isLoading, handleAuthNavigation]);
+  }, [user, isInitialized, handleAuthNavigation]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
