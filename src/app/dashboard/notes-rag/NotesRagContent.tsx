@@ -1,163 +1,168 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/lib/contexts/AuthContext';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
-import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
 import { Textarea } from '@/app/components/ui/textarea';
-import supabase from '@/lib/supabase';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function NotesRagContent() {
-  const { user } = useAuth();
-  const [credits, setCredits] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const { user, profile, isLoading } = useAuth();
   const router = useRouter();
-  const [topic, setTopic] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<string | null>(null);
+  const creditCost = 5;
 
   useEffect(() => {
-    const fetchCredits = async () => {
-      if (user?.id) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('credits')
-          .eq('id', user.id)
-          .single();
-        setCredits(data?.credits || 0);
-      }
-    };
-    fetchCredits();
-  }, [user]);
+    setMounted(true);
+  }, []);
 
-  // Handle authentication
-  if (!user) {
-    router.replace('/');
+  useEffect(() => {
+    if (mounted && !isLoading && !user) {
+      router.replace('/');
+    }
+  }, [mounted, isLoading, user, router]);
+
+  if (!mounted || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
     return null;
   }
 
-  const handleGenerate = async (model: 'llama' | 'deepseek') => {
-    if (!topic.trim() || isGenerating) return;
-    
-    console.log('Current credits:', credits); // Debug log
-    
-    if (credits < 1) {
-      setError('Not enough credits. Please purchase more credits to continue.');
+  const handleAnalyze = async () => {
+    if (!notes.trim()) {
+      setError('Please enter some notes to analyze');
       return;
     }
-    
-    setIsGenerating(true);
+
+    if ((profile?.credits || 0) < creditCost) {
+      setError(`Not enough credits. You need ${creditCost} credits to analyze notes.`);
+      return;
+    }
+
     setError(null);
-    setResult(null);
-    
+    setAnalyzing(true);
+    setAnalysis(null);
+
     try {
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          userTopic: topic.trim(),
-          model,
-          userId: user.id
+        body: JSON.stringify({
+          notes,
+          userId: user.id,
         }),
       });
 
+      if (!response.ok) {
+        throw new Error('Failed to analyze notes');
+      }
+
       const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to generate notes');
-      }
-
-      if (data.logs) {
-        console.log('API Logs:', data.logs);
-      }
-
-      setResult(data.result);
-      
-      // Immediately update credits in the UI
-      setCredits(credits - 1);
-      console.log('Credits updated, new credits:', credits); // Debug log
-    } catch (error) {
-      console.error('Generation error:', error); // Debug log
-      setError(error instanceof Error ? error.message : 'An error occurred');
+      setAnalysis(data.analysis);
+    } catch (err) {
+      console.error('Error analyzing notes:', err);
+      setError('Failed to analyze notes. Please try again.');
     } finally {
-      setIsGenerating(false);
+      setAnalyzing(false);
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-4">
-          <Link
-            href="/dashboard"
-            className="text-black hover:text-gray-700 flex items-center gap-1"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Dashboard
-          </Link>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h1 className="text-2xl font-bold mb-4 text-black">RAG-Based Viral Note Generator</h1>
-          <p className="text-black mb-6">
-            Generate viral Substack notes using our RAG system trained on thousands of high-performing examples.
-            Each generation costs 1 credit.
-          </p>
-          
-          <div className="mb-6">
-            <p className="text-black mb-2">
-              Available Credits: <span className="font-semibold">{credits}</span>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <Link
+              href="/dashboard"
+              className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Dashboard
+            </Link>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">Notes RAG</h1>
+            <p className="mt-2 text-gray-600">
+              Analyze your notes using AI and get insights.
             </p>
           </div>
+        </div>
 
-          <div className="mb-6">
-            <label htmlFor="topic" className="block text-black font-medium mb-2">
-              Enter your topic
-            </label>
-            <Input
-              id="topic"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              placeholder="e.g., Building a successful newsletter, Growing on Substack"
-              className="w-full bg-white text-black placeholder-gray-500 border-gray-300 focus:border-black focus:ring-black"
-              disabled={isGenerating}
-            />
-          </div>
-
-          <div className="flex gap-4 mb-6">
-            <Button
-              onClick={() => handleGenerate('llama')}
-              disabled={isGenerating || !topic.trim() || credits < 1}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-300"
-            >
-              {isGenerating ? 'Generating...' : 'Generate Model1'}
-            </Button>
-            <Button
-              onClick={() => handleGenerate('deepseek')}
-              disabled={isGenerating || !topic.trim() || credits < 1}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300"
-            >
-              {isGenerating ? 'Generating...' : 'Generate Model2'}
-            </Button>
+        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
+          <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
+            <span className="text-amber-700">Credits required: {creditCost}</span>
+            <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-md">
-              {error}
+            <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
             </div>
           )}
 
-          {result && (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Your Notes
+              </label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Paste your notes here..."
+                className="min-h-[200px]"
+              />
+            </div>
+
+            <Button
+              onClick={handleAnalyze}
+              disabled={analyzing || !notes.trim() || (profile?.credits || 0) < creditCost}
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700"
+            >
+              {analyzing ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Analyzing...
+                </span>
+              ) : (
+                'Analyze Notes'
+              )}
+            </Button>
+          </div>
+
+          {analysis && (
             <div className="mt-8">
-              <h2 className="text-xl font-semibold mb-4 text-black">Generated Note</h2>
-              <div className="bg-white text-black border border-gray-200 rounded-lg p-6 whitespace-pre-wrap">
-                {result}
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Analysis</h2>
+              <div className="prose prose-amber max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {analysis}
+                </ReactMarkdown>
               </div>
             </div>
           )}

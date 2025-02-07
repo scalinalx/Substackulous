@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 export default function DashboardNav() {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handlePurchaseCredits = async () => {
@@ -42,6 +42,7 @@ export default function DashboardNav() {
     try {
       setIsSigningOut(true);
       await signOut();
+      window.location.href = 'https://substackulous.vercel.app/';
     } catch (error) {
       console.error('Error signing out:', error);
       alert('Failed to sign out. Please try again.');
@@ -63,7 +64,10 @@ export default function DashboardNav() {
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-600">
-              Welcome <span className="font-medium">{user.email}</span>
+              <span className="font-medium">{user.email}</span>
+            </div>
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">{profile?.credits ?? 0} credits</span>
             </div>
             <div className="relative">
               <button
