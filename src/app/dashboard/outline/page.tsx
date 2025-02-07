@@ -23,7 +23,7 @@ interface OutlineRequest {
 
 export default function OutlineGenerator() {
   const [mounted, setMounted] = useState(false);
-  const { user, profile, loading, updateProfile } = useAuth();
+  const { user, profile, isLoading, updateProfile } = useAuth();
   const router = useRouter();
   const supabase = createClientComponentClient();
   const [formData, setFormData] = useState<OutlineRequest>({
@@ -46,12 +46,12 @@ export default function OutlineGenerator() {
   }, []);
 
   useEffect(() => {
-    if (mounted && !loading && !user) {
+    if (mounted && !isLoading && !user) {
       router.replace('/');
     }
-  }, [mounted, loading, user, router]);
+  }, [mounted, isLoading, user, router]);
 
-  if (!mounted || loading) {
+  if (!mounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>

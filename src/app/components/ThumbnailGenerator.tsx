@@ -14,7 +14,7 @@ interface GenerationOptions {
 
 export default function ThumbnailGenerator() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<{ urls: string[] } | null>(null);
   const [options, setOptions] = useState<GenerationOptions>({
@@ -154,7 +154,7 @@ export default function ThumbnailGenerator() {
         {/* Credit Cost Display */}
         <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
           <span className="text-amber-700">Credits required: {creditCost}</span>
-          <span className="font-medium text-amber-700">Your balance: {user?.credits ?? 0}</span>
+          <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
         </div>
 
         <div className="space-y-4">

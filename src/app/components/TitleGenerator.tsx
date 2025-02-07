@@ -7,7 +7,7 @@ import supabase from '@/lib/supabase';
 
 export default function TitleGenerator() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
   const [topic, setTopic] = useState('');
@@ -25,59 +25,52 @@ export default function TitleGenerator() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const handleGenerateTitles = async () => {
+    setError('');
+    setGeneratedTitles([]);
 
-    if (!user) {
+    if (!topic.trim()) {
+      setError('Please enter a topic');
+      return;
+    }
+
+    if (!profile) {
       setError('User profile not found');
       return;
     }
 
-    if (user.credits < creditCost) {
+    if (profile.credits < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
       return;
     }
 
-    try {
-      setLoading(true);
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        setError('Authentication error. Please try again.');
-        return;
-      }
+    setLoading(true);
 
-      const response = await fetch('/api/deepseek/generate-titles', {
+    try {
+      const response = await fetch('/api/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          theme: topic,
-          userId: user.id
+          prompt: topic,
+          count: 5,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate titles');
+        throw new Error('Failed to generate titles');
       }
 
       const data = await response.json();
       setGeneratedTitles(data.titles);
       
-      // Update credits only after successful completion
-      const updatedUser = {
-        ...user,
-        credits: user.credits - creditCost,
-      };
-      // await updateProfile(updatedUser);
+      await updateProfile({
+        credits: profile.credits - creditCost,
+      });
     } catch (err) {
       console.error('Error in title generation:', err);
-      setError((err as Error).message);
-      setGeneratedTitles([]);
+      setError('Failed to generate titles. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -87,7 +80,7 @@ export default function TitleGenerator() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
         <span className="text-amber-700">Credits required: {creditCost}</span>
-        <span className="font-medium text-amber-700">Your balance: {user?.credits ?? 0}</span>
+        <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
       </div>
 
       {error && (
@@ -105,7 +98,7 @@ export default function TitleGenerator() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleGenerateTitles} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Topic <span className="text-red-500">*</span>
