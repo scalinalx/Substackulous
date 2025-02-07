@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/lib/hooks/useAuth';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 type PrimaryIntent = 'Growth' | 'Educational' | 'Entertain' | 'Personal Story';
 
 export default function ViralNoteGenerator() {
-  const { user, profile, updateUserCredits } = useAuth();
+  const { user, profile } = useAuth();
   const [theme, setTheme] = useState('');
   const [coreTopics, setCoreTopics] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
@@ -19,7 +19,6 @@ export default function ViralNoteGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
-  const creditCost = primaryIntent === 'Growth' ? 2 : 1;
 
   const handleGenerate = async () => {
     if (!user) {
@@ -29,6 +28,11 @@ export default function ViralNoteGenerator() {
 
     if (!theme || !primaryIntent) {
       toast.error('Please fill in at least the theme and primary intent');
+      return;
+    }
+
+    if (!profile || profile.credits < 2) {
+      toast.error('Insufficient credits. You need 2 credits to generate notes.');
       return;
     }
 
@@ -57,7 +61,6 @@ export default function ViralNoteGenerator() {
 
       setNotes(data.notes);
       toast.success('Notes generated successfully!');
-      await updateUserCredits(user.id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to generate notes');
     } finally {
@@ -73,6 +76,11 @@ export default function ViralNoteGenerator() {
 
     if (!subject) {
       toast.error('Please enter a subject');
+      return;
+    }
+
+    if (!profile || profile.credits < 1) {
+      toast.error('Insufficient credits. You need 1 credit to generate a note.');
       return;
     }
 
@@ -98,7 +106,6 @@ export default function ViralNoteGenerator() {
 
       setNotes([data.note]);
       toast.success('Note generated successfully!');
-      await updateUserCredits(user.id);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to generate note');
     } finally {
@@ -106,24 +113,11 @@ export default function ViralNoteGenerator() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!theme || !user || !profile || profile.credits < creditCost) return;
-    setIsGenerating(true);
-    setError(null);
-
-    try {
-      // ... rest of the submit handler ...
-    } catch (error) {
-      // ... error handling ...
-    }
-  };
-
   return (
     <div className="max-w-4xl mx-auto space-y-6 p-4 bg-white">
       <div className="grid gap-6">
         <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-          <span className="text-amber-700">Credits required: {creditCost}</span>
+          <span className="text-amber-700">Credits required: {primaryIntent === 'Growth' ? 2 : 1}</span>
           <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
         </div>
 
@@ -172,19 +166,19 @@ export default function ViralNoteGenerator() {
                        text-[#181819] focus:bg-white/10
                        focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
-              <option value="Growth">Growth</option>
-              <option value="Educational">Educational</option>
-              <option value="Entertain">Entertain</option>
-              <option value="Personal Story">Personal Story</option>
+              <option value="Growth">Growth (2 credits)</option>
+              <option value="Educational">Educational (1 credit)</option>
+              <option value="Entertain">Entertain (1 credit)</option>
+              <option value="Personal Story">Personal Story (1 credit)</option>
             </select>
           </div>
           <Button 
             onClick={handleGenerate} 
-            disabled={isGenerating || !theme || !primaryIntent}
+            disabled={isGenerating || !theme || !primaryIntent || (profile?.credits ?? 0) < (primaryIntent === 'Growth' ? 2 : 1)}
             className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
             size="lg"
           >
-            {isGenerating ? 'Generating...' : 'Generate Notes (2 credits)'}
+            {isGenerating ? 'Generating...' : `Generate Notes (${primaryIntent === 'Growth' ? 2 : 1} credits)`}
           </Button>
         </div>
 
@@ -203,7 +197,7 @@ export default function ViralNoteGenerator() {
           </div>
           <Button 
             onClick={handleGenerateModel2} 
-            disabled={isGenerating || !subject}
+            disabled={isGenerating || !subject || (profile?.credits ?? 0) < 1}
             className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
             size="lg"
           >
