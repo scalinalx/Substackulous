@@ -75,7 +75,7 @@ export default function NotesRagContent() {
       }
 
       const data = await response.json();
-      if (!data.content) {
+      if (!data.result) {
         throw new Error('No content received from the API');
       }
 
@@ -88,7 +88,7 @@ export default function NotesRagContent() {
         await updateProfile(updatedProfile);
       }
 
-      setGeneratedContent(data.content);
+      setGeneratedContent(data.result);
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
@@ -142,13 +142,14 @@ export default function NotesRagContent() {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Your Notes
+                Your Topic
               </label>
-              <Textarea
+              <input
+                type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Paste your notes here..."
-                className="min-h-[200px]"
+                placeholder="Enter a topic to generate notes about..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
               />
             </div>
 
