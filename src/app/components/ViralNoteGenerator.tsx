@@ -72,18 +72,24 @@ export default function ViralNoteGenerator() {
         throw new Error(data.error || 'Failed to generate notes');
       }
 
-      if (!data.notes || !Array.isArray(data.notes)) {
+      let generatedNotes: string[] = [];
+      if (data.notes && Array.isArray(data.notes)) {
+        generatedNotes = data.notes;
+      } else if (data.result && typeof data.result === 'string') {
+        // Split by a delimiter - here we assume notes might be separated by newline and/or 'Note ' marker
+        generatedNotes = data.result.split(/\n+/).map((note: string) => note.trim()).filter((note: string) => note);
+      } else {
         throw new Error('Invalid response format from API');
       }
 
       if (profile) {
         await updateProfile({
           ...profile,
-          credits: profile.credits - 2
+          credits: profile.credits - 2,
         });
       }
 
-      setNotes(data.notes);
+      setNotes(generatedNotes);
       toast.success('Notes generated successfully!');
     } catch (error) {
       console.error('Generation error:', error);
