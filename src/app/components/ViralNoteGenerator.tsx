@@ -77,25 +77,39 @@ export default function ViralNoteGenerator() {
       let generatedNotes: string[] = [];
       
       if (data.notes && Array.isArray(data.notes)) {
-        generatedNotes = data.notes;
+        generatedNotes = data.notes.map((note: string) => note.trim()).filter((note: string) => note.length > 0);
       } 
-      else if (data.result && typeof data.result === 'string') {
-        const notePattern = /Note \d+:/;
-        if (data.result.match(notePattern)) {
-          generatedNotes = data.result.split(notePattern)
-            .map((note: string) => note.trim())
-            .filter((note: string) => note.length > 0);
-        } else {
-          generatedNotes = data.result.split(/\n\n+/)
-            .map((note: string) => note.trim())
-            .filter((note: string) => note.length > 0);
+      else if (data.result) {
+        const result = typeof data.result === 'string' ? data.result : JSON.stringify(data.result);
+        
+        if (result.startsWith('[') && result.endsWith(']')) {
+          try {
+            const parsed = JSON.parse(result);
+            if (Array.isArray(parsed)) {
+              generatedNotes = parsed.map((note: unknown) => String(note).trim()).filter((note: string) => note.length > 0);
+            }
+          } catch (e) {
+            console.log("Not valid JSON, continuing with string parsing");
+          }
         }
         
         if (generatedNotes.length === 0) {
-          generatedNotes = [data.result.trim()];
+          const notePattern = /(?:Note \d+:?|^\d+\.)\s*/;
+          const splits = result.split(notePattern).filter(Boolean);
+          
+          if (splits.length > 1) {
+            generatedNotes = splits.map((note: string) => note.trim()).filter((note: string) => note.length > 0);
+          } else {
+            generatedNotes = result
+              .split(/\n\s*\n/)
+              .map((note: string) => note.trim())
+              .filter((note: string) => note.length > 0 && note !== '');
+          }
         }
-      } else {
-        throw new Error('Invalid response format from API');
+        
+        if (generatedNotes.length === 0) {
+          generatedNotes = [result.trim()];
+        }
       }
 
       console.log("Processed Notes:", generatedNotes);
@@ -270,40 +284,16 @@ export default function ViralNoteGenerator() {
         </div>
       </div>
 
-      {/* Display generated notes */}
-      {notes && notes.length > 0 && (
+      {/* Display raw notes in textarea */}
+      {notes.length > 0 && (
         <div className="mt-8">
           <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
-          <div className="space-y-4">
-            {notes.map((note, index) => (
-              <div 
-                key={index}
-                className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="whitespace-pre-wrap font-sans text-[#181819] pr-12">
-                  {note}
-                </div>
-                <button
-                  onClick={() => handleCopyToClipboard(note, index)}
-                  className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
-                    copiedIndex === index
-                      ? 'text-green-600 bg-green-50'
-                      : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
-                  }`}
-                >
-                  {copiedIndex === index ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
+          <textarea
+            readOnly
+            value={notes.join('\n\n')}
+            className="w-full h-96 p-4 rounded-lg border border-gray-200 bg-white font-mono text-sm text-[#181819]"
+            style={{ resize: 'vertical' }}
+          />
         </div>
       )}
     </div>
