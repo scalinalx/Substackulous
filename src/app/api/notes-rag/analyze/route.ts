@@ -116,7 +116,7 @@ Write 4 highly engaging notes designed to go viral. Keep them concise, punchy, a
 The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
 
 User topic= ${userTopic}
-Tailor the note to that theme while maintaining a focus on progress, action, and cutting through distractions. If the topic is about Substack, highlight consistency, value, and playing the long game.
+Tailor the note to that theme while maintaining a focus on progress, action, and cutting through distractions. If the topic is about Substack, highlight consistency, value, and playing the long game. Also highlight Substack's unique benefits when compared to other platforms. Highlith it's true appeal being it's organic nature, ad-free feed, authentic, real interactions, it beeing cool, it being community-driven, it being a place where people can be themselves, it being a place where people can learn, grow, and connect with others.
 
 For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
 
