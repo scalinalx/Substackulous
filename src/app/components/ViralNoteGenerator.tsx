@@ -74,10 +74,16 @@ export default function ViralNoteGenerator() {
         throw new Error(data.error || 'Failed to generate notes');
       }
 
-      // Directly use the response data
-      const result = data.result || data.notes || '';
-      console.log("Setting notes with:", result);
-      setNotes([result]);
+      // Handle array of notes or single result
+      let notesToDisplay: string[] = [];
+      if (data.notes && Array.isArray(data.notes)) {
+        notesToDisplay = data.notes;
+      } else if (data.result) {
+        notesToDisplay = [data.result];
+      }
+
+      console.log("Setting notes with:", notesToDisplay);
+      setNotes(notesToDisplay);
 
       if (profile) {
         await updateProfile({
@@ -254,7 +260,7 @@ export default function ViralNoteGenerator() {
           <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
           <textarea
             readOnly
-            value={notes[0]}
+            value={notes.join('\n\n---\n\n')}
             className="w-full h-96 p-4 rounded-lg border border-gray-200 bg-white font-mono text-sm text-[#181819]"
             style={{ resize: 'vertical' }}
           />
