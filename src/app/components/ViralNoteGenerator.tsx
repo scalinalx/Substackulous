@@ -21,6 +21,7 @@ export default function ViralNoteGenerator() {
   const [notes, setNotes] = useState<string[]>([]);
   const [rawResponse, setRawResponse] = useState<string>('');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [showResults, setShowResults] = useState(false);
 
   const handleCopyToClipboard = async (text: string, index: number) => {
     try {
@@ -53,6 +54,7 @@ export default function ViralNoteGenerator() {
     setError(null);
     setNotes([]);
     setRawResponse('');
+    setShowResults(false);
 
     try {
       const response = await fetch('/api/groq/generate-notes', {
@@ -71,11 +73,15 @@ export default function ViralNoteGenerator() {
 
       const data = await response.json();
       console.log("API Response:", data);
-      setRawResponse(JSON.stringify(data, null, 2));
-
+      
       if (!response.ok) {
         throw new Error(data.error || 'Failed to generate notes');
       }
+
+      // Set raw response first
+      const rawJson = JSON.stringify(data, null, 2);
+      console.log("Setting raw response:", rawJson);
+      setRawResponse(rawJson);
 
       // Handle array of notes or single result
       let notesToDisplay: string[] = [];
@@ -90,6 +96,7 @@ export default function ViralNoteGenerator() {
       console.log("Setting notes with:", notesToDisplay);
       setNotes(notesToDisplay);
 
+      // Update credits
       if (profile) {
         await updateProfile({
           ...profile,
@@ -97,6 +104,8 @@ export default function ViralNoteGenerator() {
         });
       }
 
+      // Show results after everything is set
+      setShowResults(true);
       toast.success('Notes generated successfully!');
     } catch (error) {
       console.error('Generation error:', error);
@@ -259,31 +268,40 @@ export default function ViralNoteGenerator() {
         </div>
       </div>
 
-      {/* Display raw response for debugging */}
-      {rawResponse && (
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold text-[#181819] mb-4">Raw API Response:</h3>
-          <textarea
-            readOnly
-            value={rawResponse}
-            className="w-full h-48 p-4 rounded-lg border border-gray-200 bg-gray-50 font-mono text-xs text-[#181819]"
-            style={{ resize: 'vertical' }}
-          />
+      {/* Results Section */}
+      <div className="mt-8 space-y-8">
+        {/* Debug Info */}
+        <div className="text-sm text-gray-500">
+          Status: {isGenerating ? 'Generating...' : showResults ? 'Results Ready' : 'Waiting'}
+          {notes.length > 0 && ` (${notes.length} notes)`}
         </div>
-      )}
 
-      {/* Display processed notes */}
-      {notes && notes.length > 0 && (
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes ({notes.length}):</h3>
-          <textarea
-            readOnly
-            value={notes.join('\n\n---\n\n')}
-            className="w-full h-96 p-4 rounded-lg border border-gray-200 bg-white font-mono text-sm text-[#181819]"
-            style={{ resize: 'vertical' }}
-          />
-        </div>
-      )}
+        {/* Raw Response */}
+        {showResults && rawResponse && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-[#181819]">Raw API Response:</h3>
+            <textarea
+              readOnly
+              value={rawResponse}
+              className="w-full h-48 p-4 rounded-lg border border-gray-200 bg-gray-50 font-mono text-xs text-[#181819]"
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+        )}
+
+        {/* Processed Notes */}
+        {showResults && notes.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-[#181819]">Generated Notes ({notes.length}):</h3>
+            <textarea
+              readOnly
+              value={notes.join('\n\n---\n\n')}
+              className="w-full h-96 p-4 rounded-lg border border-gray-200 bg-white font-mono text-sm text-[#181819]"
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 } 
