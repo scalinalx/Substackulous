@@ -68,17 +68,29 @@ export default function ViralNoteGenerator() {
       });
 
       const data = await response.json();
+      console.log("API Response:", data);
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to generate notes');
       }
 
       let generatedNotes: string[] = [];
+      
       if (data.notes && Array.isArray(data.notes)) {
         generatedNotes = data.notes;
-      } else if (data.result && typeof data.result === 'string') {
-        // Split by a delimiter - here we assume notes might be separated by newline and/or 'Note ' marker
-        generatedNotes = data.result.split(/\n+/).map((note: string) => note.trim()).filter((note: string) => note);
-        // Fallback: if splitting produces no notes, use the raw trimmed result
+      } 
+      else if (data.result && typeof data.result === 'string') {
+        const notePattern = /Note \d+:/;
+        if (data.result.match(notePattern)) {
+          generatedNotes = data.result.split(notePattern)
+            .map((note: string) => note.trim())
+            .filter((note: string) => note.length > 0);
+        } else {
+          generatedNotes = data.result.split(/\n\n+/)
+            .map((note: string) => note.trim())
+            .filter((note: string) => note.length > 0);
+        }
+        
         if (generatedNotes.length === 0) {
           generatedNotes = [data.result.trim()];
         }
@@ -86,7 +98,7 @@ export default function ViralNoteGenerator() {
         throw new Error('Invalid response format from API');
       }
 
-      console.log("Generated Notes:", generatedNotes);
+      console.log("Processed Notes:", generatedNotes);
 
       if (profile) {
         await updateProfile({
@@ -96,7 +108,7 @@ export default function ViralNoteGenerator() {
       }
 
       setNotes(generatedNotes);
-      toast.success('Notes generated successfully!');
+      toast.success(`Generated ${generatedNotes.length} note${generatedNotes.length === 1 ? '' : 's'} successfully!`);
     } catch (error) {
       console.error('Generation error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate notes');
@@ -258,16 +270,19 @@ export default function ViralNoteGenerator() {
         </div>
       </div>
 
-      {notes.length > 0 && (
-        <div className="mt-8 space-y-4">
-          <h3 className="text-lg font-semibold text-[#181819]">Generated Notes:</h3>
-          <div className="grid gap-4">
+      {/* Display generated notes */}
+      {notes && notes.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
+          <div className="space-y-4">
             {notes.map((note, index) => (
               <div 
-                key={index} 
+                key={index}
                 className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
               >
-                <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note}</pre>
+                <div className="whitespace-pre-wrap font-sans text-[#181819] pr-12">
+                  {note}
+                </div>
                 <button
                   onClick={() => handleCopyToClipboard(note, index)}
                   className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
