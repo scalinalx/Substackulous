@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -22,6 +22,30 @@ export default function ViralNoteGenerator() {
   const [rawResponse, setRawResponse] = useState<string>('');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showResults, setShowResults] = useState(false);
+
+  // Add state persistence
+  useEffect(() => {
+    if (notes.length > 0 || rawResponse) {
+      console.log("Persisting results to localStorage");
+      localStorage.setItem('viralNotes', JSON.stringify({
+        notes,
+        rawResponse,
+        showResults: true
+      }));
+    }
+  }, [notes, rawResponse]);
+
+  // Restore state on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem('viralNotes');
+    if (savedState) {
+      console.log("Restoring results from localStorage");
+      const { notes: savedNotes, rawResponse: savedResponse, showResults: savedShowResults } = JSON.parse(savedState);
+      setNotes(savedNotes);
+      setRawResponse(savedResponse);
+      setShowResults(savedShowResults);
+    }
+  }, []);
 
   const handleCopyToClipboard = async (text: string, index: number) => {
     try {
@@ -55,8 +79,18 @@ export default function ViralNoteGenerator() {
     setNotes([]);
     setRawResponse('');
     setShowResults(false);
+    localStorage.removeItem('viralNotes'); // Clear previous results
 
     try {
+      // First, update credits to prevent page refresh issues
+      if (profile) {
+        console.log("Updating credits first");
+        await updateProfile({
+          ...profile,
+          credits: profile.credits - 2,
+        });
+      }
+
       const response = await fetch('/api/groq/generate-notes', {
         method: 'POST',
         headers: {
@@ -95,16 +129,6 @@ export default function ViralNoteGenerator() {
 
       console.log("Setting notes with:", notesToDisplay);
       setNotes(notesToDisplay);
-
-      // Update credits
-      if (profile) {
-        await updateProfile({
-          ...profile,
-          credits: profile.credits - 2,
-        });
-      }
-
-      // Show results after everything is set
       setShowResults(true);
       toast.success('Notes generated successfully!');
     } catch (error) {
