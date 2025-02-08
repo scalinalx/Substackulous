@@ -121,6 +121,8 @@ Tailor the note to that theme while maintaining a focus on progress, action, and
 For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
 
 Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
+
+After you've finished the task above, output 2 new viral long-form notes that are similar to the user topic and based on the examples.
 Output only the notes with no additional explanation.
   `;
   prompt += basePrompt;

@@ -186,7 +186,7 @@ export default function NotesRagContent() {
                     Generating...
                   </span>
                 ) : (
-                  'Generate (Model 1 - Llama)'
+                  'Generate (Model 1)'
                 )}
               </Button>
               <Button
@@ -203,7 +203,7 @@ export default function NotesRagContent() {
                     Generating...
                   </span>
                 ) : (
-                  'Generate (Model 2 - Deepseek)'
+                  'Generate (Model 2)'
                 )}
               </Button>
             </div>
