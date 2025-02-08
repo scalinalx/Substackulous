@@ -11,7 +11,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -19,15 +19,14 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
-
+    if (!mounted || !isInitialized) return;
     if (!isLoading && !isAuthenticated) {
       router.replace('/login');
     }
-  }, [mounted, isLoading, isAuthenticated, router]);
+  }, [mounted, isInitialized, isLoading, isAuthenticated, router]);
 
-  // Show loading state only during initial load
-  if (!mounted || (isLoading && !user)) {
+  // Show loading state until mounted and auth is initialized
+  if (!mounted || !isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>

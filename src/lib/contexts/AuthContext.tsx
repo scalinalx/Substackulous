@@ -26,6 +26,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
+  isInitialized: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -124,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         setIsLoading(false);
+        setIsInitialized(true);
       }
     );
 
@@ -254,8 +256,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     signInWithGoogle: handleGoogleSignIn,
     resetPassword: handleResetPassword,
-    updateProfile
-  }), [user, session, profile, isLoading, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile]);
+    updateProfile,
+    isInitialized
+  }), [user, session, profile, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile]);
 
   return (
     <AuthContext.Provider value={contextValue}>
