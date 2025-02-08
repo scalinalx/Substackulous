@@ -122,7 +122,7 @@ For engagement-driven notes, incorporate a strong prompt that encourages reflect
 
 Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
 
-After you've finished the task above, output 2 new viral long-form notes that are similar to the user topic and based on the examples.
+After you've finished the task above, output 2 new viral long-form notes that are similar to the user topic and based on the examples. A long-form note has more than 300 words  
 Output only the notes with no additional explanation.
   `;
   prompt += basePrompt;
