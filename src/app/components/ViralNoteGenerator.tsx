@@ -78,9 +78,15 @@ export default function ViralNoteGenerator() {
       } else if (data.result && typeof data.result === 'string') {
         // Split by a delimiter - here we assume notes might be separated by newline and/or 'Note ' marker
         generatedNotes = data.result.split(/\n+/).map((note: string) => note.trim()).filter((note: string) => note);
+        // Fallback: if splitting produces no notes, use the raw trimmed result
+        if (generatedNotes.length === 0) {
+          generatedNotes = [data.result.trim()];
+        }
       } else {
         throw new Error('Invalid response format from API');
       }
+
+      console.log("Generated Notes:", generatedNotes);
 
       if (profile) {
         await updateProfile({
