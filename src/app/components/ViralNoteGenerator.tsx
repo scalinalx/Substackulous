@@ -50,6 +50,7 @@ export default function ViralNoteGenerator() {
 
     setIsGenerating(true);
     setError(null);
+    setNotes([]);
 
     try {
       const response = await fetch('/api/groq/generate-notes', {
@@ -71,7 +72,10 @@ export default function ViralNoteGenerator() {
         throw new Error(data.error || 'Failed to generate notes');
       }
 
-      // Update credits after successful generation
+      if (!data.notes || !Array.isArray(data.notes)) {
+        throw new Error('Invalid response format from API');
+      }
+
       if (profile) {
         await updateProfile({
           ...profile,
@@ -82,7 +86,9 @@ export default function ViralNoteGenerator() {
       setNotes(data.notes);
       toast.success('Notes generated successfully!');
     } catch (error) {
+      console.error('Generation error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate notes');
+      setError(error instanceof Error ? error.message : 'Failed to generate notes');
     } finally {
       setIsGenerating(false);
     }
@@ -106,6 +112,7 @@ export default function ViralNoteGenerator() {
 
     setIsGenerating(true);
     setError(null);
+    setNotes([]);
 
     try {
       const response = await fetch('/api/groq/generate-single-note', {
@@ -124,7 +131,10 @@ export default function ViralNoteGenerator() {
         throw new Error(data.error || 'Failed to generate note');
       }
 
-      // Update credits after successful generation
+      if (!data.note) {
+        throw new Error('No note received from API');
+      }
+
       if (profile) {
         await updateProfile({
           ...profile,
@@ -135,7 +145,9 @@ export default function ViralNoteGenerator() {
       setNotes([data.note]);
       toast.success('Note generated successfully!');
     } catch (error) {
+      console.error('Generation error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate note');
+      setError(error instanceof Error ? error.message : 'Failed to generate note');
     } finally {
       setIsGenerating(false);
     }
