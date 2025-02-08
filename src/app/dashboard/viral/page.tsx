@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import ViralContent from './ViralContent';
+import { redirect } from 'next/navigation';
 
 export const metadata: Metadata = {
   title: 'Viral Note Generator',
@@ -7,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function ViralPage() {
-  return <ViralContent />;
+  // Redirect to dashboard
+  redirect('/dashboard');
+
+  // This won't be reached due to the redirect
+  return null;
 } 

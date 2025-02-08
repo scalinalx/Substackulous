@@ -22,13 +22,14 @@ const features = [
     href: "/dashboard/illustrator",
     color: "from-purple-500 to-indigo-500"
   },
-  {
-    title: "Viral Note Generator",
-    description: "Generate viral-worthy notes that captivate your audience.",
-    icon: "🚀",
-    href: "/dashboard/viral",
-    color: "from-blue-500 to-cyan-500"
-  },
+  // Temporarily hidden
+  // {
+  //   title: "Viral Note Generator",
+  //   description: "Generate viral-worthy notes that captivate your audience.",
+  //   icon: "🚀",
+  //   href: "/dashboard/viral",
+  //   color: "from-blue-500 to-cyan-500"
+  // },
   {
     title: "Clickworthy Title Generator",
     description: "Craft irresistible titles that drive clicks and engagement.",
