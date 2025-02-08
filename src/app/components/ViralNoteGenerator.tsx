@@ -19,6 +19,7 @@ export default function ViralNoteGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
+  const [rawResponse, setRawResponse] = useState<string>('');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const handleCopyToClipboard = async (text: string, index: number) => {
@@ -51,6 +52,7 @@ export default function ViralNoteGenerator() {
     setIsGenerating(true);
     setError(null);
     setNotes([]);
+    setRawResponse('');
 
     try {
       const response = await fetch('/api/groq/generate-notes', {
@@ -69,6 +71,7 @@ export default function ViralNoteGenerator() {
 
       const data = await response.json();
       console.log("API Response:", data);
+      setRawResponse(JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to generate notes');
@@ -78,8 +81,10 @@ export default function ViralNoteGenerator() {
       let notesToDisplay: string[] = [];
       if (data.notes && Array.isArray(data.notes)) {
         notesToDisplay = data.notes;
+        console.log("Found array of notes:", notesToDisplay);
       } else if (data.result) {
         notesToDisplay = [data.result];
+        console.log("Found single result:", notesToDisplay);
       }
 
       console.log("Setting notes with:", notesToDisplay);
@@ -254,10 +259,23 @@ export default function ViralNoteGenerator() {
         </div>
       </div>
 
-      {/* Display raw notes in textarea */}
-      {notes.length > 0 && (
+      {/* Display raw response for debugging */}
+      {rawResponse && (
         <div className="mt-8">
-          <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
+          <h3 className="text-lg font-semibold text-[#181819] mb-4">Raw API Response:</h3>
+          <textarea
+            readOnly
+            value={rawResponse}
+            className="w-full h-48 p-4 rounded-lg border border-gray-200 bg-gray-50 font-mono text-xs text-[#181819]"
+            style={{ resize: 'vertical' }}
+          />
+        </div>
+      )}
+
+      {/* Display processed notes */}
+      {notes && notes.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes ({notes.length}):</h3>
           <textarea
             readOnly
             value={notes.join('\n\n---\n\n')}
