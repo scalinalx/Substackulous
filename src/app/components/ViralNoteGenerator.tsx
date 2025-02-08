@@ -74,45 +74,10 @@ export default function ViralNoteGenerator() {
         throw new Error(data.error || 'Failed to generate notes');
       }
 
-      let generatedNotes: string[] = [];
-      
-      if (data.notes && Array.isArray(data.notes)) {
-        generatedNotes = data.notes.map((note: string) => note.trim()).filter((note: string) => note.length > 0);
-      } 
-      else if (data.result) {
-        const result = typeof data.result === 'string' ? data.result : JSON.stringify(data.result);
-        
-        if (result.startsWith('[') && result.endsWith(']')) {
-          try {
-            const parsed = JSON.parse(result);
-            if (Array.isArray(parsed)) {
-              generatedNotes = parsed.map((note: unknown) => String(note).trim()).filter((note: string) => note.length > 0);
-            }
-          } catch (e) {
-            console.log("Not valid JSON, continuing with string parsing");
-          }
-        }
-        
-        if (generatedNotes.length === 0) {
-          const notePattern = /(?:Note \d+:?|^\d+\.)\s*/;
-          const splits = result.split(notePattern).filter(Boolean);
-          
-          if (splits.length > 1) {
-            generatedNotes = splits.map((note: string) => note.trim()).filter((note: string) => note.length > 0);
-          } else {
-            generatedNotes = result
-              .split(/\n\s*\n/)
-              .map((note: string) => note.trim())
-              .filter((note: string) => note.length > 0 && note !== '');
-          }
-        }
-        
-        if (generatedNotes.length === 0) {
-          generatedNotes = [result.trim()];
-        }
-      }
-
-      console.log("Processed Notes:", generatedNotes);
+      // Directly use the response data
+      const result = data.result || data.notes || '';
+      console.log("Setting notes with:", result);
+      setNotes([result]);
 
       if (profile) {
         await updateProfile({
@@ -121,8 +86,7 @@ export default function ViralNoteGenerator() {
         });
       }
 
-      setNotes(generatedNotes);
-      toast.success(`Generated ${generatedNotes.length} note${generatedNotes.length === 1 ? '' : 's'} successfully!`);
+      toast.success('Notes generated successfully!');
     } catch (error) {
       console.error('Generation error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to generate notes');
@@ -290,7 +254,7 @@ export default function ViralNoteGenerator() {
           <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
           <textarea
             readOnly
-            value={notes.join('\n\n')}
+            value={notes[0]}
             className="w-full h-96 p-4 rounded-lg border border-gray-200 bg-white font-mono text-sm text-[#181819]"
             style={{ resize: 'vertical' }}
           />
