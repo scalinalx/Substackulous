@@ -25,6 +25,15 @@
   }
 }
 
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 @layer utilities {
   .animate-fade-in-down {
     animation: fade-in-down 1s ease-out;
@@ -32,6 +41,10 @@
 
   .animate-fade-in-up {
     animation: fade-in-up 1s ease-out;
+  }
+
+  .animate-marquee {
+    animation: marquee 30s linear infinite;
   }
 }
 
