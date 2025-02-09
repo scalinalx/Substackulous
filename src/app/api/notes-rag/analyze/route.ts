@@ -118,23 +118,70 @@ function removeThinkingProcess(text: string): string {
 function extractNotesFromJson(examples: string): string {
   try {
     // Split the input into lines and process each line
-    return examples
+    const processedNotes = examples
       .split('\n')
       .filter(line => line.trim())  // Remove empty lines
       .map(line => {
         try {
           const parsed = JSON.parse(line);
-          return parsed.note || '';
+          return `"${parsed.note}"`;  // Wrap note in quotes
         } catch {
           // If line isn't valid JSON, return it as-is
           return line;
         }
       })
-      .filter(note => note)  // Remove empty notes
-      .join('\n\n');  // Join with double newlines
+      .filter(note => note);  // Remove empty notes
+
+    // Join with clear separation between examples
+    return processedNotes.join('\n\n---\n\n');
   } catch (error) {
     console.error('Error extracting notes:', error);
     return examples;  // Return original if processing fails
+  }
+}
+
+/**
+ * Parses the generated content into separate notes
+ * @param content The generated content to parse
+ * @returns Object containing short notes and long-form note
+ */
+function parseGeneratedNotes(content: string): { shortNotes: string[], longFormNote: string } {
+  // Initialize result object
+  const result = {
+    shortNotes: [] as string[],
+    longFormNote: ''
+  };
+
+  try {
+    // Split content by triple dashes
+    const parts = content.split('---').map(part => part.trim());
+    
+    // Process each part
+    parts.forEach(part => {
+      if (part.toLowerCase().includes('long-form note:')) {
+        // This is the long-form note
+        result.longFormNote = part.trim();
+      } else if (part.trim()) {
+        // This is a short note
+        // Remove "Note X:" prefix if present
+        const cleanedNote = part
+          .replace(/^\*\*Note \d+:\s*/, '')  // Remove "**Note X:" prefix
+          .replace(/\*\*/g, '')              // Remove any remaining asterisks
+          .trim();
+        
+        if (cleanedNote) {
+          result.shortNotes.push(cleanedNote);
+        }
+      }
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error parsing generated notes:', error);
+    return {
+      shortNotes: [content],  // Return entire content as single note if parsing fails
+      longFormNote: ''
+    };
   }
 }
 
@@ -245,9 +292,13 @@ Think through this step by step`;
 
     const rawResult = completion.choices[0]?.message?.content || '';
     const cleanedResult = removeThinkingProcess(rawResult);
+    const parsedNotes = parseGeneratedNotes(cleanedResult);
 
     return NextResponse.json({
-      result: cleanedResult,
+      result: {
+        shortNotes: parsedNotes.shortNotes,
+        longFormNote: parsedNotes.longFormNote
+      },
       selectedExamples: selectedExamples,
     });
   } catch (error) {
