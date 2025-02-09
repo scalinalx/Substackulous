@@ -220,7 +220,7 @@ function buildPrompt(retrievedExamples: NoteExample[], userTopic: string): strin
   });
 
   const basePrompt = `
-Write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
+Based off the examples above, write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
 
 The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
 
@@ -232,7 +232,7 @@ For engagement-driven notes, incorporate a strong prompt that encourages reflect
 Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
 
 After you've finished the task above, output 1 new viral long-form note that is similar to the user topic and based on the examples. A long-form note has more than 400 words  
-Output only the notes with no additional explanation. Use markdown formatting. Leave 2 newlines between each note.
+Output only the notes with no additional explanation. Do not number the notes  Do not output a short 'title' for each note Use markdown formatting. Leave 2 newlines between each note.
   `;
   prompt += basePrompt;
   return prompt;

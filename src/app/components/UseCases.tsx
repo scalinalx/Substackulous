@@ -134,12 +134,13 @@ export default function UseCases() {
           <div className="flex items-center gap-12">
             {/* Portrait */}
             <div className="w-1/3 flex-shrink-0">
-              <div className="aspect-square rounded-full overflow-hidden relative">
+              <div className="aspect-square rounded-full overflow-hidden relative border-4 border-amber-100 shadow-lg">
                 <Image
-                  src="/data/ana_portrait.jpg"
+                  src="/images/ana_portrait.jpg"
                   alt="Ana Calin"
                   fill
                   className="object-cover"
+                  priority
                   sizes="(max-width: 768px) 100vw, 33vw"
                 />
               </div>
