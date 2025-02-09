@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import UseCases from './components/UseCases';
-import PainPoints from './components/PainPoints';
+// import PainPoints from '@/app/components/PainPoints';  // Commented out
 import Testimonials from './components/Testimonials';
 import Pricing from './components/Pricing';
 import FAQ from './components/FAQ';
@@ -42,7 +42,7 @@ export default function HomePage() {
       )}
       <Hero onGetStarted={() => setShowLogin(true)} />
       <UseCases />
-      <PainPoints />
+      {/* <PainPoints /> */}  {/* Commented out */}
       <Testimonials />
       <Pricing onGetStarted={() => setShowLogin(true)} />
       <FAQ />

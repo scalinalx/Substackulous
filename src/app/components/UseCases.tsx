@@ -108,19 +108,19 @@ export default function UseCases() {
       {/* Testimonials Marquee */}
       <div className="bg-gray-50 py-16 overflow-hidden">
         <div className="relative">
-          <div className="flex animate-marquee space-x-8 whitespace-nowrap">
+          <div className="flex animate-marquee space-x-8 whitespace-normal">
             {testimonials.concat(testimonials).map((testimonial, index) => (
               <div
                 key={index}
-                className="bg-white rounded-lg p-6 shadow-sm flex items-start space-x-4 min-w-[400px]"
+                className="bg-white rounded-lg p-6 shadow-sm flex items-start space-x-4 min-w-[400px] max-w-[400px] h-[180px]"
               >
                 <div className="flex-shrink-0 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
                   {testimonial.avatar}
                 </div>
-                <div>
-                  <h4 className="font-bold text-gray-900">{testimonial.name}</h4>
-                  <p className="text-sm text-gray-500 mb-2">{testimonial.role}</p>
-                  <p className="text-sm text-gray-600">{testimonial.text}</p>
+                <div className="flex-1 overflow-hidden">
+                  <h4 className="font-bold text-gray-900 truncate">{testimonial.name}</h4>
+                  <p className="text-sm text-gray-500 mb-2 truncate">{testimonial.role}</p>
+                  <p className="text-sm text-gray-600 line-clamp-4">{testimonial.text}</p>
                 </div>
               </div>
             ))}
