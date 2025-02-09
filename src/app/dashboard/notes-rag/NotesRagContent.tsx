@@ -236,7 +236,11 @@ export default function NotesRagContent() {
               </div>
               <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
                 <pre className="whitespace-pre-wrap font-mono text-sm text-[#181819]">
-                  {`Based off curated examples, write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
+                  {`Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. You speak plainly, challenge assumptions, and avoid fluff. Every sentence should be punchy, authentic, and grounded in real-world insights.Below are examples of viral Substack notes that have gathered high engagement:
+
+${selectedExamples ? selectedExamples : ''}
+
+Based off the examples above, write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
 
 The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
 
