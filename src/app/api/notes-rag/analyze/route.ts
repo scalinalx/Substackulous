@@ -4,6 +4,11 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 
+
+// Set the maximum duration for the route to 35 seconds
+export const maxDuration = 35;
+
+
 // Initialize Supabase client with service role key for admin operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
