@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
+import { Groq } from 'groq-sdk';
+import { promises as fs } from 'fs';
 import path from 'path';
-import Groq from 'groq-sdk';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client with service role key for admin operations
@@ -15,6 +15,10 @@ const supabaseAdmin = createClient(
     }
   }
 );
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 // -------------------------------
 // Type Definitions
@@ -94,6 +98,18 @@ function retrieveExamples(userTopic: string, count: number): NoteExample[] {
     .slice(0, count);
 }
 
+/**
+ * Removes content between <think> and </think> tags and trims whitespace
+ * @param text The text to clean
+ * @returns Cleaned text with thinking process removed
+ */
+function removeThinkingProcess(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove content between <think> tags
+    .replace(/^\s+|\s+$/gm, '')  // Remove leading/trailing whitespace from each line
+    .trim();  // Remove overall leading/trailing whitespace
+}
+
 // -------------------------------
 // Prompt Building
 // -------------------------------
@@ -111,7 +127,7 @@ function buildPrompt(retrievedExamples: NoteExample[], userTopic: string): strin
   });
 
   const basePrompt = `
-Write 4 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
+Write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
 
 The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
 
@@ -122,56 +138,11 @@ For engagement-driven notes, incorporate a strong prompt that encourages reflect
 
 Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
 
-After you've finished the task above, output 2 new viral long-form notes that are similar to the user topic and based on the examples. A long-form note has more than 300 words  
+After you've finished the task above, output 1 new viral long-form note that is similar to the user topic and based on the examples. A long-form note has more than 400 words  
 Output only the notes with no additional explanation.
   `;
   prompt += basePrompt;
   return prompt;
-}
-
-// -------------------------------
-// Calling the Groq API
-// -------------------------------
-
-/**
- * Calls the Groq API using groq-sdk with streaming disabled.
- * @param prompt The complete prompt to send to the API.
- * @param model The model to use ('llama' or 'deepseek').
- * @returns The generated viral notes as a string.
- */
-async function callGroqAPI(prompt: string, model: 'llama' | 'deepseek'): Promise<string> {
-  const groq = new Groq({
-    apiKey: process.env.GROQ_API_KEY
-  });
-  
-  const messages = [
-    { role: 'user' as const, content: prompt }
-  ];
-
-  // Call the Groq API with the specified model and parameters
-  const chatCompletion = await groq.chat.completions.create(
-    model === 'llama' 
-      ? {
-          messages,
-          model: "llama-3.3-70b-specdec",
-          temperature: 1,
-          max_tokens: 2090,
-          top_p: 1,
-          stream: false,
-          stop: null
-        }
-      : {
-          messages,
-          model: "deepseek-r1-distill-llama-70b",
-          temperature: 0.69,
-          max_tokens: 4096,
-          top_p: 0.95,
-          stream: false,
-          stop: null
-        }
-  );
-
-  return chatCompletion.choices[0]?.message?.content || '';
 }
 
 // -------------------------------
@@ -181,96 +152,79 @@ async function callGroqAPI(prompt: string, model: 'llama' | 'deepseek'): Promise
 /**
  * Next.js App Router API route handler for POST /api/notes-rag/analyze.
  */
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    // Initialize the system if not already done.
-    await init();
-
-    const body = await request.json();
-    const { userTopic, model = 'llama', userId } = body;
+    const { userTopic, userId } = await req.json();
 
     if (!userTopic) {
       return NextResponse.json(
-        { error: 'Missing required parameter: userTopic' },
+        { error: 'No topic provided' },
         { status: 400 }
       );
     }
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
+    // Read the entire JSONL file
+    const filePath = path.join(process.cwd(), 'data', 'substack_examples.jsonl');
+    const fileContents = await fs.readFile(filePath, 'utf8');
 
-    // Check if user has enough credits
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('credits')
-      .eq('id', userId)
-      .single();
+    // First Groq call to select examples
+    const exampleSelectionPrompt = `act as an expert content curator and expert Substack writer, the best in the world at publishing engaging, valuable content that always goes viral
 
-    if (profileError) {
-      return NextResponse.json({ 
-        error: 'Failed to fetch user profile',
-        details: profileError.message 
-      }, { status: 404 });
-    }
+From this list of curated viral Substack notes choose the top 3 that would best work as frameworks/templates to write a new Substack post on the THEME defined below. 
+Curated list:
+${fileContents}
 
-    if (!profile) {
-      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
-    }
+THEME= ${userTopic}
 
-    const creditCost = 1;
-    if (profile.credits < creditCost) {
-      return NextResponse.json({ error: 'Insufficient credits' }, { status: 400 });
-    }
+Output only the top 3 examples and no other explanations or other text.
+Think through this step by step`;
 
-    // Retrieve the top 3 examples similar to the user topic.
-    const retrievedExamples = retrieveExamples(userTopic, 3);
-    // Build the complete prompt using the retrieved examples and base instructions.
-    const prompt = buildPrompt(retrievedExamples, userTopic);
-    console.log('Constructed prompt:', prompt);
+    const exampleSelectionResponse = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'user',
+          content: exampleSelectionPrompt,
+        },
+      ],
+      model: 'deepseek-r1-distill-llama-70b',
+      temperature: 1.34,
+      max_tokens: 11150,
+      top_p: 0.95,
+      stream: false,
+    });
 
-    // Call the Groq API to generate the viral notes.
-    const generatedNotes = await callGroqAPI(prompt, model as 'llama' | 'deepseek');
+    const rawSelectedExamples = exampleSelectionResponse.choices[0]?.message?.content || '';
+    const selectedExamples = removeThinkingProcess(rawSelectedExamples);
 
-    // Remove content between <think> tags and clean up the output
-    const cleanedNotes = generatedNotes
-      .replace(/<think>[\s\S]*?<\/think>/g, '')
-      .trim();
+    // Build the main prompt using the selected examples
+    const prompt = buildPrompt(retrieveExamples(userTopic, 3), userTopic);
 
-    // Deduct credits
-    const { error: updateError } = await supabaseAdmin
-      .from('profiles')
-      .update({ credits: profile.credits - creditCost })
-      .eq('id', userId);
+    // Second Groq call for generating the final content
+    const completion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      model: 'deepseek-r1-distill-llama-70b',
+      temperature: 1,
+      max_tokens: 11150,
+      top_p: 0.95,
+      stream: false,
+    });
 
-    if (updateError) {
-      return NextResponse.json({ 
-        error: 'Failed to update credits',
-        details: updateError.message 
-      }, { status: 500 });
-    }
+    const rawResult = completion.choices[0]?.message?.content || '';
+    const cleanedResult = removeThinkingProcess(rawResult);
 
-    // Return the generated notes.
-    return NextResponse.json({ 
-      success: true,
-      result: cleanedNotes,
-      logs: {
-        examplesCount: retrievedExamples.length,
-        promptLength: prompt.length,
-        model
-      }
+    return NextResponse.json({
+      result: cleanedResult,
+      selectedExamples: selectedExamples,
     });
   } catch (error) {
-    console.error('Error in note generation:', error);
+    console.error('Error:', error);
     return NextResponse.json(
-      { 
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate notes',
-        details: error instanceof Error ? error.stack : 'No stack trace available'
-      },
+      { error: 'Failed to generate content' },
       { status: 500 }
     );
   }

@@ -18,6 +18,7 @@ export default function NotesRagContent() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [selectedExamples, setSelectedExamples] = useState<string | null>(null);
   const creditCost = 1;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
@@ -57,6 +58,7 @@ export default function NotesRagContent() {
     setError(null);
     setIsGenerating(true);
     setGeneratedContent(null);
+    setSelectedExamples(null);
 
     try {
       const response = await fetch('/api/notes-rag/analyze', {
@@ -91,6 +93,7 @@ export default function NotesRagContent() {
       }
 
       setGeneratedContent(data.result);
+      setSelectedExamples(data.selectedExamples);
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
@@ -199,6 +202,23 @@ export default function NotesRagContent() {
             {isGenerating && (
               <div className="text-amber-600 mb-4">Generating content...</div>
             )}
+            
+            {/* Display Selected Examples */}
+            {selectedExamples && (
+              <div className="mt-8 mb-8">
+                <h3 className="text-lg font-semibold text-[#181819] mb-4">Selected Example Notes:</h3>
+                <div className="bg-white rounded-lg border border-gray-200 p-4">
+                  <textarea
+                    readOnly
+                    value={selectedExamples}
+                    className="w-full h-64 font-mono text-sm text-[#181819] bg-gray-50 p-4 rounded-md"
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Generated Content */}
             {generatedContent && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
