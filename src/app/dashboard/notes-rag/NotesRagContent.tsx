@@ -10,6 +10,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 
+type GeneratedResult = {
+  shortNotes: string[];
+  longFormNote: string;
+};
+
 export default function NotesRagContent() {
   const [mounted, setMounted] = useState(false);
   const { user, profile, isLoading, updateProfile } = useAuth();
@@ -17,7 +22,7 @@ export default function NotesRagContent() {
   const [notes, setNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [generatedContent, setGeneratedContent] = useState<string | null>(null);
+  const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
   const [selectedExamples, setSelectedExamples] = useState<string | null>(null);
   const creditCost = 1;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -208,36 +213,66 @@ export default function NotesRagContent() {
               <div className="mt-8 mb-8">
                 <h3 className="text-lg font-semibold text-[#181819] mb-4">Selected Example Notes:</h3>
                 <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <textarea
-                    readOnly
-                    value={selectedExamples}
-                    className="w-full h-64 font-mono text-sm text-[#181819] bg-gray-50 p-4 rounded-md"
-                    style={{ resize: 'vertical' }}
-                  />
+                  <pre className="whitespace-pre-wrap font-mono text-sm text-[#181819]">
+                    {selectedExamples}
+                  </pre>
                 </div>
               </div>
             )}
 
             {/* Generated Content */}
             {generatedContent && (
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
-                <div className="grid gap-4">
-                  {splitNotes(generatedContent).map((note, index) => (
-                    <div
-                      key={index}
-                      className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note.trim()}</pre>
+              <>
+                {/* Short Notes */}
+                <div className="mt-8">
+                  <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Short Notes:</h3>
+                  <div className="grid gap-4">
+                    {generatedContent.shortNotes.map((note, index) => (
+                      <div
+                        key={index}
+                        className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note.trim()}</pre>
+                        <button
+                          onClick={() => handleCopyToClipboard(note.trim(), index)}
+                          className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
+                            copiedIndex === index
+                              ? 'text-green-600 bg-green-50'
+                              : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
+                          }`}
+                        >
+                          {copiedIndex === index ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Long Form Note */}
+                {generatedContent.longFormNote && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Long-Form Note:</h3>
+                    <div className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
+                      <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">
+                        {generatedContent.longFormNote.trim()}
+                      </pre>
                       <button
-                        onClick={() => handleCopyToClipboard(note.trim(), index)}
+                        onClick={() => handleCopyToClipboard(generatedContent.longFormNote.trim(), -1)}
                         className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
-                          copiedIndex === index
+                          copiedIndex === -1
                             ? 'text-green-600 bg-green-50'
                             : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
                         }`}
                       >
-                        {copiedIndex === index ? (
+                        {copiedIndex === -1 ? (
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
@@ -248,9 +283,9 @@ export default function NotesRagContent() {
                         )}
                       </button>
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
