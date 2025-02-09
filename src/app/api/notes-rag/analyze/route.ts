@@ -164,18 +164,26 @@ function parseGeneratedNotes(content: string): { shortNotes: string[], longFormN
     // Process each part
     parts.forEach(part => {
       if (part.toLowerCase().includes('long-form note:')) {
-        // This is the long-form note
-        result.longFormNote = part.trim();
+        // This is the long-form note - split into sentences
+        const sentences = part
+          .split(/(?<=[.!?])\s+/)
+          .map(s => s.trim())
+          .filter(s => s);
+        result.longFormNote = sentences.join('\n');
       } else if (part.trim()) {
-        // This is a short note
-        // Remove "Note X:" prefix if present
+        // This is a short note - split into sentences
         const cleanedNote = part
           .replace(/^\*\*Note \d+:\s*/, '')  // Remove "**Note X:" prefix
           .replace(/\*\*/g, '')              // Remove any remaining asterisks
           .trim();
         
         if (cleanedNote) {
-          result.shortNotes.push(cleanedNote);
+          // Split into sentences and join with newlines
+          const sentences = cleanedNote
+            .split(/(?<=[.!?])\s+/)
+            .map(s => s.trim())
+            .filter(s => s);
+          result.shortNotes.push(sentences.join('\n'));
         }
       }
     });
@@ -183,8 +191,13 @@ function parseGeneratedNotes(content: string): { shortNotes: string[], longFormN
     return result;
   } catch (error) {
     console.error('Error parsing generated notes:', error);
+    // If parsing fails, split the entire content into sentences
+    const sentences = content
+      .split(/(?<=[.!?])\s+/)
+      .map(s => s.trim())
+      .filter(s => s);
     return {
-      shortNotes: [content],  // Return entire content as single note if parsing fails
+      shortNotes: [sentences.join('\n')],
       longFormNote: ''
     };
   }
@@ -303,8 +316,7 @@ Think through this step by step`;
       result: {
         shortNotes: parsedNotes.shortNotes,
         longFormNote: parsedNotes.longFormNote
-      },
-      selectedExamples: selectedExamples,
+      }
     });
   } catch (error) {
     console.error('Error:', error);

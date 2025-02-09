@@ -5,9 +5,9 @@ import Image from "next/image";
 
 export default function UseCases() {
   return (
-    <section className="py-16">
+    <section>
       {/* Transform Your Substack Journey Section */}
-      <div className="bg-gray-800 py-16">
+      <div className="bg-[#2a2632] py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-white text-center mb-12">
             Transform Your Substack Journey
