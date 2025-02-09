@@ -194,7 +194,25 @@ export default function NotesRagContent() {
                     Generating...
                   </span>
                 ) : (
-                  'Generate Notes'
+                  'Generate Short Notes'
+                )}
+              </Button>
+
+              <Button
+                onClick={() => {}}
+                disabled={isGenerating || !notes.trim() || (profile?.credits || 0) < creditCost}
+                className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
+              >
+                {isGenerating ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating...
+                  </span>
+                ) : (
+                  'Generate Long-form Note'
                 )}
               </Button>
             </div>
@@ -208,6 +226,35 @@ export default function NotesRagContent() {
               <div className="text-amber-600 mb-4">Generating content...</div>
             )}
             
+            {/* Display Final Prompt */}
+            <div className="mt-8 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-[#181819]">Final Prompt:</h3>
+                <div className="text-sm text-gray-500">
+                  (This is what we&apos;re asking the AI to do)
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                <pre className="whitespace-pre-wrap font-mono text-sm text-[#181819]">
+                  {`Based off curated examples, write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
+
+The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
+
+User topic= ${notes}
+
+Tailor the note to that topic while maintaining a focus on progress, action, and cutting through distractions. 
+If the topic is about Substack, highlight consistency, value, and playing the long game. Also highlight Substack's unique benefits when compared to other platforms. Highlight its true appeal being its organic nature, ad-free feed, authentic, real interactions, it being cool, it being community-driven, it being a place where people can be themselves, it being a place where people can learn, grow, and connect with others.
+
+For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
+
+Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
+
+Output only the notes with no additional explanation. Do not number the notes. Do not output a short 'title' for each note. 
+Separate each note with ###---###. Use markdown formatting.`}
+                </pre>
+              </div>
+            </div>
+
             {/* Display Selected Examples */}
             {selectedExamples && (
               <div className="mt-8 mb-8">

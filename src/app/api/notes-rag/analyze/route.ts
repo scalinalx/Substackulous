@@ -214,7 +214,7 @@ function parseGeneratedNotes(content: string): { shortNotes: string[], longFormN
  * @returns Complete prompt string
  */
 function buildPrompt(retrievedExamples: NoteExample[], userTopic: string): string {
-  let prompt = 'Below are examples of viral Substack notes that have gathered high engagement:\n\n';
+  let prompt = 'Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. You speak plainly, challenge assumptions, and avoid fluff. Every sentence should be punchy, authentic, and grounded in real-world insights.Below are examples of viral Substack notes that have gathered high engagement:\n\n';
   retrievedExamples.forEach((ex, i) => {
     prompt += `Example ${i + 1}:\n${ex.note}\n\n`;
   });
@@ -225,15 +225,15 @@ Based off the examples above, write 3 highly engaging notes designed to go viral
 The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
 
 User topic= ${userTopic}
-Tailor the note to that theme while maintaining a focus on progress, action, and cutting through distractions. If the topic is about Substack, highlight consistency, value, and playing the long game. Also highlight Substack's unique benefits when compared to other platforms. Highlith it's true appeal being it's organic nature, ad-free feed, authentic, real interactions, it beeing cool, it being community-driven, it being a place where people can be themselves, it being a place where people can learn, grow, and connect with others.
+Tailor the note to that topic while maintaining a focus on progress, action, and cutting through distractions. 
+If the topic is about Substack, highlight consistency, value, and playing the long game. Also highlight Substack's unique benefits when compared to other platforms. Highlith it's true appeal being it's organic nature, ad-free feed, authentic, real interactions, it beeing cool, it being community-driven, it being a place where people can be themselves, it being a place where people can learn, grow, and connect with others.
 
 For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
 
 Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
 
-After you've finished the task above, output 1 new viral long-form note that is written on the user topic and based on the examples. A long-form note has more than 400 words  
-Output only the notes with no additional explanation. Do not number the notes  Do not output a short 'title' for each note. 
-Separate each note with '###{}###'. Use markdown formatting. Leave 2 newlines between each note.
+Output only the notes with no additional explanation. Do not number the notes. Do not output a short 'title' for each note. 
+Separate each note with '###---###'. Use markdown formatting.
   `;
   prompt += basePrompt;
   return prompt;
