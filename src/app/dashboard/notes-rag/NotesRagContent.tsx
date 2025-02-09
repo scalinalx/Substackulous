@@ -237,27 +237,28 @@ export default function NotesRagContent() {
                 </div>
                 <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
                   <pre className="whitespace-pre-wrap font-mono text-sm text-[#181819]">
-                    {`Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. You speak plainly, challenge assumptions, and avoid fluff. Every sentence should be punchy, authentic, and grounded in real-world insights.
+                    {`Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. 
+You speak plainly, challenge assumptions, and avoid fluff. 
+Every sentence should be punchy and standalone.
 
-Below are examples of viral Substack notes that have gathered high engagement:
+Below are 3 example viral Substack notes:
 
 ${selectedExamples || 'No examples selected yet'}
 
-Based off the examples above, write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
-
-The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
-
 User topic= ${notes}
 
-Tailor the note to that topic while maintaining a focus on progress, action, and cutting through distractions. 
-If the topic is about Substack, highlight consistency, value, and playing the long game. Also highlight Substack's unique benefits when compared to other platforms. Highlight its true appeal being its organic nature, ad-free feed, authentic, real interactions, it being cool, it being community-driven, it being a place where people can be themselves, it being a place where people can learn, grow, and connect with others.
+Rewrite each example note to focus on the user's topic.
+- Transform each example into a new note on this topic.
+- Keep the same structure, same bullet points, same line breaks, and overall length.
+- Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
+- For instance, if a note starts with a short story, keep it as a short story but adapt it to Growth Hacks.
+- If a note ends with a direct prompt, do so here as well.
+- Output exactly 3 rewritten notes, separated by the Markdown delimiter:
 
-For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
+###---###
 
-Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
-
-Output only the notes with no additional explanation. Do not number the notes. Do not output a short 'title' for each note. 
-Separate each note with ###---###. Use markdown formatting.`}
+Output only the notes. 
+No explanations, no numbering, no extra commentary.`}
                   </pre>
                 </div>
               </div>
