@@ -317,7 +317,8 @@ Think through this step by step`;
       result: {
         shortNotes: parsedNotes.shortNotes,
         longFormNote: parsedNotes.longFormNote
-      }
+      },
+      selectedExamples: selectedExamples
     });
   } catch (error) {
     console.error('Error:', error);

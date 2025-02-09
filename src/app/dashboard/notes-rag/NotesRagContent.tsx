@@ -241,7 +241,7 @@ export default function NotesRagContent() {
 
 Below are examples of viral Substack notes that have gathered high engagement:
 
-${selectedExamples ? selectedExamples.split('\n').map(line => line.trim()).join('\n') : ''}
+${selectedExamples || 'No examples selected yet'}
 
 Based off the examples above, write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
 
@@ -262,6 +262,11 @@ Separate each note with ###---###. Use markdown formatting.`}
                 </div>
               </div>
             )}
+
+            {/* Add a debug section to see what examples we're getting */}
+            <div className="mt-4 text-sm text-gray-500">
+              Selected Examples Debug: {selectedExamples ? 'Examples received' : 'No examples yet'}
+            </div>
 
             {/* Generated Content */}
             {generatedContent && (
