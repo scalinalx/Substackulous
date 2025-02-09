@@ -194,7 +194,7 @@ export default function NotesRagContent() {
                     Generating...
                   </span>
                 ) : (
-                  'Generate (Model 2)'
+                  'Generate Notes'
                 )}
               </Button>
             </div>

@@ -157,9 +157,9 @@ export default function UseCases() {
               </p>
               <div className="space-y-1">
                 <h4 className="text-2xl font-bold text-gray-900">Ana Calin</h4>
-                <p className="text-gray-600">CEO of Substackulous</p>
+                <p className="text-gray-600">Co-Creator of Substackulous</p>
                 <p className="text-gray-600">
-                  Author of <a 
+                  Founder of <a 
                     href="https://howwegrowtoday.substack.com/" 
                     target="_blank" 
                     rel="noopener noreferrer"
