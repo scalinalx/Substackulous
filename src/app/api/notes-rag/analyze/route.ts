@@ -225,7 +225,7 @@ Below are 3 example viral Substack notes.\n\n`;
   const basePrompt = `
 User topic= ${userTopic}
 
-Rewrite each example note to focus on the user's topic.
+Rewrite each example note to focus on the user topic.
 - Transform each example into a new note on this topic.
 - Keep the same structure, same bullet points, same line breaks, and overall length.
 - Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
@@ -313,8 +313,8 @@ Think through this step by step`;
           content: prompt,
         },
       ],
-      model: 'deepseek-r1-distill-llama-70b',
-      temperature: 1.37,
+      model: 'llama-3.3-70b-specdec',
+      temperature: 0.95,
       max_tokens: 11150,
       top_p: 0.95,
       stream: false,
