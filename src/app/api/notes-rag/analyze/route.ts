@@ -110,6 +110,34 @@ function removeThinkingProcess(text: string): string {
     .trim();  // Remove overall leading/trailing whitespace
 }
 
+/**
+ * Extracts just the note content from JSON formatted examples
+ * @param examples String containing JSON formatted examples
+ * @returns String with only the note contents, separated by newlines
+ */
+function extractNotesFromJson(examples: string): string {
+  try {
+    // Split the input into lines and process each line
+    return examples
+      .split('\n')
+      .filter(line => line.trim())  // Remove empty lines
+      .map(line => {
+        try {
+          const parsed = JSON.parse(line);
+          return parsed.note || '';
+        } catch {
+          // If line isn't valid JSON, return it as-is
+          return line;
+        }
+      })
+      .filter(note => note)  // Remove empty notes
+      .join('\n\n');  // Join with double newlines
+  } catch (error) {
+    console.error('Error extracting notes:', error);
+    return examples;  // Return original if processing fails
+  }
+}
+
 // -------------------------------
 // Prompt Building
 // -------------------------------
@@ -139,7 +167,7 @@ For engagement-driven notes, incorporate a strong prompt that encourages reflect
 Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
 
 After you've finished the task above, output 1 new viral long-form note that is similar to the user topic and based on the examples. A long-form note has more than 400 words  
-Output only the notes with no additional explanation.
+Output only the notes with no additional explanation. Use markdown formatting. Leave 2 newlines between each note.
   `;
   prompt += basePrompt;
   return prompt;
@@ -194,7 +222,8 @@ Think through this step by step`;
     });
 
     const rawSelectedExamples = exampleSelectionResponse.choices[0]?.message?.content || '';
-    const selectedExamples = removeThinkingProcess(rawSelectedExamples);
+    const cleanedFromThinking = removeThinkingProcess(rawSelectedExamples);
+    const selectedExamples = extractNotesFromJson(cleanedFromThinking);
 
     // Build the main prompt using the selected examples
     const prompt = buildPrompt(retrieveExamples(userTopic, 3), userTopic);
@@ -208,7 +237,7 @@ Think through this step by step`;
         },
       ],
       model: 'deepseek-r1-distill-llama-70b',
-      temperature: 1,
+      temperature: 1.37,
       max_tokens: 11150,
       top_p: 0.95,
       stream: false,
