@@ -128,6 +128,51 @@ export default function UseCases() {
         </div>
       </div>
 
+      {/* Founder Section */}
+      <div className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-12">
+            {/* Portrait */}
+            <div className="w-1/3 flex-shrink-0">
+              <div className="aspect-square rounded-full overflow-hidden relative">
+                <Image
+                  src="/data/ana_portrait.jpg"
+                  alt="Ana Calin"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                />
+              </div>
+            </div>
+            
+            {/* Bio */}
+            <div className="w-2/3">
+              <p className="text-gray-600 text-lg mb-6 leading-relaxed">
+                With over 41,000 subscribers and generating 5-figure monthly revenue in just 5 months, 
+                I&apos;ve cracked the code to Substack growth. Now, I&apos;m sharing my proven strategies 
+                and frameworks through Substackulous, helping creators like you achieve remarkable growth 
+                without the guesswork. Our AI-powered tools and data-driven approach combine my expertise 
+                with cutting-edge technology to accelerate your Substack journey.
+              </p>
+              <div className="space-y-1">
+                <h4 className="text-2xl font-bold text-gray-900">Ana Calin</h4>
+                <p className="text-gray-600">CEO of Substackulous</p>
+                <p className="text-gray-600">
+                  Author of <a 
+                    href="https://howwegrowtoday.substack.com/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-amber-600 hover:text-amber-700 font-semibold"
+                  >
+                    How We Grow
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Common Challenges Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <h2 className="text-3xl font-bold text-gray-900 text-center mb-4">
