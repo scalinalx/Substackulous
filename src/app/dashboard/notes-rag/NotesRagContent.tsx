@@ -237,9 +237,11 @@ export default function NotesRagContent() {
                 </div>
                 <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
                   <pre className="whitespace-pre-wrap font-mono text-sm text-[#181819]">
-                    {`Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. You speak plainly, challenge assumptions, and avoid fluff. Every sentence should be punchy, authentic, and grounded in real-world insights.Below are examples of viral Substack notes that have gathered high engagement:
+                    {`Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. You speak plainly, challenge assumptions, and avoid fluff. Every sentence should be punchy, authentic, and grounded in real-world insights.
 
-${selectedExamples || ''}
+Below are examples of viral Substack notes that have gathered high engagement:
+
+${selectedExamples ? selectedExamples.split('\n').map(line => line.trim()).join('\n') : ''}
 
 Based off the examples above, write 3 highly engaging notes designed to go viral. Keep them concise, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
 
@@ -256,18 +258,6 @@ Ensure the tone is optimistic but grounded in reality—no empty inspiration, ju
 
 Output only the notes with no additional explanation. Do not number the notes. Do not output a short 'title' for each note. 
 Separate each note with ###---###. Use markdown formatting.`}
-                  </pre>
-                </div>
-              </div>
-            )}
-
-            {/* Display Selected Examples */}
-            {selectedExamples && (
-              <div className="mt-8 mb-8">
-                <h3 className="text-lg font-semibold text-[#181819] mb-4">Selected Example Notes:</h3>
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <pre className="whitespace-pre-wrap font-mono text-sm text-[#181819]">
-                    {selectedExamples}
                   </pre>
                 </div>
               </div>
