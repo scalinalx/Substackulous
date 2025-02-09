@@ -229,7 +229,7 @@ Rewrite each example note to focus on the user's topic.
 - Transform each example into a new note on this topic.
 - Keep the same structure, same bullet points, same line breaks, and overall length.
 - Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
-- For instance, if a note starts with a short story, keep it as a short story but adapt it to Growth Hacks.
+- For instance, if a note starts with a short story, keep it as a short story but adapt it to ${userTopic}.
 - If a note ends with a direct prompt, do so here as well.
 - Output exactly 3 rewritten notes, separated by the Markdown delimiter:
 
