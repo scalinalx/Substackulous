@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Add smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
 /* Custom Animations */
 @keyframes fade-in-down {
   0% {

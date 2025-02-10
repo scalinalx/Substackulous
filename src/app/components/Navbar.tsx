@@ -34,7 +34,7 @@ const Navbar = ({ onSignIn }: NavbarProps) => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <a href="#use-cases" className="text-gray-700 hover:text-gray-900 transition-colors">
+            <a href="#creator-tools" className="text-gray-700 hover:text-gray-900 transition-colors">
               Creator Tools
             </a>
             <a href="#testimonials" className="text-gray-700 hover:text-gray-900 transition-colors">
@@ -68,7 +68,7 @@ const Navbar = ({ onSignIn }: NavbarProps) => {
           <div className="md:hidden absolute top-full left-0 right-0 bg-white/90 backdrop-blur-sm shadow-lg py-4">
             <div className="flex flex-col space-y-4 px-4">
               <a
-                href="#use-cases"
+                href="#creator-tools"
                 className="text-gray-700 hover:text-gray-900 transition-colors"
                 onClick={() => setIsOpen(false)}
               >
