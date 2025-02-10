@@ -17,7 +17,7 @@ type GeneratedResult = {
 
 export default function NotesRagContent() {
   const [mounted, setMounted] = useState(false);
-  const { user, profile, isLoading, updateProfile } = useAuth();
+  const { user, profile, isLoading: authLoading, updateProfile } = useAuth();
   const router = useRouter();
   const [notes, setNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -39,7 +39,9 @@ export default function NotesRagContent() {
   }, [setNotesStable]);
 
   const handleNoteChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    debouncedSetNotes(e.target.value);
+    const value = e.target.value;
+    setNotes(value); // Update immediately for UI
+    debouncedSetNotes(value); // Debounce for processing
   }, [debouncedSetNotes]);
 
   // Memoize handlers
@@ -129,6 +131,15 @@ export default function NotesRagContent() {
     setSelectedExamples(null);
 
     try {
+      // First update the credits
+      if (profile) {
+        const updatedCredits = profile.credits - creditCost;
+        await updateProfile({
+          ...profile,
+          credits: updatedCredits
+        });
+      }
+
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
@@ -149,41 +160,70 @@ export default function NotesRagContent() {
       const data = await response.json();
       console.log("Long-form response:", data);
 
-      // Update the profile credits after successful generation
-      if (profile) {
-        const updatedProfile = {
-          ...profile,
-          credits: profile.credits - creditCost
-        };
-        await updateProfile(updatedProfile);
-      }
-
       setGeneratedContent(data.result);
       setSelectedExamples(data.selectedExamples);
+      
     } catch (err) {
       console.error('Error generating long-form content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
+      
+      // If there was an error, try to restore the credits
+      if (profile) {
+        try {
+          await updateProfile({
+            ...profile,
+            credits: profile.credits // Restore original credits
+          });
+        } catch (creditError) {
+          console.error('Error restoring credits:', creditError);
+        }
+      }
     } finally {
       setIsGenerating(false);
     }
   }, [notes, profile, user, updateProfile, creditCost]);
+
+  // Add a recovery mechanism for loading state
+  useEffect(() => {
+    const loadingTimeout = setTimeout(() => {
+      if (isGenerating) {
+        setIsGenerating(false);
+        console.log('Forced loading state reset after timeout');
+      }
+    }, 10000); // Reset loading state after 10 seconds
+
+    return () => clearTimeout(loadingTimeout);
+  }, [isGenerating]);
+
+  // Add an error boundary effect
+  useEffect(() => {
+    const errorTimeout = setTimeout(() => {
+      if (error) {
+        setError(null);
+        console.log('Cleared error state after timeout');
+      }
+    }, 5000); // Clear error after 5 seconds
+
+    return () => clearTimeout(errorTimeout);
+  }, [error]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (mounted && !isLoading && !user) {
+    if (mounted && !authLoading && !user) {
       router.replace('/');
     }
-  }, [mounted, isLoading, user, router]);
+  }, [mounted, authLoading, user, router]);
 
   // Split the content into individual notes
   const splitNotes = useCallback((content: string): string[] => {
     return content.split(/Note \d+:\n/).filter(note => note.trim());
   }, []);
 
-  if (!mounted || isLoading) {
+  // Loading state
+  if (!mounted || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
@@ -191,6 +231,7 @@ export default function NotesRagContent() {
     );
   }
 
+  // Auth check
   if (!user || !profile) {
     return null;
   }

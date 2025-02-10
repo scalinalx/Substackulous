@@ -212,16 +212,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       setIsLoading(true);
-      const { error } = await supabase
+      
+      // Get the latest profile state first
+      const { data: currentProfile, error: fetchError } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
 
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
+      // Merge current profile with updates
+      const mergedUpdates = {
+        ...currentProfile,
+        ...updates,
+      };
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(mergedUpdates)
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      // Update local state with merged updates
+      setProfile(mergedUpdates);
+      
     } catch (error) {
       console.error('Error updating profile:', error);
+      // Reset loading state even on error
+      setIsLoading(false);
       throw error;
     } finally {
       setIsLoading(false);
