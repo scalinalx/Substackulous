@@ -273,8 +273,13 @@ export default function UseCases() {
               </div>
             </div>
             <div className="w-1/3">
-              <div className="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
-                <span className="text-4xl">✨</span>
+              <div className="aspect-square relative">
+                <Image
+                  src="/t3.jpeg"
+                  alt="Stand Out"
+                  fill
+                  className="object-cover rounded-lg"
+                />
               </div>
             </div>
           </div>
