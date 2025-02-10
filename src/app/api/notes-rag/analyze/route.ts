@@ -209,18 +209,18 @@ function parseGeneratedNotes(content: string): { shortNotes: string[], longFormN
 
 /**
  * Builds the complete prompt for the Groq API.
- * @param retrievedExamples Retrieved similar examples
+ * @param selectedExamples Selected example notes as a string
  * @param userTopic User's input topic
  * @returns Complete prompt string
  */
-function buildPrompt(retrievedExamples: NoteExample[], userTopic: string): string {
+function buildPrompt(selectedExamples: string, userTopic: string): string {
   let prompt = `Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. 
 You speak plainly, challenge assumptions, and avoid fluff. 
 Every sentence should be punchy and standalone.
-Below are 3 example viral Substack notes.\n\n`;
-  retrievedExamples.forEach((ex, i) => {
-    prompt += `Example ${i + 1}:\n${ex.note}\n\n`;
-  });
+Below are 3 example viral Substack notes:\n\n`;
+
+  // Add the selected examples directly
+  prompt += selectedExamples + '\n\n';
 
   const basePrompt = `
 User topic= ${userTopic}
@@ -302,9 +302,9 @@ Think through this step by step`;
     const cleanedFromThinking = removeThinkingProcess(rawSelectedExamples);
     const selectedExamples = extractNotesFromJson(cleanedFromThinking);
 
-    // Build the main prompt using the selected examples
-    const prompt = buildPrompt(retrieveExamples(userTopic, 3), userTopic);
-    console.log(prompt);
+    // Build the main prompt using the selected examples from the first API call
+    const prompt = buildPrompt(selectedExamples, userTopic);
+    console.log("Final prompt being sent to LLM:", prompt); // Add logging to verify the prompt
 
     // Second Groq call for generating the final content
     const completion = await groq.chat.completions.create({
