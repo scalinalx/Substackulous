@@ -2,7 +2,7 @@ import { Button } from "@/app/components/ui/button";
 import { Check, Pencil, Star, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface PricingTier {
+export interface PricingTier {
     name: string;
     icon: React.ReactNode;
     price: number;
@@ -12,16 +12,19 @@ interface PricingTier {
     color: string;
 }
 
-function CreativePricing({
-    tag = "Simple Pricing",
-    title = "Create Content That Stands Out, Grow Your Audience, and Save Time",
-    description = "Increase your growth and conversion rate by 100% and save up to 90h/month",
-}: {
+interface CreativePricingProps {
     tag?: string;
     title?: string;
     description?: string;
     tiers: PricingTier[];
-}) {
+}
+
+function CreativePricing({
+    tag = "Simple Pricing",
+    title = "Create Content That Stands Out, Grow Your Audience, and Save Time",
+    description = "Increase your growth and conversion rate by 100% and save up to 90h/month",
+    tiers,
+}: CreativePricingProps) {
     return (
         <div className="w-full max-w-6xl mx-auto px-4">
             <div className="text-center space-y-6 mb-16">
@@ -49,7 +52,7 @@ function CreativePricing({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {tiers.map((tier, index) => (
+                {tiers.map((tier: PricingTier, index: number) => (
                     <div
                         key={tier.name}
                         className={cn(
@@ -173,4 +176,3 @@ function CreativePricing({
 }
 
 export { CreativePricing };
-export type { PricingTier };
