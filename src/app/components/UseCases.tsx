@@ -195,15 +195,13 @@ export default function UseCases() {
               </div>
             </div>
             <div className="w-1/3">
-              <div className="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
-                <div className="relative w-16 h-16">
-                  <Image
-                    src="/t1.webp"
-                    alt="Target"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
+              <div className="aspect-square relative">
+                <Image
+                  src="/t1.webp"
+                  alt="Target"
+                  fill
+                  className="object-cover rounded-lg"
+                />
               </div>
             </div>
           </div>
@@ -211,8 +209,13 @@ export default function UseCases() {
           {/* Row 2: 1/3 illustration, 2/3 text */}
           <div className="flex items-center mb-16">
             <div className="w-1/3">
-              <div className="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
-                <span className="text-4xl">💡</span>
+              <div className="aspect-square relative">
+                <Image
+                  src="/t2.jpeg"
+                  alt="Ideas"
+                  fill
+                  className="object-cover rounded-lg"
+                />
               </div>
             </div>
             <div className="w-2/3 pl-8">
