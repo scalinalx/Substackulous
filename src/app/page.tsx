@@ -51,7 +51,7 @@ export default function HomePage() {
           <CreativePricingDemo />
         </div>
       </div>
-      <Pricing onGetStarted={() => setShowLogin(true)} />
+      {/* <Pricing onGetStarted={() => setShowLogin(true)} /> */}
       <FAQ />
     </main>
   );

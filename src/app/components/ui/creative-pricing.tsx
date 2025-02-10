@@ -14,9 +14,8 @@ interface PricingTier {
 
 function CreativePricing({
     tag = "Simple Pricing",
-    title = "Make Short Videos That Pop",
-    description = "Edit, enhance, and go viral in minutes",
-    tiers,
+    title = "Create Content That Stands Out, Grow Your Audience, and Save Time",
+    description = "Increase your growth and conversion rate by 100% and save up to 90h/month",
 }: {
     tag?: string;
     title?: string;
