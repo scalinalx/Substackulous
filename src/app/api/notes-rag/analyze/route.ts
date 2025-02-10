@@ -315,7 +315,7 @@ Think through this step by step`;
       ],
       model: 'llama-3.3-70b-specdec',
       temperature: 0.95,
-      max_tokens: 11150,
+      max_tokens: 8192,
       top_p: 0.95,
       stream: false,
     });
