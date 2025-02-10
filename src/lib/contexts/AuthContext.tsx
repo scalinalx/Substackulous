@@ -3,15 +3,15 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { useRouter, usePathname } from 'next/navigation';
-import { supabase } from '../supabase/clients';
+import { supabase } from '@/lib/supabase/clients';
 import { logoutUser, signInWithGoogle, resetPassword as resetPasswordUtil } from '../supabase/authUtils';
 
 interface UserProfile {
   id: string;
-  email: string | null;
+  email: string;
   credits: number;
-  name: string | null;
-  avatar_url: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface AuthContextType {

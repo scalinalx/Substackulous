@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useDeepgram } from '../lib/contexts/DeepgramContext';
-import { supabase } from '../lib/supabase/clients';
+import { supabase } from '@/lib/supabase/clients';
 import { motion } from 'framer-motion';
 
 export default function VoiceRecorder() {
@@ -28,6 +28,21 @@ export default function VoiceRecorder() {
             timestamp: new Date().toISOString(),
           },
         ]);
+    }
+  };
+
+  const uploadToStorage = async (blob: Blob) => {
+    try {
+      const { data, error } = await supabase
+        .storage
+        .from('audio-uploads')
+        .upload(`recording-${Date.now()}.webm`, blob);
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error uploading audio:', error);
+      throw error;
     }
   };
 
