@@ -211,7 +211,7 @@ export default function UseCases() {
             <div className="w-1/3">
               <div className="aspect-square relative">
                 <Image
-                  src="/t2.jpeg"
+                  src="/t3.jpeg"
                   alt="Ideas"
                   fill
                   className="object-cover rounded-lg"
@@ -275,7 +275,7 @@ export default function UseCases() {
             <div className="w-1/3">
               <div className="aspect-square relative">
                 <Image
-                  src="/t3.jpeg"
+                  src="/t2.jpeg"
                   alt="Stand Out"
                   fill
                   className="object-cover rounded-lg"
