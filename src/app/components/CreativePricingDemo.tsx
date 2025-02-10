@@ -1,5 +1,5 @@
-import { CreativePricing } from "@/components/ui/creative-pricing"
-import type { PricingTier } from "@/components/ui/creative-pricing"
+import { CreativePricing } from "@/app/components/ui/creative-pricing"
+import type { PricingTier } from "@/app/components/ui/creative-pricing"
 import { Button } from "@/app/components/ui/button"
 import { Check, Pencil, Star, Sparkles } from "lucide-react";
 
