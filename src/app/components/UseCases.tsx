@@ -196,7 +196,14 @@ export default function UseCases() {
             </div>
             <div className="w-1/3">
               <div className="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
-                <span className="text-4xl">🎯</span>
+                <div className="relative w-16 h-16">
+                  <Image
+                    src="/t1.webp"
+                    alt="Target"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
               </div>
             </div>
           </div>

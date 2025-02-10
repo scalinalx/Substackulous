@@ -12,6 +12,7 @@ import Testimonials from './components/Testimonials';
 import Pricing from './components/Pricing';
 import FAQ from './components/FAQ';
 import LoginForm from './components/LoginForm';
+import { CreativePricingDemo } from './components/CreativePricingDemo';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -44,6 +45,12 @@ export default function HomePage() {
       <UseCases />
       {/* <PainPoints /> */}  {/* Commented out */}
       <Testimonials />
+      <div className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Choose Your Plan</h2>
+          <CreativePricingDemo />
+        </div>
+      </div>
       <Pricing onGetStarted={() => setShowLogin(true)} />
       <FAQ />
     </main>
