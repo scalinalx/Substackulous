@@ -304,6 +304,7 @@ Think through this step by step`;
 
     // Build the main prompt using the selected examples
     const prompt = buildPrompt(retrieveExamples(userTopic, 3), userTopic);
+    console.log(prompt);
 
     // Second Groq call for generating the final content
     const completion = await groq.chat.completions.create({
@@ -314,9 +315,9 @@ Think through this step by step`;
         },
       ],
       model: 'llama-3.3-70b-specdec',
-      temperature: 0.95,
-      max_tokens: 8192,
-      top_p: 0.95,
+      temperature: 1,
+      max_tokens: 3200,
+      top_p: 1,
       stream: false,
     });
 
