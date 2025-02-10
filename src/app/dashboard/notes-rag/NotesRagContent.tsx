@@ -338,139 +338,76 @@ export default function NotesRagContent() {
             {isGenerating && (
               <div className="text-amber-600 mb-4">Generating content...</div>
             )}
-            
-            {/* Display Final Prompt */}
-            {(selectedExamples || generatedContent) && (
-              <div className="mt-8 mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-[#181819]">Final Prompt:</h3>
-                  <div className="text-sm text-gray-500">
-                    (This is what we&apos;re asking the AI to do)
-                  </div>
-                </div>
-                <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-                  <pre className="whitespace-pre-wrap font-mono text-sm text-[#181819]">
-                    {generatedContent?.longFormNote ? 
-                      `Act like a seasoned Substack creator who consistently goes viral with impactful, long-form notes. 
-A long-form note has a length of over 400 words, and is either EDUCATIONAL or shares a PERSONAL STORY. 
-You speak plainly, challenge assumptions, and avoid fluff. 
-Every sentence should be punchy and standalone.
-
-Below are 3 example viral Substack long-form notes:
-
-${selectedExamples || 'No examples selected yet'}
-
-User topic= ${notes}
-
-Rewrite each example note to focus on the user topic.
-- Transform each example into a new note on this topic.
-- Keep the same structure, same bullet points, same line breaks.
-- Make sure the notes you output contain at least 400 words.
-- Write each sentence on a new line.
-- Focus on notes that have either a strong EDUCATIONAL intent, or share a PERSONAL STORY - as these are the ones that work best as long-form notes. 
-- Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
-- For instance, if a note starts with a short story, keep it as a short story but adapt it to ${notes}.
-- If a note ends with a direct prompt, do so here as well.
-- Output exactly 3 rewritten notes, separated by the Markdown delimiter:
-
-###---###
-
-Output only the notes. 
-No explanations, no numbering, no extra commentary.` :
-                      `Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. 
-You speak plainly, challenge assumptions, and avoid fluff. 
-Every sentence should be punchy and standalone.
-
-Below are 3 example viral Substack notes:
-
-${selectedExamples || 'No examples selected yet'}
-
-User topic= ${notes}
-
-Rewrite each example note to focus on the user's topic.
-- Transform each example into a new note on this topic.
-- Keep the same structure, same bullet points, same line breaks, and overall length.
-- Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
-- For instance, if a note starts with a short story, keep it as a short story but adapt it to ${notes}.
-- If a note ends with a direct prompt, do so here as well.
-- Output exactly 3 rewritten notes, separated by the Markdown delimiter:
-
-###---###
-
-Output only the notes. 
-No explanations, no numbering, no extra commentary.`}
-                  </pre>
-                </div>
-              </div>
-            )}
-
-            {/* Add a debug section to see what examples we're getting */}
-            <div className="mt-4 text-sm text-gray-500">
-              Selected Examples Debug: {selectedExamples ? 'Examples received' : 'No examples yet'}
-            </div>
 
             {/* Generated Content */}
             {generatedContent && (
               <>
                 {/* Short Notes */}
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Short Notes:</h3>
-                  <div className="grid gap-4">
-                    {generatedContent.shortNotes.map((note, index) => (
-                      <div
-                        key={index}
-                        className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note.trim()}</pre>
-                        <button
-                          onClick={() => handleCopyToClipboard(note.trim(), index)}
-                          className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
-                            copiedIndex === index
-                              ? 'text-green-600 bg-green-50'
-                              : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
-                          }`}
+                {generatedContent.shortNotes.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Short Notes:</h3>
+                    <div className="grid gap-4">
+                      {generatedContent.shortNotes.map((note, index) => (
+                        <div
+                          key={index}
+                          className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
                         >
-                          {copiedIndex === index ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                    ))}
+                          <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note.trim()}</pre>
+                          <button
+                            onClick={() => handleCopyToClipboard(note.trim(), index)}
+                            className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
+                              copiedIndex === index
+                                ? 'text-green-600 bg-green-50'
+                                : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
+                            }`}
+                          >
+                            {copiedIndex === index ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Long Form Note */}
+                {/* Long Form Notes */}
                 {generatedContent.longFormNote && (
                   <div className="mt-8">
-                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Long-Form Note:</h3>
-                    <div className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
-                      <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">
-                        {generatedContent.longFormNote.trim()}
-                      </pre>
-                      <button
-                        onClick={() => handleCopyToClipboard(generatedContent.longFormNote.trim(), -1)}
-                        className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
-                          copiedIndex === -1
-                            ? 'text-green-600 bg-green-50'
-                            : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
-                        }`}
-                      >
-                        {copiedIndex === -1 ? (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                          </svg>
-                        )}
-                      </button>
+                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Long-Form Notes:</h3>
+                    <div className="grid gap-4">
+                      {generatedContent.longFormNote.split('###---###').map((note, index) => (
+                        <div
+                          key={index}
+                          className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
+                        >
+                          <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note.trim()}</pre>
+                          <button
+                            onClick={() => handleCopyToClipboard(note.trim(), index)}
+                            className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
+                              copiedIndex === index
+                                ? 'text-green-600 bg-green-50'
+                                : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
+                            }`}
+                          >
+                            {copiedIndex === index ? (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
