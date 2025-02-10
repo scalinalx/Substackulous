@@ -107,6 +107,51 @@ export default function NotesRagContent() {
     }
   };
 
+  const handleGenerateLongForm = async () => {
+    if (!notes.trim()) {
+      setError('Please enter some notes to generate from');
+      return;
+    }
+
+    if ((profile?.credits || 0) < creditCost) {
+      setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
+      return;
+    }
+
+    setError(null);
+    setIsGenerating(true);
+    setGeneratedContent(null);
+    setSelectedExamples(null);
+
+    try {
+      const response = await fetch('/api/notes-rag/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userTopic: notes,
+          userId: user.id,
+          isLongForm: true // New flag to indicate long-form generation
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate content');
+      }
+
+      const data = await response.json();
+      console.log("Long-form examples response:", data);
+
+    } catch (err) {
+      console.error('Error generating long-form content:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleCopyToClipboard = async (text: string, index: number) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -199,7 +244,7 @@ export default function NotesRagContent() {
               </Button>
 
               <Button
-                onClick={() => {}}
+                onClick={handleGenerateLongForm}
                 disabled={isGenerating || !notes.trim() || (profile?.credits || 0) < creditCost}
                 className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
               >

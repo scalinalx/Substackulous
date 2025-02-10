@@ -259,7 +259,7 @@ Note 3
  */
 export async function POST(req: Request) {
   try {
-    const { userTopic, userId } = await req.json();
+    const { userTopic, userId, isLongForm } = await req.json();
 
     if (!userTopic) {
       return NextResponse.json(
@@ -272,10 +272,49 @@ export async function POST(req: Request) {
     const filePath = path.join(process.cwd(), 'data', 'substack_examples.jsonl');
     const fileContents = await fs.readFile(filePath, 'utf8');
 
-    // First Groq call to select examples
+    // If it's a long-form request, use different example selection
+    if (isLongForm) {
+      const exampleLongSelectionPrompt = `Act as an expert content curator and expert Substack writer, the best in the world at publishing engaging, valuable content that always goes viral
+
+From this list of curated viral Substack notes choose the top 3 that would best work as frameworks/templates to write a new Substack long-form note on the THEME defined below. PRIORITIZE EXAMPLES THAT ARE EITHER EDUCATIONAL OR SHARE A PERSONALY STORY AND ARE LONGER THAN 8 SENTENCES. 
+Curated list:
+${fileContents}
+
+THEME= ${userTopic}
+
+Output only the top 3 examples and no other explanations or other text.
+Think through this step by step`;
+
+      const exampleLongSelectionResponse = await groq.chat.completions.create({
+        messages: [
+          {
+            role: 'user',
+            content: exampleLongSelectionPrompt,
+          },
+        ],
+        model: 'deepseek-r1-distill-llama-70b',
+        temperature: 1.34,
+        max_tokens: 11150,
+        top_p: 0.95,
+        stream: false,
+      });
+
+      const rawSelectedExamples = exampleLongSelectionResponse.choices[0]?.message?.content || '';
+      const cleanedFromThinking = removeThinkingProcess(rawSelectedExamples);
+      const selectedExamples = extractNotesFromJson(cleanedFromThinking);
+
+      console.log("Long-form selected examples:", selectedExamples);
+
+      // For now, just return the selected examples
+      return NextResponse.json({
+        selectedExamples
+      });
+    }
+
+    // Original short-form note generation code
     const exampleSelectionPrompt = `Act as an expert content curator and expert Substack writer, the best in the world at publishing engaging, valuable content that always goes viral
 
-From this list of curated viral Substack notes choose the top 3 that would best work as frameworks/templates to write a new Substack post on the THEME defined below. 
+From this list of curated viral Substack notes choose the top 3 that would best work as frameworks/templates to write a new Substack note on the THEME defined below. 
 Curated list:
 ${fileContents}
 
@@ -315,7 +354,7 @@ Think through this step by step`;
         },
       ],
       model: 'llama-3.3-70b-specdec',
-      temperature: 1,
+      temperature: 1.37,
       max_tokens: 3200,
       top_p: 1,
       stream: false,
