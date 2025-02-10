@@ -9,22 +9,23 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY');
 }
 
-// Create a single instance of the Supabase client
-const supabaseClient = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storageKey: 'substackulous-auth'
-    }
-  }
-);
+let supabaseClient: ReturnType<typeof createClient> | null = null;
 
-// Export a function that returns the singleton instance
-export const getSupabaseClient = () => supabaseClient;
+export const getSupabaseClient = () => {
+  if (!supabaseClient) {
+    supabaseClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+        }
+      }
+    );
+  }
+  return supabaseClient;
+};
 
 // For backward compatibility
 export const supabase = supabaseClient;

@@ -250,6 +250,53 @@ Note 3
   return prompt;
 }
 
+/**
+ * Builds the complete prompt for long-form note generation.
+ * @param selectedExamples Selected example long-form notes as a string
+ * @param userTopic User's input topic
+ * @returns Complete prompt string
+ */
+function buildLongFormPrompt(selectedExamples: string, userTopic: string): string {
+  let prompt = `Act like a seasoned Substack creator who consistently goes viral with impactful, long-form notes. 
+A long-form note has a length of over 400 words, and is either EDUCATIONAL or shares a PERSONAL STORY. 
+You speak plainly, challenge assumptions, and avoid fluff. 
+Every sentence should be punchy and standalone.
+Below are 3 example viral Substack long-form notes:\n\n`;
+
+  // Add the selected examples directly
+  prompt += selectedExamples + '\n\n';
+
+  const basePrompt = `
+User topic= ${userTopic}
+
+Rewrite each example note to focus on the user topic.
+- Transform each example into a new note on this topic.
+- Keep the same structure, same bullet points, same line breaks.
+- Make sure the notes you output contain at least 400 words.
+- Write each sentence on a new line.
+- Focus on notes that have either a strong EDUCATIONAL intent, or share a PERSONAL STORY - as these are the ones that work best as long-form notes. 
+- Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
+- For instance, if a note starts with a short story, keep it as a short story but adapt it to ${userTopic}.
+- If a note ends with a direct prompt, do so here as well.
+- Output exactly 3 rewritten notes, separated by the Markdown delimiter:
+
+###---###
+
+Output only the notes. 
+No explanations, no numbering, no extra commentary.
+
+[EXAMPLE OUTPUT FORMAT]
+
+Note 1
+###---###
+Note 2
+###---###
+Note 3`;
+
+  prompt += basePrompt;
+  return prompt;
+}
+
 // -------------------------------
 // API Route Handler
 // -------------------------------
@@ -305,9 +352,35 @@ Think through this step by step`;
 
       console.log("Long-form selected examples:", selectedExamples);
 
-      // For now, just return the selected examples
+      // Build the long-form prompt using the selected examples
+      const longFormPrompt = buildLongFormPrompt(selectedExamples, userTopic);
+      console.log("Final long-form prompt being sent to LLM:", longFormPrompt);
+
+      // Generate the long-form notes using Groq
+      const completion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: 'user',
+            content: longFormPrompt,
+          },
+        ],
+        model: 'llama-3.3-70b-specdec',
+        temperature: 1.37,
+        max_tokens: 3200,
+        top_p: 1,
+        stream: false,
+      });
+
+      const rawResult = completion.choices[0]?.message?.content || '';
+      const cleanedResult = removeThinkingProcess(rawResult);
+      const parsedNotes = parseGeneratedNotes(cleanedResult);
+
       return NextResponse.json({
-        selectedExamples
+        result: {
+          shortNotes: [],
+          longFormNote: parsedNotes.shortNotes.join('\n\n###---###\n\n')
+        },
+        selectedExamples: selectedExamples
       });
     }
 

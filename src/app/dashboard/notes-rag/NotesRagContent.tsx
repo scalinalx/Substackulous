@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
@@ -27,29 +27,34 @@ export default function NotesRagContent() {
   const creditCost = 1;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
+  // Create a stable reference for the setNotes function
+  const setNotesStable = useCallback((value: string) => {
+    setNotes(value);
   }, []);
 
-  useEffect(() => {
-    if (mounted && !isLoading && !user) {
-      router.replace('/');
+  // Debounced note update using useCallback with proper timeout handling
+  const debouncedSetNotes = useCallback((value: string) => {
+    const timeoutId = setTimeout(() => setNotesStable(value), 300);
+    return () => clearTimeout(timeoutId);
+  }, [setNotesStable]);
+
+  const handleNoteChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    debouncedSetNotes(e.target.value);
+  }, [debouncedSetNotes]);
+
+  // Memoize handlers
+  const handleCopyToClipboard = useCallback(async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      toast.success('Note copied to clipboard!');
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      toast.error('Failed to copy to clipboard');
     }
-  }, [mounted, isLoading, user, router]);
+  }, []);
 
-  if (!mounted || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-      </div>
-    );
-  }
-
-  if (!user || !profile) {
-    return null;
-  }
-
-  const handleGenerate = async (model: 'deepseek') => {
+  const handleGenerate = useCallback(async (model: 'deepseek') => {
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
       return;
@@ -73,7 +78,7 @@ export default function NotesRagContent() {
         },
         body: JSON.stringify({
           userTopic: notes,
-          userId: user.id,
+          userId: user?.id,
           model
         }),
       });
@@ -105,9 +110,9 @@ export default function NotesRagContent() {
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [notes, profile, user, updateProfile, creditCost]);
 
-  const handleGenerateLongForm = async () => {
+  const handleGenerateLongForm = useCallback(async () => {
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
       return;
@@ -131,8 +136,8 @@ export default function NotesRagContent() {
         },
         body: JSON.stringify({
           userTopic: notes,
-          userId: user.id,
-          isLongForm: true // New flag to indicate long-form generation
+          userId: user?.id,
+          isLongForm: true
         }),
       });
 
@@ -142,31 +147,53 @@ export default function NotesRagContent() {
       }
 
       const data = await response.json();
-      console.log("Long-form examples response:", data);
+      console.log("Long-form response:", data);
 
+      // Update the profile credits after successful generation
+      if (profile) {
+        const updatedProfile = {
+          ...profile,
+          credits: profile.credits - creditCost
+        };
+        await updateProfile(updatedProfile);
+      }
+
+      setGeneratedContent(data.result);
+      setSelectedExamples(data.selectedExamples);
     } catch (err) {
       console.error('Error generating long-form content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [notes, profile, user, updateProfile, creditCost]);
 
-  const handleCopyToClipboard = async (text: string, index: number) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedIndex(index);
-      toast.success('Note copied to clipboard!');
-      setTimeout(() => setCopiedIndex(null), 2000);
-    } catch (err) {
-      toast.error('Failed to copy to clipboard');
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isLoading && !user) {
+      router.replace('/');
     }
-  };
+  }, [mounted, isLoading, user, router]);
 
   // Split the content into individual notes
-  const splitNotes = (content: string): string[] => {
+  const splitNotes = useCallback((content: string): string[] => {
     return content.split(/Note \d+:\n/).filter(note => note.trim());
-  };
+  }, []);
+
+  if (!mounted || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+
+  if (!user || !profile) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -217,10 +244,10 @@ export default function NotesRagContent() {
               </label>
               <input
                 type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+                defaultValue={notes}
+                onChange={handleNoteChange}
                 placeholder="Enter a topic to generate notes about..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 transform-gpu"
               />
             </div>
 
@@ -282,7 +309,34 @@ export default function NotesRagContent() {
                 </div>
                 <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
                   <pre className="whitespace-pre-wrap font-mono text-sm text-[#181819]">
-                    {`Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. 
+                    {generatedContent?.longFormNote ? 
+                      `Act like a seasoned Substack creator who consistently goes viral with impactful, long-form notes. 
+A long-form note has a length of over 400 words, and is either EDUCATIONAL or shares a PERSONAL STORY. 
+You speak plainly, challenge assumptions, and avoid fluff. 
+Every sentence should be punchy and standalone.
+
+Below are 3 example viral Substack long-form notes:
+
+${selectedExamples || 'No examples selected yet'}
+
+User topic= ${notes}
+
+Rewrite each example note to focus on the user topic.
+- Transform each example into a new note on this topic.
+- Keep the same structure, same bullet points, same line breaks.
+- Make sure the notes you output contain at least 400 words.
+- Write each sentence on a new line.
+- Focus on notes that have either a strong EDUCATIONAL intent, or share a PERSONAL STORY - as these are the ones that work best as long-form notes. 
+- Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
+- For instance, if a note starts with a short story, keep it as a short story but adapt it to ${notes}.
+- If a note ends with a direct prompt, do so here as well.
+- Output exactly 3 rewritten notes, separated by the Markdown delimiter:
+
+###---###
+
+Output only the notes. 
+No explanations, no numbering, no extra commentary.` :
+                      `Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. 
 You speak plainly, challenge assumptions, and avoid fluff. 
 Every sentence should be punchy and standalone.
 
@@ -296,7 +350,7 @@ Rewrite each example note to focus on the user's topic.
 - Transform each example into a new note on this topic.
 - Keep the same structure, same bullet points, same line breaks, and overall length.
 - Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
-- For instance, if a note starts with a short story, keep it as a short story but adapt it to Growth Hacks.
+- For instance, if a note starts with a short story, keep it as a short story but adapt it to ${notes}.
 - If a note ends with a direct prompt, do so here as well.
 - Output exactly 3 rewritten notes, separated by the Markdown delimiter:
 
