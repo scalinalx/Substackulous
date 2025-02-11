@@ -43,7 +43,7 @@ export default function HomeRunContent() {
       // Process the posts to get title and first 500 characters
       const processedPosts = data.posts.slice(0, 50).map((post: any) => ({
         title: post.title,
-        excerpt: post.body.substring(0, 500) + '...',
+        excerpt: post.preview || '',
       }));
 
       setPosts(processedPosts);
