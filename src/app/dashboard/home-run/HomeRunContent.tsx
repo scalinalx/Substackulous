@@ -29,8 +29,7 @@ export default function HomeRunContent() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          substackUrl,
-          userId: user?.id,
+          url: substackUrl.trim()
         }),
       });
 
