@@ -16,6 +16,13 @@ const features = [
     color: "from-pink-500 to-rose-500"
   },
   {
+    title: "The Home Run",
+    description: "Generate viral content for your Substack with AI-powered brainstorming, notes, and posts.",
+    icon: "🚀",
+    href: "/dashboard/home-run",
+    color: "from-indigo-500 to-blue-500"
+  },
+  {
     title: "Idea Illustrator",
     description: "Transform your ideas into stunning visuals. No design skills needed.",
     icon: "✨",
