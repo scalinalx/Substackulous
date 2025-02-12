@@ -17,7 +17,49 @@ export default function HomeRunContent() {
   const [substackUrl, setSubstackUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [constructedPrompt, setConstructedPrompt] = useState<string>('');
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
+
+  const constructPrompt = (posts: Post[]) => {
+    const postsSection = posts.map(post => (
+      `Title: ${post.title}\nExcerpt: ${post.excerpt}\n`
+    )).join('\n');
+
+    return `You are an expert content analyst and Substack content coach. I will provide you with a collection of Substack posts, where each post includes a headline and a 500‑character snippet. Your task is to analyze this collection and extract detailed patterns across the following dimensions:
+
+Formatting:
+How are the headlines structured (capitalization, punctuation, use of symbols, etc.)?
+What is the layout of the snippets? (e.g., paragraph breaks, bullet points, emphasis on certain phrases)
+Please extract all formatting patterns that contribute to making the winners win. 
+
+Tone and Voice:
+What overall tone do the posts convey (e.g., energetic, authoritative, conversational, humorous)?
+What type of voice is used (first-person narrative, objective analysis, direct address to the reader)?
+
+Style:
+What are the common stylistic features? (e.g., use of rhetorical questions, metaphors, analogies, descriptive language, technical jargon)
+Are there consistent language choices or sentence structures?
+
+Topics and Themes:
+What recurring subjects or topics do the posts cover (e.g., Bitcoin, economic cycles, market trends)?
+Identify any common themes or ideas that appear across the posts.
+
+Ideas and Concepts:
+What innovative or recurring ideas are present? (e.g., predictions, strategies, risk management approaches, call-to-action elements)
+
+After you extract and list the patterns in each of these categories, please provide a structured summary that:
+1. Describes the overall style, tone, and voice of the content creator.
+2. Highlights the key topics and themes.
+
+Input (sorted in descending order by Total Engagement):
+
+${postsSection}
+
+Provide your answer in a structured format with clear headings for each category (Formatting, Tone and Voice, Style, Topics and Themes, Ideas).
+
+Be as detailed as possible. Focus on highlighting what makes winners win. 
+Think through this step by step.`;
+  };
 
   const fetchTopPosts = async () => {
     try {
@@ -47,7 +89,12 @@ export default function HomeRunContent() {
       }));
 
       setPosts(processedPosts);
-      toast.success('Posts fetched successfully!');
+      
+      // Construct and set the prompt
+      const prompt = constructPrompt(processedPosts);
+      setConstructedPrompt(prompt);
+      
+      toast.success('Analysis prompt generated successfully!');
     } catch (error) {
       console.error('Error fetching posts:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to fetch posts');
@@ -107,7 +154,7 @@ export default function HomeRunContent() {
                 type="url"
                 value={substackUrl}
                 onChange={(e) => setSubstackUrl(e.target.value)}
-                placeholder="https://yourname.substack.com"
+                placeholder="https://yourURL.substack.com"
                 className="w-full"
               />
             </div>
@@ -139,20 +186,17 @@ export default function HomeRunContent() {
             </div>
 
             {/* Results Section */}
-            {posts.length > 0 && (
+            {constructedPrompt && (
               <div className="mt-8 space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {activeSection === 'brainstorm' && 'Brainstorming Based on Your Top Posts'}
-                  {activeSection === 'notes' && 'Analyzing Posts for Note Generation'}
-                  {activeSection === 'post' && 'Analyzing Posts for Content Creation'}
+                  {activeSection === 'brainstorm' && 'Content Analysis Prompt for Brainstorming'}
+                  {activeSection === 'notes' && 'Content Analysis Prompt for Note Generation'}
+                  {activeSection === 'post' && 'Content Analysis Prompt for Post Creation'}
                 </h2>
-                <div className="space-y-4">
-                  {posts.map((post, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                      <h3 className="font-semibold text-gray-900 mb-2">{post.title}</h3>
-                      <p className="text-gray-600 text-sm">{post.excerpt}</p>
-                    </div>
-                  ))}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 overflow-x-auto">
+                    {constructedPrompt}
+                  </pre>
                 </div>
               </div>
             )}
