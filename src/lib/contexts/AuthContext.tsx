@@ -57,33 +57,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Handle navigation based on auth state
-  const handleAuthNavigation = useCallback(async (isAuthenticated: boolean) => {
-    if (!isInitialized) return;
-
-    const isAuthRoute = ['/login', '/signup', '/reset-password'].includes(pathname || '');
-    const isPublicRoute = ['/', '/about', '/contact'].includes(pathname || '');
-    const isDashboardRoute = pathname?.startsWith('/dashboard');
-
-    if (isAuthenticated) {
-      if (isAuthRoute) {
-        await router.replace('/dashboard');
-      }
-    } else {
-      if (isDashboardRoute) {
-        await router.replace('/login');
-      }
-    }
-  }, [pathname, router, isInitialized]);
-
   // Handle auth state initialization and changes
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
 
     const initializeAuth = async () => {
       try {
+        setIsLoading(true);
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        if (!isMounted) return;
+        
+        if (!mounted) return;
         
         if (error) throw error;
 
@@ -94,8 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        setUser(null);
+        setSession(null);
+        setProfile(null);
       } finally {
-        if (isMounted) {
+        if (mounted) {
           setIsLoading(false);
           setIsInitialized(true);
         }
@@ -106,40 +92,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        if (!isMounted) return;
+        if (!mounted) return;
 
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+        try {
+          setIsLoading(true);
+          
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
 
-        if (currentSession?.user) {
-          await fetchProfile(currentSession.user.id);
-        } else {
-          setProfile(null);
+          if (currentSession?.user) {
+            await fetchProfile(currentSession.user.id);
+          } else {
+            setProfile(null);
+          }
+
+          // Handle navigation after auth state changes
+          if (event === 'SIGNED_IN') {
+            await router.replace('/dashboard');
+          } else if (event === 'SIGNED_OUT') {
+            await router.replace('/login');
+          }
+        } catch (error) {
+          console.error('Auth state change error:', error);
+        } finally {
+          if (mounted) {
+            setIsLoading(false);
+            setIsInitialized(true);
+          }
         }
-
-        // Handle navigation after auth state changes
-        if (event === 'SIGNED_IN') {
-          await handleAuthNavigation(true);
-        } else if (event === 'SIGNED_OUT') {
-          await handleAuthNavigation(false);
-        }
-
-        setIsLoading(false);
-        setIsInitialized(true);
       }
     );
 
     return () => {
-      isMounted = false;
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, handleAuthNavigation]);
+  }, [fetchProfile, router]);
 
-  // Route protection effect
-  useEffect(() => {
-    if (!isInitialized) return;
-    handleAuthNavigation(!!user);
-  }, [user, isInitialized, handleAuthNavigation]);
+  const signOut = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      router.refresh();
+      await router.replace('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [router]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
@@ -249,23 +254,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   }, [user]);
-
-  const signOut = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
-      setProfile(null);
-      await router.push('/login');
-      router.refresh();
-    } catch (error) {
-      console.error('Logout failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [router]);
 
   const contextValue = useMemo(() => ({
     user,

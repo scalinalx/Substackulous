@@ -178,75 +178,30 @@ function extractNotesFromJson(examples: string): string {
  * @returns Object containing short notes and long-form note
  */
 function parseGeneratedNotes(content: string): { shortNotes: string[], longFormNote: string } {
-  // Initialize result object
-  const result = {
-    shortNotes: [] as string[],
-    longFormNote: ''
+  // Remove any "thinking" process text
+  const cleanedContent = removeThinkingProcess(content);
+
+  // Split into individual notes
+  const parts = cleanedContent.split('###---###').map(part => part.trim());
+
+  // Process each note
+  const shortNotes = parts.map(note => {
+    // Remove "Note:" or "Note X:" prefix
+    const cleanedNote = note.replace(/^note\s*\d*:\s*/i, '');
+    
+    // Split into sentences (handling multiple punctuation marks)
+    const sentences = cleanedNote.split(/(?<=[.!?])\s+/);
+    
+    if (sentences.length === 0) return '';
+    
+    // Make first sentence bold and join all sentences with newlines
+    return `**${sentences[0]}**\n${sentences.slice(1).join('\n')}`.trim();
+  });
+
+  return {
+    shortNotes: shortNotes.filter(note => note.length > 0),
+    longFormNote: '' // Currently not used but kept for future implementation
   };
-
-  try {
-    // Split content by triple dashes
-    const parts = content.split('###---###').map(part => part.trim());
-    
-    // Process each part
-    parts.forEach(part => {
-      if (part.toLowerCase().includes('long-form note:')) {
-        // This is the long-form note - split into sentences
-        const sentences = part
-          .replace(/^long-form note:\s*/i, '') // Remove "Long-form Note:" prefix
-          .split(/(?<=[.!?])\s+/)
-          .map(s => s.trim())
-          .filter(s => s);
-        
-        // Make first sentence bold
-        if (sentences.length > 0) {
-          sentences[0] = `**${sentences[0]}**`;
-        }
-        
-        result.longFormNote = sentences.join('\n');
-      } else if (part.trim()) {
-        // Remove "Note:" or "Note X:" prefix
-        const cleanedNote = part
-          .replace(/^note\s*\d*:\s*/i, '')  // Remove "Note:" or "Note X:" prefix
-          .trim();
-        
-        if (cleanedNote) {
-          // Split into sentences
-          const sentences = cleanedNote
-            .split(/(?<=[.!?])\s+/)
-            .map(s => s.trim())
-            .filter(s => s);
-          
-          // Make first sentence bold
-          if (sentences.length > 0) {
-            sentences[0] = `**${sentences[0]}**`;
-          }
-          
-          // Join sentences with newlines
-          result.shortNotes.push(sentences.join('\n'));
-        }
-      }
-    });
-
-    return result;
-  } catch (error) {
-    console.error('Error parsing generated notes:', error);
-    // If parsing fails, split the entire content into sentences
-    const sentences = content
-      .split(/(?<=[.!?])\s+/)
-      .map(s => s.trim())
-      .filter(s => s);
-    
-    // Make first sentence bold
-    if (sentences.length > 0) {
-      sentences[0] = `**${sentences[0]}**`;
-    }
-    
-    return {
-      shortNotes: [sentences.join('\n')],
-      longFormNote: ''
-    };
-  }
 }
 
 // -------------------------------
@@ -438,13 +393,10 @@ export async function POST(req: Request) {
     });
 
     const result = completion.choices[0]?.message?.content || '';
-    const cleanedResult = removeThinkingProcess(result);
+    const parsedNotes = parseGeneratedNotes(result);
 
     return NextResponse.json({
-      result: {
-        shortNotes: cleanedResult.split('###---###').map(note => note.trim()),
-        longFormNote: ''
-      },
+      result: parsedNotes,
       selectedExamples: selectedExamplesText
     });
 

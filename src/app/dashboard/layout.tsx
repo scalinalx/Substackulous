@@ -4,6 +4,7 @@ import DashboardNav from '@/app/components/DashboardNav';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function DashboardLayout({
   children,
@@ -20,18 +21,15 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!mounted || !isInitialized) return;
+    
     if (!isLoading && !isAuthenticated) {
       router.replace('/login');
     }
   }, [mounted, isInitialized, isLoading, isAuthenticated, router]);
 
   // Show loading state until mounted and auth is initialized
-  if (!mounted || !isInitialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-      </div>
-    );
+  if (!mounted || !isInitialized || isLoading) {
+    return <LoadingSpinner />;
   }
 
   // If not authenticated, render nothing (redirect will happen)
