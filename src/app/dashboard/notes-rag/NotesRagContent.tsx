@@ -87,6 +87,7 @@ export default function NotesRagContent() {
   const handleGenerate = useCallback(async (model: 'deepseek', e: React.MouseEvent<HTMLButtonElement>) => {
     // Prevent default button behavior
     e.preventDefault();
+    e.stopPropagation();
     
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
@@ -100,8 +101,6 @@ export default function NotesRagContent() {
 
     setError(null);
     setIsGenerating(true);
-    // Keep existing generated content until new one arrives
-    // setGeneratedContent(null);
 
     try {
       // First update the credits
@@ -113,6 +112,9 @@ export default function NotesRagContent() {
         });
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
@@ -123,7 +125,10 @@ export default function NotesRagContent() {
           userId: user?.id,
           model
         }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -131,15 +136,23 @@ export default function NotesRagContent() {
       }
 
       const data = await response.json();
+      
       if (!data.result) {
         throw new Error('No content received from the API');
       }
 
-      // Keep the notes value in state
-      localStorage.setItem('notesRagInput', notes);
-      setGeneratedContent(data.result);
-      setSelectedExamples(data.selectedExamples);
-      toast.success('Notes generated successfully!');
+      // Update state in a single batch
+      const stateUpdates = () => {
+        localStorage.setItem('notesRagInput', notes);
+        localStorage.setItem('notesRagContent', JSON.stringify(data.result));
+        setGeneratedContent(data.result);
+        setSelectedExamples(data.selectedExamples);
+        toast.success('Notes generated successfully!');
+      };
+
+      // Use React's batching
+      stateUpdates();
+
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
@@ -325,39 +338,41 @@ export default function NotesRagContent() {
           )}
 
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Your Topic
-              </label>
-              <input
-                type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Enter a topic to generate notes about..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 transform-gpu"
-              />
-            </div>
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Your Topic
+                </label>
+                <input
+                  type="text"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Enter a topic to generate notes about..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 transform-gpu"
+                />
+              </div>
 
-            <div className="flex gap-4">
-              <Button
-                onClick={(e) => handleGenerate('deepseek', e)}
-                disabled={isGenerating || !notes.trim() || (profile?.credits || 0) < creditCost}
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
-                type="button" // Explicitly set button type
-              >
-                {isGenerating ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Generating...
-                  </span>
-                ) : (
-                  'Generate 5 Notes'
-                )}
-              </Button>
-            </div>
+              <div className="flex gap-4">
+                <Button
+                  onClick={(e) => handleGenerate('deepseek', e)}
+                  disabled={isGenerating || !notes.trim() || (profile?.credits || 0) < creditCost}
+                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                  type="button"
+                >
+                  {isGenerating ? (
+                    <span className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Generating...
+                    </span>
+                  ) : (
+                    'Generate 5 Notes'
+                  )}
+                </Button>
+              </div>
+            </form>
           </div>
 
           <div className="mt-8">

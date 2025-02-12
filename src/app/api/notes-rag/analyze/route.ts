@@ -364,7 +364,7 @@ export async function POST(req: Request) {
         },
       ],
       model: "llama-3.3-70b-specdec",
-      temperature: 0.7, // Lower temperature for more focused selection
+      temperature: 0.97, // Lower temperature for more focused selection
       max_tokens: 4000,
       top_p: 0.95,
       stream: false,
