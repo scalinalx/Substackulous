@@ -17,7 +17,7 @@ export default function HomeRunContent() {
   const [substackUrl, setSubstackUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [constructedPrompt, setConstructedPrompt] = useState<string>('');
+  const [analysisResult, setAnalysisResult] = useState<string>('');
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
 
   const constructPrompt = (posts: Post[]) => {
@@ -61,9 +61,37 @@ Be as detailed as possible. Focus on highlighting what makes winners win.
 Think through this step by step.`;
   };
 
+  const analyzeWithGroq = async (prompt: string) => {
+    try {
+      const response = await fetch('/api/groq/analyze-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to analyze content');
+      }
+
+      const data = await response.json();
+      
+      // Remove content between <think> tags
+      const cleanedResult = data.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      
+      return cleanedResult;
+    } catch (error) {
+      console.error('Error analyzing content:', error);
+      throw error;
+    }
+  };
+
   const fetchTopPosts = async () => {
     try {
       setIsLoading(true);
+      setAnalysisResult('');
       
       const response = await fetch('/api/substack-pro/analyze-posts', {
         method: 'POST',
@@ -90,14 +118,15 @@ Think through this step by step.`;
 
       setPosts(processedPosts);
       
-      // Construct and set the prompt
+      // Construct prompt and analyze with Groq
       const prompt = constructPrompt(processedPosts);
-      setConstructedPrompt(prompt);
+      const result = await analyzeWithGroq(prompt);
+      setAnalysisResult(result);
       
-      toast.success('Analysis prompt generated successfully!');
+      toast.success('Content analysis completed successfully!');
     } catch (error) {
-      console.error('Error fetching posts:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to fetch posts');
+      console.error('Error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to analyze content');
     } finally {
       setIsLoading(false);
     }
@@ -186,17 +215,21 @@ Think through this step by step.`;
             </div>
 
             {/* Results Section */}
-            {constructedPrompt && (
+            {analysisResult && (
               <div className="mt-8 space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {activeSection === 'brainstorm' && 'Content Analysis Prompt for Brainstorming'}
-                  {activeSection === 'notes' && 'Content Analysis Prompt for Note Generation'}
-                  {activeSection === 'post' && 'Content Analysis Prompt for Post Creation'}
+                  {activeSection === 'brainstorm' && 'Content Analysis Results'}
+                  {activeSection === 'notes' && 'Generated Notes Analysis'}
+                  {activeSection === 'post' && 'Post Analysis Results'}
                 </h2>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 overflow-x-auto">
-                    {constructedPrompt}
-                  </pre>
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <div className="prose prose-sm max-w-none">
+                    {analysisResult.split('\n').map((line, index) => (
+                      <p key={index} className="mb-4">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
