@@ -401,7 +401,7 @@ export async function POST(req: Request) {
 
     // Generate with OpenAI
     const openaiCompletion = await openai.chat.completions.create({
-      model: "gpt-4o-latest",
+      model: "o3-mini",
       messages: [
         {
           role: "user",
