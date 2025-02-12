@@ -217,9 +217,8 @@ function buildPrompt(selectedExamples: string, userTopic: string): string {
   let prompt = `Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. 
 You speak plainly, challenge assumptions, and avoid fluff. 
 Every sentence should be punchy and standalone.
-Below are 3 example viral Substack notes:\n\n`;
+Below are 5 example viral Substack notes:\n\n`;
 
-  // Add the selected examples directly
   prompt += selectedExamples + '\n\n';
 
   const basePrompt = `
@@ -231,7 +230,7 @@ Rewrite each example note to focus on the user topic.
 - Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
 - For instance, if a note starts with a short story, keep it as a short story but adapt it to ${userTopic}.
 - If a note ends with a direct prompt, do so here as well.
-- Output exactly 3 rewritten notes, separated by the Markdown delimiter:
+- Output exactly 5 rewritten notes, separated by the Markdown delimiter:
 
 ###---###
 
@@ -245,7 +244,11 @@ Note 1
 Note 2
 ###---###
 Note 3
-  `;
+###---###
+Note 4
+###---###
+Note 5`;
+
   prompt += basePrompt;
   return prompt;
 }
@@ -306,148 +309,48 @@ Note 3`;
  */
 export async function POST(req: Request) {
   try {
-    const { userTopic, userId, isLongForm } = await req.json();
+    const { userTopic, userId, model = 'deepseek', isLongForm = false } = await req.json();
 
     if (!userTopic) {
-      return NextResponse.json(
-        { error: 'No topic provided' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
     }
 
-    // Read the entire JSONL file
-    const filePath = path.join(process.cwd(), 'data', 'substack_examples.jsonl');
-    const fileContents = await fs.readFile(filePath, 'utf8');
+    // Get examples from the database
+    const selectedExamples = retrieveExamples(userTopic, 5);
+    const examplesText = selectedExamples.map(ex => ex.note).join('\n\n');
 
-    // If it's a long-form request, use different example selection
-    if (isLongForm) {
-      const exampleLongSelectionPrompt = `Act as an expert content curator and expert Substack writer, the best in the world at publishing engaging, valuable content that always goes viral
+    // Use the buildPrompt function to construct the prompt
+    const prompt = buildPrompt(examplesText, userTopic);
 
-From this list of curated viral Substack notes choose the top 3 that would best work as frameworks/templates to write a new Substack long-form note on the THEME defined below. PRIORITIZE EXAMPLES THAT ARE EITHER EDUCATIONAL OR SHARE A PERSONALY STORY AND ARE LONGER THAN 8 SENTENCES. 
-Curated list:
-${fileContents}
-
-THEME= ${userTopic}
-
-Output only the top 3 examples and no other explanations or other text.
-Think through this step by step`;
-
-      const exampleLongSelectionResponse = await groq.chat.completions.create({
-        messages: [
-          {
-            role: 'user',
-            content: exampleLongSelectionPrompt,
-          },
-        ],
-        model: 'deepseek-r1-distill-llama-70b',
-        temperature: 1.34,
-        max_tokens: 11150,
-        top_p: 0.95,
-        stream: false,
-      });
-
-      const rawSelectedExamples = exampleLongSelectionResponse.choices[0]?.message?.content || '';
-      const cleanedFromThinking = removeThinkingProcess(rawSelectedExamples);
-      const selectedExamples = extractNotesFromJson(cleanedFromThinking);
-
-      console.log("Long-form selected examples:", selectedExamples);
-
-      // Build the long-form prompt using the selected examples
-      const longFormPrompt = buildLongFormPrompt(selectedExamples, userTopic);
-      console.log("Final long-form prompt being sent to LLM:", longFormPrompt);
-
-      // Generate the long-form notes using Groq
-      const completion = await groq.chat.completions.create({
-        messages: [
-          {
-            role: 'user',
-            content: longFormPrompt,
-          },
-        ],
-        model: 'llama-3.3-70b-specdec',
-        temperature: 1.37,
-        max_tokens: 3200,
-        top_p: 1,
-        stream: false,
-      });
-
-      const rawResult = completion.choices[0]?.message?.content || '';
-      const cleanedResult = removeThinkingProcess(rawResult);
-      const parsedNotes = parseGeneratedNotes(cleanedResult);
-
-      return NextResponse.json({
-        result: {
-          shortNotes: [],
-          longFormNote: parsedNotes.shortNotes.join('\n\n###---###\n\n')
-        },
-        selectedExamples: selectedExamples
-      });
-    }
-
-    // Original short-form note generation code
-    const exampleSelectionPrompt = `Act as an expert content curator and expert Substack writer, the best in the world at publishing engaging, valuable content that always goes viral
-
-From this list of curated viral Substack notes choose the top 3 that would best work as frameworks/templates to write a new Substack note on the THEME defined below. 
-Curated list:
-${fileContents}
-
-THEME= ${userTopic}
-
-Output only the top 3 examples and no other explanations or other text.
-Think through this step by step`;
-
-    const exampleSelectionResponse = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'user',
-          content: exampleSelectionPrompt,
-        },
-      ],
-      model: 'deepseek-r1-distill-llama-70b',
-      temperature: 1.34,
-      max_tokens: 11150,
-      top_p: 0.95,
-      stream: false,
-    });
-
-    const rawSelectedExamples = exampleSelectionResponse.choices[0]?.message?.content || '';
-    const cleanedFromThinking = removeThinkingProcess(rawSelectedExamples);
-    const selectedExamples = extractNotesFromJson(cleanedFromThinking);
-
-    // Build the main prompt using the selected examples from the first API call
-    const prompt = buildPrompt(selectedExamples, userTopic);
-    console.log("Final prompt being sent to LLM:", prompt); // Add logging to verify the prompt
-
-    // Second Groq call for generating the final content
     const completion = await groq.chat.completions.create({
       messages: [
         {
-          role: 'user',
+          role: "user",
           content: prompt,
         },
       ],
-      model: 'llama-3.3-70b-specdec',
+      model: "llama-3.3-70b-specdec",
       temperature: 1.37,
       max_tokens: 3200,
       top_p: 1,
       stream: false,
     });
 
-    const rawResult = completion.choices[0]?.message?.content || '';
-    const cleanedResult = removeThinkingProcess(rawResult);
-    const parsedNotes = parseGeneratedNotes(cleanedResult);
+    const result = completion.choices[0]?.message?.content || '';
+    const cleanedResult = removeThinkingProcess(result);
 
     return NextResponse.json({
       result: {
-        shortNotes: parsedNotes.shortNotes,
-        longFormNote: parsedNotes.longFormNote
+        shortNotes: cleanedResult.split('###---###').map(note => note.trim()),
+        longFormNote: ''
       },
-      selectedExamples: selectedExamples
+      selectedExamples: examplesText
     });
+
   } catch (error) {
     console.error('Error:', error);
     return NextResponse.json(
-      { error: 'Failed to generate content' },
+      { error: 'Failed to analyze content' },
       { status: 500 }
     );
   }
