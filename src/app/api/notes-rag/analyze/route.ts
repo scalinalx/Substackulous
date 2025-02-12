@@ -410,9 +410,7 @@ export async function POST(req: Request) {
       ],
       temperature: 1,
       max_completion_tokens: 2048,
-      top_p: 1,
-      frequency_penalty: 0.4,
-      presence_penalty: 0
+      top_p: 1
     });
 
     const llamaResult = llamaCompletion.choices[0]?.message?.content || '';
