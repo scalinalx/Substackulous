@@ -84,7 +84,10 @@ export default function NotesRagContent() {
     }
   }, []);
 
-  const handleGenerate = useCallback(async (model: 'deepseek') => {
+  const handleGenerate = useCallback(async (model: 'deepseek', e: React.MouseEvent<HTMLButtonElement>) => {
+    // Prevent default button behavior
+    e.preventDefault();
+    
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
       return;
@@ -97,6 +100,8 @@ export default function NotesRagContent() {
 
     setError(null);
     setIsGenerating(true);
+    // Keep existing generated content until new one arrives
+    // setGeneratedContent(null);
 
     try {
       // First update the credits
@@ -335,9 +340,10 @@ export default function NotesRagContent() {
 
             <div className="flex gap-4">
               <Button
-                onClick={() => handleGenerate('deepseek')}
+                onClick={(e) => handleGenerate('deepseek', e)}
                 disabled={isGenerating || !notes.trim() || (profile?.credits || 0) < creditCost}
                 className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                type="button" // Explicitly set button type
               >
                 {isGenerating ? (
                   <span className="flex items-center justify-center">
