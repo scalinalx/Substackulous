@@ -25,14 +25,9 @@ export default function NotesRagContent() {
   const [mounted, setMounted] = useState(false);
   const { user, profile, isLoading: authLoading, updateProfile } = useAuth();
   const router = useRouter();
-  const [notes, setNotes] = useState(() => {
-    // Initialize from localStorage if available
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('notesRagInput');
-      return saved || '';
-    }
-    return '';
-  });
+  
+  // Initialize notes without localStorage
+  const [notes, setNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
@@ -41,37 +36,27 @@ export default function NotesRagContent() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [currentTopic, setCurrentTopic] = useState<string>('');
 
-  // Remove the localStorage initialization for generatedContent
+  // Clear localStorage on unmount or when user signs out
   useEffect(() => {
-    if (notes) {
-      localStorage.setItem('notesRagInput', notes);
-      setCurrentTopic(notes);
+    if (!user) {
+      localStorage.removeItem('notesRagInput');
+      localStorage.removeItem('notesRagContent');
+      setNotes('');
+      setGeneratedContent(null);
+      setCurrentTopic('');
     }
-  }, [notes]);
+  }, [user]);
 
-  // Persist generated content to localStorage
+  // Load saved notes only when component mounts and user is authenticated
   useEffect(() => {
-    if (generatedContent) {
-      localStorage.setItem('notesRagContent', JSON.stringify(generatedContent));
+    if (mounted && user) {
+      const saved = localStorage.getItem('notesRagInput');
+      if (saved) {
+        setNotes(saved);
+        setCurrentTopic(saved);
+      }
     }
-  }, [generatedContent]);
-
-  // Create a stable reference for the setNotes function
-  const setNotesStable = useCallback((value: string) => {
-    setNotes(value);
-  }, []);
-
-  // Debounced note update using useCallback with proper timeout handling
-  const debouncedSetNotes = useCallback((value: string) => {
-    const timeoutId = setTimeout(() => setNotesStable(value), 300);
-    return () => clearTimeout(timeoutId);
-  }, [setNotesStable]);
-
-  const handleNoteChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setNotes(value); // Update immediately for UI
-    debouncedSetNotes(value); // Debounce for processing
-  }, [debouncedSetNotes]);
+  }, [mounted, user]);
 
   // Memoize handlers
   const handleCopyToClipboard = useCallback(async (text: string, index: number) => {
@@ -143,7 +128,10 @@ export default function NotesRagContent() {
         throw new Error('No content received from the API');
       }
 
-      // Update state in a single batch
+      // Save current state to localStorage
+      localStorage.setItem('notesRagInput', notes);
+
+      // Update state
       setGeneratedContent(data.result);
       setSelectedExamples(data.selectedExamples);
       toast.success('Notes generated successfully!');
@@ -261,10 +249,19 @@ export default function NotesRagContent() {
     return () => clearTimeout(errorTimeout);
   }, [error]);
 
+  // Mount effect
   useEffect(() => {
     setMounted(true);
+    return () => {
+      // Cleanup on unmount
+      setMounted(false);
+      setGeneratedContent(null);
+      setNotes('');
+      setCurrentTopic('');
+    };
   }, []);
 
+  // Auth redirect effect
   useEffect(() => {
     if (mounted && !authLoading && !user) {
       router.replace('/');
