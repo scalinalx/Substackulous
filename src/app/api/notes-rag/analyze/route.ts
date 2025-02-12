@@ -186,30 +186,43 @@ function parseGeneratedNotes(content: string): { shortNotes: string[], longFormN
 
   try {
     // Split content by triple dashes
-    const parts = content.split('---').map(part => part.trim());
+    const parts = content.split('###---###').map(part => part.trim());
     
     // Process each part
     parts.forEach(part => {
       if (part.toLowerCase().includes('long-form note:')) {
         // This is the long-form note - split into sentences
         const sentences = part
+          .replace(/^long-form note:\s*/i, '') // Remove "Long-form Note:" prefix
           .split(/(?<=[.!?])\s+/)
           .map(s => s.trim())
           .filter(s => s);
+        
+        // Make first sentence bold
+        if (sentences.length > 0) {
+          sentences[0] = `**${sentences[0]}**`;
+        }
+        
         result.longFormNote = sentences.join('\n');
       } else if (part.trim()) {
-        // This is a short note - split into sentences
+        // Remove "Note:" or "Note X:" prefix
         const cleanedNote = part
-          .replace(/^\*\*Note \d+:\s*/, '')  // Remove "**Note X:" prefix
-          .replace(/\*\*/g, '')              // Remove any remaining asterisks
+          .replace(/^note\s*\d*:\s*/i, '')  // Remove "Note:" or "Note X:" prefix
           .trim();
         
         if (cleanedNote) {
-          // Split into sentences and join with newlines
+          // Split into sentences
           const sentences = cleanedNote
             .split(/(?<=[.!?])\s+/)
             .map(s => s.trim())
             .filter(s => s);
+          
+          // Make first sentence bold
+          if (sentences.length > 0) {
+            sentences[0] = `**${sentences[0]}**`;
+          }
+          
+          // Join sentences with newlines
           result.shortNotes.push(sentences.join('\n'));
         }
       }
@@ -223,6 +236,12 @@ function parseGeneratedNotes(content: string): { shortNotes: string[], longFormN
       .split(/(?<=[.!?])\s+/)
       .map(s => s.trim())
       .filter(s => s);
+    
+    // Make first sentence bold
+    if (sentences.length > 0) {
+      sentences[0] = `**${sentences[0]}**`;
+    }
+    
     return {
       shortNotes: [sentences.join('\n')],
       longFormNote: ''
@@ -243,7 +262,7 @@ function parseGeneratedNotes(content: string): { shortNotes: string[], longFormN
 function buildPrompt(selectedExamples: string, userTopic: string): string {
   let prompt = `Act like a seasoned Substack creator who consistently goes viral with concise, impactful notes. 
 You speak plainly, challenge assumptions, and avoid fluff. 
-Every sentence should be punchy and standalone.
+Every sentence should be punchy and standalone. Use only natural language, speak plaiin English. The notes should be written in a way that is easy to understand and follow even by someone who is 12 years old.
 Below are 5 example viral Substack notes:\n\n`;
 
   prompt += selectedExamples + '\n\n';
