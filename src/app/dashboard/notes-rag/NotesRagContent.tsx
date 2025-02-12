@@ -19,13 +19,41 @@ export default function NotesRagContent() {
   const [mounted, setMounted] = useState(false);
   const { user, profile, isLoading: authLoading, updateProfile } = useAuth();
   const router = useRouter();
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('notesRagInput');
+      return saved || '';
+    }
+    return '';
+  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
+  const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('notesRagContent');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
   const [selectedExamples, setSelectedExamples] = useState<string | null>(null);
   const creditCost = 1;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  // Persist notes input to localStorage
+  useEffect(() => {
+    if (notes) {
+      localStorage.setItem('notesRagInput', notes);
+    }
+  }, [notes]);
+
+  // Persist generated content to localStorage
+  useEffect(() => {
+    if (generatedContent) {
+      localStorage.setItem('notesRagContent', JSON.stringify(generatedContent));
+    }
+  }, [generatedContent]);
 
   // Create a stable reference for the setNotes function
   const setNotesStable = useCallback((value: string) => {
@@ -69,10 +97,17 @@ export default function NotesRagContent() {
 
     setError(null);
     setIsGenerating(true);
-    setGeneratedContent(null);
-    setSelectedExamples(null);
 
     try {
+      // First update the credits
+      if (profile) {
+        const updatedCredits = profile.credits - creditCost;
+        await updateProfile({
+          ...profile,
+          credits: updatedCredits
+        });
+      }
+
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
@@ -95,20 +130,24 @@ export default function NotesRagContent() {
         throw new Error('No content received from the API');
       }
 
-      // Update the profile credits after successful generation
-      if (profile) {
-        const updatedProfile = {
-          ...profile,
-          credits: profile.credits - creditCost
-        };
-        await updateProfile(updatedProfile);
-      }
-
       setGeneratedContent(data.result);
       setSelectedExamples(data.selectedExamples);
+      toast.success('Notes generated successfully!');
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
+      
+      // If there was an error, try to restore the credits
+      if (profile) {
+        try {
+          await updateProfile({
+            ...profile,
+            credits: profile.credits // Restore original credits
+          });
+        } catch (creditError) {
+          console.error('Error restoring credits:', creditError);
+        }
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -188,9 +227,9 @@ export default function NotesRagContent() {
     const loadingTimeout = setTimeout(() => {
       if (isGenerating) {
         setIsGenerating(false);
-        console.log('Forced loading state reset after timeout');
+        setError('Generation timed out. Please try again.');
       }
-    }, 10000); // Reset loading state after 10 seconds
+    }, 30000); // Reset loading state after 30 seconds
 
     return () => clearTimeout(loadingTimeout);
   }, [isGenerating]);

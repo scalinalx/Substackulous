@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from '@/app/components/ui/button';
@@ -138,7 +138,9 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
   const fetchTopPosts = async () => {
     try {
       setIsLoading(true);
-      setResults({ analysis: '', ideas: '', shortNotes: [] });
+      
+      // Don't reset results here, as it causes a flash of empty content
+      // setResults({ analysis: '', ideas: '', shortNotes: [] });
       
       const response = await fetch('/api/substack-pro/analyze-posts', {
         method: 'POST',
@@ -168,31 +170,68 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
       // Construct prompt and analyze with Groq
       const prompt = constructPrompt(processedPosts);
       const result = await analyzeWithGroq(prompt);
-      setResults(result);
+      
+      // Update results in a single state update
+      setResults(prevResults => ({
+        ...prevResults,
+        ...result
+      }));
       
       toast.success('Content analysis completed successfully!');
     } catch (error) {
       console.error('Error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to analyze content');
+      throw error; // Re-throw to be handled by the calling function
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Separate handlers for each action to prevent state conflicts
   const handleBrainstorm = async () => {
-    setActiveSection('brainstorm');
-    await fetchTopPosts();
+    try {
+      setActiveSection('brainstorm');
+      await fetchTopPosts();
+    } catch (error) {
+      console.error('Brainstorm error:', error);
+      setActiveSection(null);
+    }
   };
 
   const handleGenerateNotes = async () => {
-    setActiveSection('notes');
-    await fetchTopPosts();
+    try {
+      setActiveSection('notes');
+      await fetchTopPosts();
+    } catch (error) {
+      console.error('Generate notes error:', error);
+      setActiveSection(null);
+    }
   };
 
   const handleGeneratePost = async () => {
-    setActiveSection('post');
-    await fetchTopPosts();
+    try {
+      setActiveSection('post');
+      await fetchTopPosts();
+    } catch (error) {
+      console.error('Generate post error:', error);
+      setActiveSection(null);
+    }
   };
+
+  // Add useEffect to persist substackUrl
+  useEffect(() => {
+    const savedUrl = localStorage.getItem('substackUrl');
+    if (savedUrl) {
+      setSubstackUrl(savedUrl);
+    }
+  }, []);
+
+  // Save substackUrl when it changes
+  useEffect(() => {
+    if (substackUrl) {
+      localStorage.setItem('substackUrl', substackUrl);
+    }
+  }, [substackUrl]);
 
   // Helper function to get the appropriate content based on active section
   const getDisplayContent = () => {
