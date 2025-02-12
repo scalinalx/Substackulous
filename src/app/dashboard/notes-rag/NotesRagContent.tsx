@@ -36,27 +36,41 @@ export default function NotesRagContent() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [currentTopic, setCurrentTopic] = useState<string>('');
 
-  // Clear localStorage on unmount or when user signs out
+  // Mount effect - simplified
   useEffect(() => {
-    if (!user) {
+    setMounted(true);
+  }, []);
+
+  // Auth redirect effect - modified to be more robust
+  useEffect(() => {
+    if (!authLoading) {  // Only act when auth state is determined
+      if (!user) {
+        router.replace('/');
+      }
+    }
+  }, [authLoading, user, router]);
+
+  // Clear localStorage and state on unmount or when user signs out
+  useEffect(() => {
+    if (!authLoading && !user) {  // Only clear when we know user is signed out
       localStorage.removeItem('notesRagInput');
       localStorage.removeItem('notesRagContent');
       setNotes('');
       setGeneratedContent(null);
       setCurrentTopic('');
     }
-  }, [user]);
+  }, [authLoading, user]);
 
   // Load saved notes only when component mounts and user is authenticated
   useEffect(() => {
-    if (mounted && user) {
+    if (mounted && !authLoading && user) {  // Only load when fully mounted and authenticated
       const saved = localStorage.getItem('notesRagInput');
       if (saved) {
         setNotes(saved);
         setCurrentTopic(saved);
       }
     }
-  }, [mounted, user]);
+  }, [mounted, authLoading, user]);
 
   // Memoize handlers
   const handleCopyToClipboard = useCallback(async (text: string, index: number) => {
@@ -273,18 +287,23 @@ export default function NotesRagContent() {
     return content.split(/Note \d+:\n/).filter(note => note.trim());
   }, []);
 
-  // Loading state
+  // Loading state - modified to be more specific
   if (!mounted || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-600">Loading your dashboard...</p>
       </div>
     );
   }
 
-  // Auth check
+  // Auth check - modified to be more explicit
   if (!user || !profile) {
-    return null;
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <p className="text-gray-600">Please sign in to access this page</p>
+      </div>
+    );
   }
 
   return (
