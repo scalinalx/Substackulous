@@ -12,12 +12,17 @@ interface Post {
   excerpt: string;
 }
 
+interface AnalysisResults {
+  analysis: string;
+  ideas: string;
+}
+
 export default function HomeRunContent() {
   const { user, profile } = useAuth();
   const [substackUrl, setSubstackUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [analysisResult, setAnalysisResult] = useState<string>('');
+  const [results, setResults] = useState<AnalysisResults>({ analysis: '', ideas: '' });
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
 
   const constructPrompt = (posts: Post[]) => {
@@ -47,7 +52,7 @@ Identify any common themes or ideas that appear across the posts.
 Ideas and Concepts:
 What innovative or recurring ideas are present? (e.g., predictions, strategies, risk management approaches, call-to-action elements)
 
-After you extract and list the patterns in each of these categories, please provide a structured summary that:
+After you extract and list the patterns in each of these categories, please provide a detailed, comprehensive, insightful and nuanced structured summary that:
 1. Describes the overall style, tone, and voice of the content creator.
 2. Highlights the key topics and themes.
 
@@ -61,9 +66,10 @@ Be as detailed as possible. Focus on highlighting what makes winners win.
 Think through this step by step.`;
   };
 
-  const analyzeWithGroq = async (prompt: string) => {
+  const analyzeWithGroq = async (prompt: string): Promise<AnalysisResults> => {
     try {
-      const response = await fetch('/api/groq/analyze-content', {
+      // First API call for content analysis
+      const analysisResponse = await fetch('/api/groq/analyze-content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,17 +77,56 @@ Think through this step by step.`;
         body: JSON.stringify({ prompt }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
+      if (!analysisResponse.ok) {
+        const error = await analysisResponse.json();
         throw new Error(error.message || 'Failed to analyze content');
       }
 
-      const data = await response.json();
+      const analysisData = await analysisResponse.json();
+      const cleanedAnalysis = analysisData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+
+      // Second API call for viral post ideas
+      const viralIdeasPrompt = `Act as an expert viral content strategist and creative writer for Substack. You will work solely from the structured analysis provided below, which outlines a successful content creator's formatting, tone, voice, style, topics, themes, and recurring ideas. 
+
+Based on this analysis, please first determine:
+1. The most appropriate FIELD/INDUSTRY that the content belongs to.
+2. The TARGET AUDIENCE that the content is meant to engage.
+
+Note: Use your best inference based on the analysis context if these details are not explicitly mentioned.
+
+The CONTENT STRATEGY GOAL is fixed: to establish your presence on Substack, grow your Substack audience, engage & connect with your community, and maximize your conversion rate from free subscribers to paid.
+
+Using the above context and your inferred FIELD/INDUSTRY and TARGET AUDIENCE, generate **10 viral post ideas** for Substack. For each idea, provide:
+
+1. **A catchy headline:** Use attention-grabbing elements such as emojis, numbers, or rhetorical questions, in line with the analysis.
+2. **A brief concept description (2–3 sentences):** Outline the post's content, structure, and key engagement hooks, explaining how it aligns with the style, tone, and themes from the analysis.
+
+Below is the structured analysis context:
+
+${cleanedAnalysis}
+
+Output ONLY the 10 viral ideas. Do not output any addition explanation or exposition or clarifications. Please work through this task step-by-step, first identifying the FIELD/INDUSTRY and TARGET AUDIENCE from the analysis, and then provide your list of 10 viral post ideas.`;
+
+      const ideasResponse = await fetch('/api/groq/analyze-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: viralIdeasPrompt }),
+      });
+
+      if (!ideasResponse.ok) {
+        const error = await ideasResponse.json();
+        throw new Error(error.message || 'Failed to generate viral ideas');
+      }
+
+      const ideasData = await ideasResponse.json();
+      const cleanedIdeas = ideasData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       
-      // Remove content between <think> tags
-      const cleanedResult = data.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-      
-      return cleanedResult;
+      return {
+        analysis: cleanedAnalysis,
+        ideas: cleanedIdeas
+      };
     } catch (error) {
       console.error('Error analyzing content:', error);
       throw error;
@@ -91,7 +136,7 @@ Think through this step by step.`;
   const fetchTopPosts = async () => {
     try {
       setIsLoading(true);
-      setAnalysisResult('');
+      setResults({ analysis: '', ideas: '' });
       
       const response = await fetch('/api/substack-pro/analyze-posts', {
         method: 'POST',
@@ -121,7 +166,7 @@ Think through this step by step.`;
       // Construct prompt and analyze with Groq
       const prompt = constructPrompt(processedPosts);
       const result = await analyzeWithGroq(prompt);
-      setAnalysisResult(result);
+      setResults(result);
       
       toast.success('Content analysis completed successfully!');
     } catch (error) {
@@ -145,6 +190,14 @@ Think through this step by step.`;
   const handleGeneratePost = async () => {
     setActiveSection('post');
     await fetchTopPosts();
+  };
+
+  // Helper function to get the appropriate content based on active section
+  const getDisplayContent = () => {
+    if (activeSection === 'brainstorm') {
+      return results.ideas;
+    }
+    return results.analysis;
   };
 
   return (
@@ -215,16 +268,16 @@ Think through this step by step.`;
             </div>
 
             {/* Results Section */}
-            {analysisResult && (
+            {(results.analysis || results.ideas) && (
               <div className="mt-8 space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {activeSection === 'brainstorm' && 'Content Analysis Results'}
-                  {activeSection === 'notes' && 'Generated Notes Analysis'}
-                  {activeSection === 'post' && 'Post Analysis Results'}
+                  {activeSection === 'brainstorm' && '10 Viral Post Ideas'}
+                  {activeSection === 'notes' && 'Content Analysis Results'}
+                  {activeSection === 'post' && 'Content Analysis Results'}
                 </h2>
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <div className="prose prose-sm max-w-none">
-                    {analysisResult.split('\n').map((line, index) => (
+                    {getDisplayContent().split('\n').map((line, index) => (
                       <p key={index} className="mb-4">
                         {line}
                       </p>
