@@ -300,6 +300,36 @@ Note 3`;
   return prompt;
 }
 
+/**
+ * Builds the prompt for selecting the most appropriate examples
+ * @param allExamples All available examples from the JSONL file
+ * @param userTopic User's input topic
+ * @returns Selection prompt string
+ */
+function buildExampleSelectionPrompt(allExamples: NoteExample[], userTopic: string): string {
+  const examplesText = allExamples.map(ex => `Note: ${ex.note}\nLikes: ${ex.likes || 0}`).join('\n\n');
+  
+  return `You are an expert content curator for Substack. Your task is to select the 5 most relevant and high-performing examples from the provided list that would work best as templates/inspiration for writing about the user's topic.
+
+USER'S TOPIC: ${userTopic}
+
+SELECTION CRITERIA:
+1. Relevance to the topic (either direct topic match or similar content structure that could be adapted)
+2. Performance (indicated by likes)
+3. Diversity in writing styles (to provide varied templates)
+4. Strong hooks and viral potential
+5. Clear structure that can be replicated
+
+Below are all available examples with their engagement metrics:
+
+${examplesText}
+
+Select exactly 5 examples that would work best as templates for writing about "${userTopic}".
+Return ONLY the selected notes, separated by ###---###.
+Do not include the likes count or any explanations.
+Think through this step by step, but only output the final selection.`;
+}
+
 // -------------------------------
 // API Route Handler
 // -------------------------------
@@ -315,19 +345,43 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
     }
 
-    // Get examples from the database
-    const selectedExamples = retrieveExamples(userTopic, 5);
-    const examplesText = selectedExamples.map(ex => ex.note).join('\n\n');
+    // Initialize if needed
+    if (!initialized) {
+      await init();
+    }
 
-    // Use the buildPrompt function to construct the prompt
-    const prompt = buildPrompt(examplesText, userTopic);
-    console.log(`Final prompt for LLM: ${prompt}`);
+    // Step 1: Use LLM to select the most appropriate examples
+    console.log("Step 1: Selecting examples with LLM");
+    const selectionPrompt = buildExampleSelectionPrompt(examples, userTopic);
+    console.log("Example selection prompt:", selectionPrompt);
+
+    const selectionCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: selectionPrompt,
+        },
+      ],
+      model: "llama-3.3-70b-specdec",
+      temperature: 0.7, // Lower temperature for more focused selection
+      max_tokens: 4000,
+      top_p: 0.95,
+      stream: false,
+    });
+
+    const selectedExamplesText = selectionCompletion.choices[0]?.message?.content || '';
+    console.log("Selected examples:", selectedExamplesText);
+
+    // Step 2: Generate new notes using the selected examples
+    console.log("Step 2: Generating new notes using selected examples");
+    const generationPrompt = buildPrompt(selectedExamplesText, userTopic);
+    console.log("Final generation prompt:", generationPrompt);
 
     const completion = await groq.chat.completions.create({
       messages: [
         {
           role: "user",
-          content: prompt,
+          content: generationPrompt,
         },
       ],
       model: "llama-3.3-70b-specdec",
@@ -345,7 +399,7 @@ export async function POST(req: Request) {
         shortNotes: cleanedResult.split('###---###').map(note => note.trim()),
         longFormNote: ''
       },
-      selectedExamples: examplesText
+      selectedExamples: selectedExamplesText
     });
 
   } catch (error) {
