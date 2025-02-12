@@ -22,7 +22,6 @@ type GeneratedResult = {
 };
 
 export default function NotesRagContent() {
-  const [mounted, setMounted] = useState(false);
   const { user, profile, isLoading: authLoading, updateProfile } = useAuth();
   const router = useRouter();
   
@@ -36,41 +35,29 @@ export default function NotesRagContent() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [currentTopic, setCurrentTopic] = useState<string>('');
 
-  // Mount effect - simplified
+  // Single auth effect to handle all auth-related state
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    // If auth is still loading, do nothing
+    if (authLoading) return;
 
-  // Auth redirect effect - modified to be more robust
-  useEffect(() => {
-    if (!authLoading) {  // Only act when auth state is determined
-      if (!user) {
-        router.replace('/');
-      }
-    }
-  }, [authLoading, user, router]);
-
-  // Clear localStorage and state on unmount or when user signs out
-  useEffect(() => {
-    if (!authLoading && !user) {  // Only clear when we know user is signed out
+    // If no user, redirect and clear state
+    if (!user) {
       localStorage.removeItem('notesRagInput');
       localStorage.removeItem('notesRagContent');
       setNotes('');
       setGeneratedContent(null);
       setCurrentTopic('');
+      router.replace('/');
+      return;
     }
-  }, [authLoading, user]);
 
-  // Load saved notes only when component mounts and user is authenticated
-  useEffect(() => {
-    if (mounted && !authLoading && user) {  // Only load when fully mounted and authenticated
-      const saved = localStorage.getItem('notesRagInput');
-      if (saved) {
-        setNotes(saved);
-        setCurrentTopic(saved);
-      }
+    // If user is authenticated, load saved data
+    const saved = localStorage.getItem('notesRagInput');
+    if (saved) {
+      setNotes(saved);
+      setCurrentTopic(saved);
     }
-  }, [mounted, authLoading, user]);
+  }, [authLoading, user, router]);
 
   // Memoize handlers
   const handleCopyToClipboard = useCallback(async (text: string, index: number) => {
@@ -263,32 +250,8 @@ export default function NotesRagContent() {
     return () => clearTimeout(errorTimeout);
   }, [error]);
 
-  // Mount effect
-  useEffect(() => {
-    setMounted(true);
-    return () => {
-      // Cleanup on unmount
-      setMounted(false);
-      setGeneratedContent(null);
-      setNotes('');
-      setCurrentTopic('');
-    };
-  }, []);
-
-  // Auth redirect effect
-  useEffect(() => {
-    if (mounted && !authLoading && !user) {
-      router.replace('/');
-    }
-  }, [mounted, authLoading, user, router]);
-
-  // Split the content into individual notes
-  const splitNotes = useCallback((content: string): string[] => {
-    return content.split(/Note \d+:\n/).filter(note => note.trim());
-  }, []);
-
-  // Loading state - modified to be more specific
-  if (!mounted || authLoading) {
+  // Loading state
+  if (authLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
@@ -297,7 +260,7 @@ export default function NotesRagContent() {
     );
   }
 
-  // Auth check - modified to be more explicit
+  // Auth check
   if (!user || !profile) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
@@ -305,6 +268,9 @@ export default function NotesRagContent() {
       </div>
     );
   }
+
+  // Debug output
+  console.log('Auth state:', { authLoading, user: !!user, profile: !!profile });
 
   return (
     <div className="min-h-screen bg-gray-50">
