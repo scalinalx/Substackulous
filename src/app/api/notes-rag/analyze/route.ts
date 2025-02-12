@@ -321,6 +321,7 @@ export async function POST(req: Request) {
 
     // Use the buildPrompt function to construct the prompt
     const prompt = buildPrompt(examplesText, userTopic);
+    console.log(`Final prompt for LLM: ${prompt}`);
 
     const completion = await groq.chat.completions.create({
       messages: [
