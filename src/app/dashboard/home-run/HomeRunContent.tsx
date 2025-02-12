@@ -127,7 +127,7 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
       return {
         analysis: cleanedAnalysis,
         ideas: cleanedIdeas,
-        shortNotes: cleanedIdeas.split('\n').slice(0, 5).map(note => note.trim())
+        shortNotes: cleanedIdeas.split('\n').slice(0, 5).map((note: string) => note.trim())
       };
     } catch (error) {
       console.error('Error analyzing content:', error);
