@@ -22,7 +22,7 @@ export default function HomeRunContent() {
 
   const constructPrompt = (posts: Post[]) => {
     const postsSection = posts.map(post => (
-      `Title: ${post.title}\nExcerpt: ${post.excerpt}\n`
+      `${post.title}\n${post.excerpt}\n`
     )).join('\n');
 
     return `You are an expert content analyst and Substack content coach. I will provide you with a collection of Substack posts, where each post includes a headline and a 500‑character snippet. Your task is to analyze this collection and extract detailed patterns across the following dimensions:
