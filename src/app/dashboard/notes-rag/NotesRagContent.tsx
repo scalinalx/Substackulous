@@ -327,16 +327,19 @@ export default function NotesRagContent() {
                 {/* Short Notes */}
                 {generatedContent.shortNotes.length > 0 && (
                   <div className="mt-8">
-                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Short Notes:</h3>
+                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
                     <div className="grid gap-4">
                       {generatedContent.shortNotes.map((note, index) => (
                         <div
                           key={index}
                           className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
                         >
-                          <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note.trim()}</pre>
+                          <div 
+                            className="whitespace-pre-wrap font-sans text-[#181819] pr-12"
+                            dangerouslySetInnerHTML={{ __html: note }}
+                          />
                           <button
-                            onClick={() => handleCopyToClipboard(note.trim(), index)}
+                            onClick={() => handleCopyToClipboard(note, index)}
                             className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
                               copiedIndex === index
                                 ? 'text-green-600 bg-green-50'

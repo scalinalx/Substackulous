@@ -15,6 +15,7 @@ interface Post {
 interface AnalysisResults {
   analysis: string;
   ideas: string;
+  shortNotes: string[];
 }
 
 export default function HomeRunContent() {
@@ -22,7 +23,7 @@ export default function HomeRunContent() {
   const [substackUrl, setSubstackUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [results, setResults] = useState<AnalysisResults>({ analysis: '', ideas: '' });
+  const [results, setResults] = useState<AnalysisResults>({ analysis: '', ideas: '', shortNotes: [] });
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
 
   const constructPrompt = (posts: Post[]) => {
@@ -125,7 +126,8 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
       
       return {
         analysis: cleanedAnalysis,
-        ideas: cleanedIdeas
+        ideas: cleanedIdeas,
+        shortNotes: cleanedIdeas.split('\n').slice(0, 5).map(note => note.trim())
       };
     } catch (error) {
       console.error('Error analyzing content:', error);
@@ -136,7 +138,7 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
   const fetchTopPosts = async () => {
     try {
       setIsLoading(true);
-      setResults({ analysis: '', ideas: '' });
+      setResults({ analysis: '', ideas: '', shortNotes: [] });
       
       const response = await fetch('/api/substack-pro/analyze-posts', {
         method: 'POST',
@@ -195,7 +197,8 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
   // Helper function to get the appropriate content based on active section
   const getDisplayContent = () => {
     if (activeSection === 'brainstorm') {
-      return results.ideas;
+      // Return the short notes joined with line breaks
+      return results.shortNotes.join('\n\n---\n\n');
     }
     return results.analysis;
   };
@@ -268,20 +271,31 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
             </div>
 
             {/* Results Section */}
-            {(results.analysis || results.ideas) && (
+            {(results.shortNotes?.length > 0 || results.analysis) && (
               <div className="mt-8 space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {activeSection === 'brainstorm' && '10 Viral Post Ideas'}
-                  {activeSection === 'notes' && 'Content Analysis Results'}
-                  {activeSection === 'post' && 'Content Analysis Results'}
+                  {activeSection === 'brainstorm' ? '5 Viral Notes' : 'Content Analysis Results'}
                 </h2>
                 <div className="bg-gray-50 p-6 rounded-lg">
                   <div className="prose prose-sm max-w-none">
-                    {getDisplayContent().split('\n').map((line, index) => (
-                      <p key={index} className="mb-4">
-                        {line}
-                      </p>
-                    ))}
+                    {activeSection === 'brainstorm' ? (
+                      // Display each note in a separate div
+                      results.shortNotes.map((note, index) => (
+                        <div key={index} className="mb-8 last:mb-0">
+                          <div 
+                            className="whitespace-pre-wrap" 
+                            dangerouslySetInnerHTML={{ __html: note }}
+                          />
+                          {index < results.shortNotes.length - 1 && (
+                            <hr className="my-6 border-gray-200" />
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="whitespace-pre-wrap">
+                        {results.analysis}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
