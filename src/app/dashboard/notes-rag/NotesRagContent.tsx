@@ -130,6 +130,8 @@ export default function NotesRagContent() {
         throw new Error('No content received from the API');
       }
 
+      // Keep the notes value in state
+      localStorage.setItem('notesRagInput', notes);
       setGeneratedContent(data.result);
       setSelectedExamples(data.selectedExamples);
       toast.success('Notes generated successfully!');
@@ -324,8 +326,8 @@ export default function NotesRagContent() {
               </label>
               <input
                 type="text"
-                defaultValue={notes}
-                onChange={handleNoteChange}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
                 placeholder="Enter a topic to generate notes about..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 transform-gpu"
               />
