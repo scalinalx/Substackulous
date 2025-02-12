@@ -11,8 +11,14 @@ import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 
 type GeneratedResult = {
-  shortNotes: string[];
-  longFormNote: string;
+  llama: {
+    shortNotes: string[];
+    longFormNote: string;
+  };
+  openai: {
+    shortNotes: string[];
+    longFormNote: string;
+  };
 };
 
 export default function NotesRagContent() {
@@ -29,22 +35,17 @@ export default function NotesRagContent() {
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(() => {
-    // Initialize from localStorage if available
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('notesRagContent');
-      return saved ? JSON.parse(saved) : null;
-    }
-    return null;
-  });
+  const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
   const [selectedExamples, setSelectedExamples] = useState<string | null>(null);
   const creditCost = 1;
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [currentTopic, setCurrentTopic] = useState<string>('');
 
-  // Persist notes input to localStorage
+  // Remove the localStorage initialization for generatedContent
   useEffect(() => {
     if (notes) {
       localStorage.setItem('notesRagInput', notes);
+      setCurrentTopic(notes);
     }
   }, [notes]);
 
@@ -101,6 +102,7 @@ export default function NotesRagContent() {
 
     setError(null);
     setIsGenerating(true);
+    setCurrentTopic(notes);
 
     try {
       // First update the credits
@@ -142,16 +144,9 @@ export default function NotesRagContent() {
       }
 
       // Update state in a single batch
-      const stateUpdates = () => {
-        localStorage.setItem('notesRagInput', notes);
-        localStorage.setItem('notesRagContent', JSON.stringify(data.result));
-        setGeneratedContent(data.result);
-        setSelectedExamples(data.selectedExamples);
-        toast.success('Notes generated successfully!');
-      };
-
-      // Use React's batching
-      stateUpdates();
+      setGeneratedContent(data.result);
+      setSelectedExamples(data.selectedExamples);
+      toast.success('Notes generated successfully!');
 
     } catch (err) {
       console.error('Error generating content:', err);
@@ -384,14 +379,14 @@ export default function NotesRagContent() {
             )}
 
             {/* Generated Content */}
-            {generatedContent && (
+            {generatedContent && currentTopic === notes && (
               <>
-                {/* Short Notes */}
-                {generatedContent.shortNotes.length > 0 && (
+                {/* Llama Notes */}
+                {generatedContent.llama.shortNotes.length > 0 && (
                   <div className="mt-8">
-                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes:</h3>
+                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes using Llama 3.3 70B for: {currentTopic}</h3>
                     <div className="grid gap-4">
-                      {generatedContent.shortNotes.map((note, index) => (
+                      {generatedContent.llama.shortNotes.map((note, index) => (
                         <div
                           key={index}
                           className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
@@ -424,26 +419,29 @@ export default function NotesRagContent() {
                   </div>
                 )}
 
-                {/* Long Form Notes */}
-                {generatedContent.longFormNote && (
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Long-Form Notes:</h3>
+                {/* OpenAI Notes */}
+                {generatedContent.openai.shortNotes.length > 0 && (
+                  <div className="mt-12">
+                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes using GPT-4 for: {currentTopic}</h3>
                     <div className="grid gap-4">
-                      {generatedContent.longFormNote.split('###---###').map((note, index) => (
+                      {generatedContent.openai.shortNotes.map((note, index) => (
                         <div
                           key={index}
                           className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
                         >
-                          <pre className="whitespace-pre-wrap font-sans text-[#181819] pr-12">{note.trim()}</pre>
+                          <div 
+                            className="whitespace-pre-wrap font-sans text-[#181819] pr-12"
+                            dangerouslySetInnerHTML={{ __html: note }}
+                          />
                           <button
-                            onClick={() => handleCopyToClipboard(note.trim(), index)}
+                            onClick={() => handleCopyToClipboard(note, index + 100)} // Offset index to avoid conflicts
                             className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
-                              copiedIndex === index
+                              copiedIndex === index + 100
                                 ? 'text-green-600 bg-green-50'
                                 : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
                             }`}
                           >
-                            {copiedIndex === index ? (
+                            {copiedIndex === index + 100 ? (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>

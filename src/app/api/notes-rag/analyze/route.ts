@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Groq } from 'groq-sdk';
+import OpenAI from "openai";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
@@ -20,6 +21,11 @@ const supabaseAdmin = createClient(
     }
   }
 );
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -364,7 +370,7 @@ export async function POST(req: Request) {
         },
       ],
       model: "llama-3.3-70b-specdec",
-      temperature: 0.97, // Lower temperature for more focused selection
+      temperature: 0.97,
       max_tokens: 4000,
       top_p: 0.95,
       stream: false,
@@ -373,12 +379,13 @@ export async function POST(req: Request) {
     const selectedExamplesText = selectionCompletion.choices[0]?.message?.content || '';
     console.log("Selected examples:", selectedExamplesText);
 
-    // Step 2: Generate new notes using the selected examples
+    // Step 2: Generate new notes using the selected examples with both models
     console.log("Step 2: Generating new notes using selected examples");
     const generationPrompt = buildPrompt(selectedExamplesText, userTopic);
     console.log("Final generation prompt:", generationPrompt);
 
-    const completion = await groq.chat.completions.create({
+    // Generate with Groq (llama)
+    const llamaCompletion = await groq.chat.completions.create({
       messages: [
         {
           role: "user",
@@ -392,11 +399,33 @@ export async function POST(req: Request) {
       stream: false,
     });
 
-    const result = completion.choices[0]?.message?.content || '';
-    const parsedNotes = parseGeneratedNotes(result);
+    // Generate with OpenAI
+    const openaiCompletion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: generationPrompt
+        }
+      ],
+      temperature: 1,
+      max_tokens: 2048,
+      top_p: 1,
+      frequency_penalty: 0.4,
+      presence_penalty: 0
+    });
+
+    const llamaResult = llamaCompletion.choices[0]?.message?.content || '';
+    const openaiResult = openaiCompletion.choices[0]?.message?.content || '';
+
+    const parsedLlamaNotes = parseGeneratedNotes(llamaResult);
+    const parsedOpenAINotes = parseGeneratedNotes(openaiResult);
 
     return NextResponse.json({
-      result: parsedNotes,
+      result: {
+        llama: parsedLlamaNotes,
+        openai: parsedOpenAINotes
+      },
       selectedExamples: selectedExamplesText
     });
 
