@@ -51,16 +51,43 @@ async function init() {
   if (initialized) return;
 
   try {
-    const filePath = path.join(process.cwd(), 'data', 'substack_examples.jsonl');
+    // Use the clean version of the file
+    const filePath = path.join(process.cwd(), 'data', 'substack_examples_clean.jsonl');
     const fileContent = await fs.readFile(filePath, 'utf-8');
+    
+    // Split by newlines and process each line individually
     examples = fileContent
       .split('\n')
-      .filter(Boolean)
-      .map(line => JSON.parse(line));
+      .filter(line => line.trim()) // Remove empty lines
+      .map(line => {
+        try {
+          const parsed = JSON.parse(line);
+          if (!parsed.note || typeof parsed.note !== 'string') {
+            console.warn('Invalid note format:', line);
+            return null;
+          }
+          return {
+            note: parsed.note,
+            likes: parsed.likes || 0
+          };
+        } catch (parseError) {
+          console.warn('Failed to parse line:', line, parseError);
+          return null;
+        }
+      })
+      .filter(example => example !== null); // Remove failed parses
+
+    if (examples.length === 0) {
+      throw new Error('No valid examples found in file');
+    }
+
+    console.log(`Successfully loaded ${examples.length} examples`);
     initialized = true;
   } catch (error) {
     console.error('Error loading examples:', error);
-    throw error;
+    // Initialize with empty array instead of throwing
+    examples = [];
+    initialized = true; // Still mark as initialized to prevent repeated attempts
   }
 }
 
