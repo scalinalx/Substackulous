@@ -76,6 +76,8 @@ export default function NotesRagContent() {
     e.preventDefault();
     e.stopPropagation();
     
+    console.log('Generate clicked with notes:', notes);
+    
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
       return;
@@ -100,9 +102,7 @@ export default function NotesRagContent() {
         });
       }
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-
+      console.log('Making API request...');
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
@@ -112,11 +112,8 @@ export default function NotesRagContent() {
           userTopic: notes,
           userId: user?.id,
           model
-        }),
-        signal: controller.signal
+        })
       });
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -124,6 +121,7 @@ export default function NotesRagContent() {
       }
 
       const data = await response.json();
+      console.log('Received API response:', data);
       
       if (!data.result) {
         throw new Error('No content received from the API');
@@ -133,8 +131,10 @@ export default function NotesRagContent() {
       localStorage.setItem('notesRagInput', notes);
 
       // Update state
+      console.log('Updating state with:', data.result);
       setGeneratedContent(data.result);
       setSelectedExamples(data.selectedExamples);
+      setCurrentTopic(notes); // Ensure currentTopic is set to the current notes
       toast.success('Notes generated successfully!');
 
     } catch (err) {
@@ -146,7 +146,7 @@ export default function NotesRagContent() {
         try {
           await updateProfile({
             ...profile,
-            credits: profile.credits // Restore original credits
+            credits: profile.credits
           });
         } catch (creditError) {
           console.error('Error restoring credits:', creditError);
@@ -250,6 +250,15 @@ export default function NotesRagContent() {
     return () => clearTimeout(errorTimeout);
   }, [error]);
 
+  // Debug logging for render
+  console.log('Render state:', {
+    notes,
+    currentTopic,
+    hasGeneratedContent: !!generatedContent,
+    isGenerating,
+    error
+  });
+
   // Loading state
   if (authLoading) {
     return (
@@ -271,6 +280,7 @@ export default function NotesRagContent() {
 
   // Debug output
   console.log('Auth state:', { authLoading, user: !!user, profile: !!profile });
+  console.log('Content state:', { generatedContent, currentTopic, notes });
 
   return (
     <div className="min-h-screen bg-gray-50">
