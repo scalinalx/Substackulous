@@ -78,6 +78,12 @@ export default function NotesRagContent() {
     
     console.log('Generate clicked with notes:', notes);
     
+    // Prevent multiple submissions
+    if (isGenerating) {
+      console.log('Already generating, ignoring click');
+      return;
+    }
+    
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
       return;
@@ -88,9 +94,11 @@ export default function NotesRagContent() {
       return;
     }
 
+    // Set states before API call
     setError(null);
     setIsGenerating(true);
     setCurrentTopic(notes);
+    setGeneratedContent(null); // Clear previous content
 
     try {
       // First update the credits
@@ -130,11 +138,10 @@ export default function NotesRagContent() {
       // Save current state to localStorage
       localStorage.setItem('notesRagInput', notes);
 
-      // Update state
+      // Update state in a single batch
       console.log('Updating state with:', data.result);
       setGeneratedContent(data.result);
       setSelectedExamples(data.selectedExamples);
-      setCurrentTopic(notes); // Ensure currentTopic is set to the current notes
       toast.success('Notes generated successfully!');
 
     } catch (err) {
@@ -155,7 +162,7 @@ export default function NotesRagContent() {
     } finally {
       setIsGenerating(false);
     }
-  }, [notes, profile, user, updateProfile, creditCost]);
+  }, [notes, profile, user, updateProfile, creditCost, isGenerating]);
 
   const handleGenerateLongForm = useCallback(async () => {
     if (!notes.trim()) {
@@ -226,29 +233,13 @@ export default function NotesRagContent() {
     }
   }, [notes, profile, user, updateProfile, creditCost]);
 
-  // Add a recovery mechanism for loading state
+  // Remove the loading timeout effect as it might interfere with state
+  // Add an effect to sync currentTopic with notes
   useEffect(() => {
-    const loadingTimeout = setTimeout(() => {
-      if (isGenerating) {
-        setIsGenerating(false);
-        setError('Generation timed out. Please try again.');
-      }
-    }, 30000); // Reset loading state after 30 seconds
-
-    return () => clearTimeout(loadingTimeout);
-  }, [isGenerating]);
-
-  // Add an error boundary effect
-  useEffect(() => {
-    const errorTimeout = setTimeout(() => {
-      if (error) {
-        setError(null);
-        console.log('Cleared error state after timeout');
-      }
-    }, 5000); // Clear error after 5 seconds
-
-    return () => clearTimeout(errorTimeout);
-  }, [error]);
+    if (notes) {
+      setCurrentTopic(notes);
+    }
+  }, [notes]);
 
   // Debug logging for render
   console.log('Render state:', {
@@ -256,8 +247,16 @@ export default function NotesRagContent() {
     currentTopic,
     hasGeneratedContent: !!generatedContent,
     isGenerating,
-    error
+    error,
+    generatedContentExists: generatedContent !== null && 
+      (generatedContent.llama.shortNotes.length > 0 || 
+       generatedContent.openai.shortNotes.length > 0)
   });
+
+  // Modify the rendering condition to be less restrictive
+  const shouldShowContent = generatedContent !== null && 
+    (generatedContent.llama.shortNotes.length > 0 || 
+     generatedContent.openai.shortNotes.length > 0);
 
   // Loading state
   if (authLoading) {
@@ -370,13 +369,15 @@ export default function NotesRagContent() {
               <div className="text-amber-600 mb-4">Generating content...</div>
             )}
 
-            {/* Generated Content */}
-            {generatedContent && currentTopic === notes && (
+            {/* Generated Content - simplified condition */}
+            {shouldShowContent && (
               <>
                 {/* Llama Notes */}
                 {generatedContent.llama.shortNotes.length > 0 && (
                   <div className="mt-8">
-                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes using Llama 3.3 70B for: {currentTopic}</h3>
+                    <h3 className="text-lg font-semibold text-[#181819] mb-4">
+                      Generated Notes using Llama 3.3 70B for: {currentTopic}
+                    </h3>
                     <div className="grid gap-4">
                       {generatedContent.llama.shortNotes.map((note, index) => (
                         <div
@@ -414,7 +415,9 @@ export default function NotesRagContent() {
                 {/* OpenAI Notes */}
                 {generatedContent.openai.shortNotes.length > 0 && (
                   <div className="mt-12">
-                    <h3 className="text-lg font-semibold text-[#181819] mb-4">Generated Notes using GPT-4 for: {currentTopic}</h3>
+                    <h3 className="text-lg font-semibold text-[#181819] mb-4">
+                      Generated Notes using GPT-4 for: {currentTopic}
+                    </h3>
                     <div className="grid gap-4">
                       {generatedContent.openai.shortNotes.map((note, index) => (
                         <div
