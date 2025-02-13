@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
@@ -21,11 +21,67 @@ type GeneratedResult = {
   };
 };
 
+// Separate form component to prevent re-renders
+function GenerateForm({ 
+  onGenerate, 
+  isGenerating, 
+  notes, 
+  setNotes, 
+  profile, 
+  creditCost 
+}: { 
+  onGenerate: (notes: string) => Promise<void>;
+  isGenerating: boolean;
+  notes: string;
+  setNotes: (notes: string) => void;
+  profile: any;
+  creditCost: number;
+}) {
+  return (
+    <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Your Topic
+        </label>
+        <input
+          type="text"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Enter a topic to generate notes about..."
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 transform-gpu"
+          disabled={isGenerating}
+        />
+      </div>
+
+      <div className="flex gap-4">
+        <Button
+          onClick={() => onGenerate(notes)}
+          disabled={isGenerating || !notes.trim() || (profile?.credits || 0) < creditCost}
+          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          type="button"
+        >
+          {isGenerating ? (
+            <span className="flex items-center justify-center">
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Generating...
+            </span>
+          ) : (
+            'Generate 5 Notes'
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export default function NotesRagContent() {
   const { user, profile, isLoading: authLoading, updateProfile } = useAuth();
   const router = useRouter();
+  const generatingRef = useRef(false);
   
-  // Initialize notes without localStorage
   const [notes, setNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +115,84 @@ export default function NotesRagContent() {
     }
   }, [authLoading, user, router]);
 
-  // Memoize handlers
+  // Handle generate function
+  const handleGenerate = useCallback(async (inputNotes: string) => {
+    if (generatingRef.current) {
+      console.log('Already generating, ignoring request');
+      return;
+    }
+
+    if (!inputNotes.trim()) {
+      setError('Please enter some notes to generate from');
+      return;
+    }
+
+    if ((profile?.credits || 0) < creditCost) {
+      setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
+      return;
+    }
+
+    try {
+      generatingRef.current = true;
+      setIsGenerating(true);
+      setError(null);
+      setGeneratedContent(null);
+
+      // Update credits first
+      if (profile) {
+        const updatedCredits = profile.credits - creditCost;
+        await updateProfile({
+          ...profile,
+          credits: updatedCredits
+        });
+      }
+
+      const response = await fetch('/api/notes-rag/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userTopic: inputNotes,
+          userId: user?.id,
+          model: 'deepseek'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate content');
+      }
+
+      const data = await response.json();
+      
+      if (!data.result) {
+        throw new Error('No content received from the API');
+      }
+
+      // Update state with new content
+      setGeneratedContent(data.result);
+      setSelectedExamples(data.selectedExamples);
+      toast.success('Notes generated successfully!');
+
+    } catch (err) {
+      console.error('Error generating content:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
+      
+      // Restore credits on error
+      if (profile) {
+        await updateProfile({
+          ...profile,
+          credits: profile.credits
+        });
+      }
+    } finally {
+      setIsGenerating(false);
+      generatingRef.current = false;
+    }
+  }, [profile, user, updateProfile, creditCost]);
+
+  // Copy to clipboard handler
   const handleCopyToClipboard = useCallback(async (text: string, index: number) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -70,168 +203,6 @@ export default function NotesRagContent() {
       toast.error('Failed to copy to clipboard');
     }
   }, []);
-
-  const handleGenerate = useCallback(async (model: 'deepseek', e: React.MouseEvent<HTMLButtonElement>) => {
-    // Prevent default button behavior
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('Generate clicked with notes:', notes);
-    
-    // Prevent multiple submissions
-    if (isGenerating) {
-      console.log('Already generating, ignoring click');
-      return;
-    }
-    
-    if (!notes.trim()) {
-      setError('Please enter some notes to generate from');
-      return;
-    }
-
-    if ((profile?.credits || 0) < creditCost) {
-      setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
-      return;
-    }
-
-    // Set states before API call
-    setError(null);
-    setIsGenerating(true);
-    setCurrentTopic(notes);
-    setGeneratedContent(null); // Clear previous content
-
-    try {
-      // First update the credits
-      if (profile) {
-        const updatedCredits = profile.credits - creditCost;
-        await updateProfile({
-          ...profile,
-          credits: updatedCredits
-        });
-      }
-
-      console.log('Making API request...');
-      const response = await fetch('/api/notes-rag/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userTopic: notes,
-          userId: user?.id,
-          model
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate content');
-      }
-
-      const data = await response.json();
-      console.log('Received API response:', data);
-      
-      if (!data.result) {
-        throw new Error('No content received from the API');
-      }
-
-      // Save current state to localStorage
-      localStorage.setItem('notesRagInput', notes);
-
-      // Update state in a single batch
-      console.log('Updating state with:', data.result);
-      setGeneratedContent(data.result);
-      setSelectedExamples(data.selectedExamples);
-      toast.success('Notes generated successfully!');
-
-    } catch (err) {
-      console.error('Error generating content:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
-      
-      // If there was an error, try to restore the credits
-      if (profile) {
-        try {
-          await updateProfile({
-            ...profile,
-            credits: profile.credits
-          });
-        } catch (creditError) {
-          console.error('Error restoring credits:', creditError);
-        }
-      }
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [notes, profile, user, updateProfile, creditCost, isGenerating]);
-
-  const handleGenerateLongForm = useCallback(async () => {
-    if (!notes.trim()) {
-      setError('Please enter some notes to generate from');
-      return;
-    }
-
-    if ((profile?.credits || 0) < creditCost) {
-      setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
-      return;
-    }
-
-    setError(null);
-    setIsGenerating(true);
-    setGeneratedContent(null);
-    setSelectedExamples(null);
-
-    try {
-      // First update the credits
-      if (profile) {
-        const updatedCredits = profile.credits - creditCost;
-        await updateProfile({
-          ...profile,
-          credits: updatedCredits
-        });
-      }
-
-      const response = await fetch('/api/notes-rag/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userTopic: notes,
-          userId: user?.id,
-          isLongForm: true
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate content');
-      }
-
-      const data = await response.json();
-      console.log("Long-form response:", data);
-
-      setGeneratedContent(data.result);
-      setSelectedExamples(data.selectedExamples);
-      
-    } catch (err) {
-      console.error('Error generating long-form content:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
-      
-      // If there was an error, try to restore the credits
-      if (profile) {
-        try {
-          await updateProfile({
-            ...profile,
-            credits: profile.credits // Restore original credits
-          });
-        } catch (creditError) {
-          console.error('Error restoring credits:', creditError);
-        }
-      }
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [notes, profile, user, updateProfile, creditCost]);
 
   // Remove the loading timeout effect as it might interfere with state
   // Add an effect to sync currentTopic with notes
@@ -324,53 +295,22 @@ export default function NotesRagContent() {
           )}
 
           <div className="space-y-6">
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Your Topic
-                </label>
-                <input
-                  type="text"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Enter a topic to generate notes about..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 transform-gpu"
-                />
-              </div>
-
-              <div className="flex gap-4">
-                <Button
-                  onClick={(e) => handleGenerate('deepseek', e)}
-                  disabled={isGenerating || !notes.trim() || (profile?.credits || 0) < creditCost}
-                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
-                  type="button"
-                >
-                  {isGenerating ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Generating...
-                    </span>
-                  ) : (
-                    'Generate 5 Notes'
-                  )}
-                </Button>
-              </div>
-            </form>
+            <GenerateForm
+              onGenerate={handleGenerate}
+              isGenerating={isGenerating}
+              notes={notes}
+              setNotes={setNotes}
+              profile={profile}
+              creditCost={creditCost}
+            />
           </div>
 
           <div className="mt-8">
-            {error && (
-              <div className="text-red-500 mb-4">{error}</div>
-            )}
             {isGenerating && (
               <div className="text-amber-600 mb-4">Generating content...</div>
             )}
 
-            {/* Generated Content - simplified condition */}
-            {shouldShowContent && (
+            {generatedContent && (
               <>
                 {/* Llama Notes */}
                 {generatedContent.llama.shortNotes.length > 0 && (
@@ -429,7 +369,7 @@ export default function NotesRagContent() {
                             dangerouslySetInnerHTML={{ __html: note }}
                           />
                           <button
-                            onClick={() => handleCopyToClipboard(note, index + 100)} // Offset index to avoid conflicts
+                            onClick={() => handleCopyToClipboard(note, index + 100)}
                             className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
                               copiedIndex === index + 100
                                 ? 'text-green-600 bg-green-50'
