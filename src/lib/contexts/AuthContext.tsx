@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/clients';
@@ -39,6 +39,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  
+  // Use refs to track initialization and prevent race conditions
+  const isInitializing = useRef(true);
+  const lastActivity = useRef(Date.now());
+  const sessionCheckInterval = useRef<NodeJS.Timeout>();
 
   // Fetch user profile
   const fetchProfile = useCallback(async (userId: string) => {
@@ -57,12 +62,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Handle auth state initialization and changes
+  // Check session status periodically
+  const startSessionCheck = useCallback(() => {
+    if (sessionCheckInterval.current) {
+      clearInterval(sessionCheckInterval.current);
+    }
+
+    sessionCheckInterval.current = setInterval(async () => {
+      const now = Date.now();
+      const inactiveTime = now - lastActivity.current;
+
+      // If inactive for more than 5 minutes, check session
+      if (inactiveTime > 5 * 60 * 1000) {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (!currentSession && session) {
+          // Session expired, reset state
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          router.replace('/login');
+        }
+        lastActivity.current = now;
+      }
+    }, 30 * 1000); // Check every 30 seconds
+  }, [router, session]);
+
+  // Handle visibility change
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        lastActivity.current = Date.now();
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (currentSession) {
+          setSession(currentSession);
+          setUser(currentSession.user);
+          await fetchProfile(currentSession.user.id);
+        } else if (session) {
+          // Session expired while away
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          router.replace('/login');
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchProfile, router, session]);
+
+  // Initialize auth state
   useEffect(() => {
     let mounted = true;
 
     const initializeAuth = async () => {
       try {
+        if (!isInitializing.current) return;
+        
         setIsLoading(true);
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
@@ -75,6 +134,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(initialSession.user);
           await fetchProfile(initialSession.user.id);
         }
+
+        // Start session check
+        startSessionCheck();
+        
       } catch (error) {
         console.error('Auth initialization error:', error);
         setUser(null);
@@ -84,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (mounted) {
           setIsLoading(false);
           setIsInitialized(true);
+          isInitializing.current = false;
         }
       }
     };
@@ -96,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
           setIsLoading(true);
+          lastActivity.current = Date.now();
           
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
@@ -108,16 +173,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           // Handle navigation after auth state changes
           if (event === 'SIGNED_IN') {
-            await router.replace('/dashboard');
+            router.replace('/dashboard');
           } else if (event === 'SIGNED_OUT') {
-            await router.replace('/login');
+            router.replace('/login');
           }
         } catch (error) {
           console.error('Auth state change error:', error);
         } finally {
           if (mounted) {
             setIsLoading(false);
-            setIsInitialized(true);
           }
         }
       }
@@ -125,9 +189,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      if (sessionCheckInterval.current) {
+        clearInterval(sessionCheckInterval.current);
+      }
       subscription.unsubscribe();
     };
-  }, [fetchProfile, router]);
+  }, [fetchProfile, router, startSessionCheck]);
 
   const signOut = useCallback(async () => {
     try {

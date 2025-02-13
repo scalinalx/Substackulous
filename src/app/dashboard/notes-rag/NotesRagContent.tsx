@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
@@ -20,32 +20,68 @@ type GeneratedResult = {
 
 export default function NotesRagContent() {
   const router = useRouter();
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, isLoading, isAuthenticated } = useAuth();
   
+  // All state hooks at the top
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [localProfile, setLocalProfile] = useState(profile);
   const creditCost = 1;
 
-  // Handle profile updates separately
-  const [localProfile, setLocalProfile] = useState(profile);
+  // Refs
+  const generatedContentRef = useRef<GeneratedResult | null>(null);
+  const shouldUpdateProfileRef = useRef(false);
   
+  // All useEffects together
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
   useEffect(() => {
     console.log('Profile updated:', profile);
     setLocalProfile(profile);
+    
+    if (generatedContentRef.current) {
+      setGeneratedContent(generatedContentRef.current);
+    }
   }, [profile]);
 
-  // Auth check - only return null if we're definitely not authenticated
-  if (!user) {
-    console.log('No user found, returning null');
-    return null;
+  useEffect(() => {
+    const updateProfileCredits = async () => {
+      if (shouldUpdateProfileRef.current && localProfile) {
+        console.log('Updating profile credits...');
+        try {
+          await updateProfile({
+            credits: localProfile.credits - creditCost
+          });
+        } catch (error) {
+          console.error('Failed to update profile credits:', error);
+        } finally {
+          shouldUpdateProfileRef.current = false;
+        }
+      }
+    };
+
+    updateProfileCredits();
+  }, [localProfile, updateProfile, creditCost]);
+
+  // Loading state check
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-600">Securing your session...</p>
+      </div>
+    );
   }
 
-  // Use local profile for rendering
-  if (!localProfile) {
-    console.log('No profile found, returning null');
+  // Auth check
+  if (!user || !profile) {
     return null;
   }
 
@@ -67,6 +103,8 @@ export default function NotesRagContent() {
     // Clear states at the start
     setError(null);
     setGeneratedContent(null);
+    generatedContentRef.current = null;
+    shouldUpdateProfileRef.current = false;
 
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
@@ -112,23 +150,20 @@ export default function NotesRagContent() {
         throw new Error('No content received from the API');
       }
 
-      // Set content first
+      // Store in ref first
+      generatedContentRef.current = data.result;
+      
+      // Then update state
       console.log('Setting generated content...');
       setGeneratedContent(data.result);
       
       // Show success toast
       toast.success('Notes generated successfully!');
       
-      // Update profile last
-      console.log('Updating profile...');
-      try {
-        await updateProfile({
-          credits: localProfile.credits - creditCost
-        });
-      } catch (profileError) {
-        console.error('Error updating profile:', profileError);
-        // Don't throw here, we still want to show the generated content
-      }
+      // Flag that we should update the profile
+      console.log('Flagging profile update...');
+      shouldUpdateProfileRef.current = true;
+      
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
