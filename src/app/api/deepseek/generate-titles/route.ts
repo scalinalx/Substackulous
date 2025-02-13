@@ -132,7 +132,7 @@ Output ONLY the titles, one per line. No explanations or frameworks needed.`;
         content: prompt
       }],
       model: "deepseek-r1-distill-llama-70b",
-      temperature: 0.69,
+      temperature: 0.99,
       max_tokens: 4096,
       top_p: 0.95,
       stream: false,
