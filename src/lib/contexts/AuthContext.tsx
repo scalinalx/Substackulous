@@ -55,12 +55,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) throw error;
-      setProfile(data);
+      
+      // Only update profile if it's different
+      if (JSON.stringify(data) !== JSON.stringify(profile)) {
+        setProfile(data);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       setProfile(null);
     }
-  }, []);
+  }, [profile]);
 
   // Check session status periodically
   const startSessionCheck = useCallback(() => {
@@ -75,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // If inactive for more than 5 minutes, check session
       if (inactiveTime > 5 * 60 * 1000) {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (!currentSession && session) {
+        if (!currentSession && user) {
           // Session expired, reset state
           setSession(null);
           setUser(null);
@@ -85,7 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastActivity.current = now;
       }
     }, 30 * 1000); // Check every 30 seconds
-  }, [router, session]);
+
+    return () => {
+      if (sessionCheckInterval.current) {
+        clearInterval(sessionCheckInterval.current);
+      }
+    };
+  }, [router, user]);
 
   // Handle visibility change
   useEffect(() => {
@@ -117,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Initialize auth state
   useEffect(() => {
     let mounted = true;
+    let cleanup: (() => void) | undefined;
 
     const initializeAuth = async () => {
       try {
@@ -135,8 +146,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetchProfile(initialSession.user.id);
         }
 
-        // Start session check
-        startSessionCheck();
+        // Start session check and store cleanup
+        cleanup = startSessionCheck();
         
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -162,20 +173,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsLoading(true);
           lastActivity.current = Date.now();
           
-          setSession(currentSession);
-          setUser(currentSession?.user ?? null);
+          // Only update if session actually changed
+          if (JSON.stringify(currentSession) !== JSON.stringify(session)) {
+            setSession(currentSession);
+            setUser(currentSession?.user ?? null);
 
-          if (currentSession?.user) {
-            await fetchProfile(currentSession.user.id);
-          } else {
-            setProfile(null);
-          }
+            if (currentSession?.user) {
+              await fetchProfile(currentSession.user.id);
+            } else {
+              setProfile(null);
+            }
 
-          // Handle navigation after auth state changes
-          if (event === 'SIGNED_IN') {
-            router.replace('/dashboard');
-          } else if (event === 'SIGNED_OUT') {
-            router.replace('/login');
+            // Handle navigation after auth state changes
+            if (event === 'SIGNED_IN') {
+              router.replace('/dashboard');
+            } else if (event === 'SIGNED_OUT') {
+              router.replace('/login');
+            }
           }
         } catch (error) {
           console.error('Auth state change error:', error);
@@ -189,12 +203,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
-      if (sessionCheckInterval.current) {
-        clearInterval(sessionCheckInterval.current);
-      }
+      if (cleanup) cleanup();
       subscription.unsubscribe();
     };
-  }, [fetchProfile, router, startSessionCheck]);
+  }, [fetchProfile, router, startSessionCheck, session]);
 
   const signOut = useCallback(async () => {
     try {

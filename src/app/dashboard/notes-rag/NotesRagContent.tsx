@@ -28,12 +28,12 @@ export default function NotesRagContent() {
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [localProfile, setLocalProfile] = useState(profile);
   const creditCost = 1;
 
   // Refs
   const generatedContentRef = useRef<GeneratedResult | null>(null);
-  const shouldUpdateProfileRef = useRef(false);
+  const profileUpdatePendingRef = useRef(false);
+  const lastProfileUpdateRef = useRef<number>(0);
   
   // All useEffects together
   useEffect(() => {
@@ -43,32 +43,34 @@ export default function NotesRagContent() {
   }, [isLoading, isAuthenticated, router]);
 
   useEffect(() => {
-    console.log('Profile updated:', profile);
-    setLocalProfile(profile);
-    
-    if (generatedContentRef.current) {
-      setGeneratedContent(generatedContentRef.current);
-    }
-  }, [profile]);
-
-  useEffect(() => {
     const updateProfileCredits = async () => {
-      if (shouldUpdateProfileRef.current && localProfile) {
-        console.log('Updating profile credits...');
+      if (profileUpdatePendingRef.current && profile) {
+        const now = Date.now();
+        // Prevent updates more frequent than every 2 seconds
+        if (now - lastProfileUpdateRef.current < 2000) {
+          return;
+        }
+
         try {
           await updateProfile({
-            credits: localProfile.credits - creditCost
+            credits: profile.credits - creditCost
           });
+          profileUpdatePendingRef.current = false;
+          lastProfileUpdateRef.current = now;
         } catch (error) {
           console.error('Failed to update profile credits:', error);
-        } finally {
-          shouldUpdateProfileRef.current = false;
         }
       }
     };
 
     updateProfileCredits();
-  }, [localProfile, updateProfile, creditCost]);
+  }, [profile, updateProfile, creditCost]);
+
+  useEffect(() => {
+    if (generatedContentRef.current) {
+      setGeneratedContent(generatedContentRef.current);
+    }
+  }, [profile]);
 
   // Loading state check
   if (isLoading) {
@@ -104,19 +106,19 @@ export default function NotesRagContent() {
     setError(null);
     setGeneratedContent(null);
     generatedContentRef.current = null;
-    shouldUpdateProfileRef.current = false;
+    profileUpdatePendingRef.current = false;
 
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
       return;
     }
 
-    if (!localProfile) {
+    if (!profile) {
       setError('User profile not found');
       return;
     }
 
-    if (localProfile.credits < creditCost) {
+    if (profile.credits < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
       return;
     }
@@ -162,7 +164,7 @@ export default function NotesRagContent() {
       
       // Flag that we should update the profile
       console.log('Flagging profile update...');
-      shouldUpdateProfileRef.current = true;
+      profileUpdatePendingRef.current = true;
       
     } catch (err) {
       console.error('Error generating content:', err);
@@ -197,7 +199,7 @@ export default function NotesRagContent() {
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
           <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
             <span className="text-amber-700">Credits required: {creditCost}</span>
-            <span className="font-medium text-amber-700">Your balance: {localProfile?.credits ?? 0}</span>
+            <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
           </div>
 
           {error && (
@@ -232,7 +234,7 @@ export default function NotesRagContent() {
 
             <Button
               type="submit"
-              disabled={loading || !notes.trim() || (localProfile?.credits || 0) < creditCost}
+              disabled={loading || !notes.trim() || (profile?.credits || 0) < creditCost}
               className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
