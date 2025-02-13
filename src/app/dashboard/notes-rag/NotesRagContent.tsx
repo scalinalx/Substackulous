@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
@@ -29,6 +29,26 @@ export default function NotesRagContent() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const creditCost = 1;
 
+  // Handle profile updates separately
+  const [localProfile, setLocalProfile] = useState(profile);
+  
+  useEffect(() => {
+    console.log('Profile updated:', profile);
+    setLocalProfile(profile);
+  }, [profile]);
+
+  // Auth check - only return null if we're definitely not authenticated
+  if (!user) {
+    console.log('No user found, returning null');
+    return null;
+  }
+
+  // Use local profile for rendering
+  if (!localProfile) {
+    console.log('No profile found, returning null');
+    return null;
+  }
+
   const copyToClipboard = async (text: string, index: number) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -42,6 +62,9 @@ export default function NotesRagContent() {
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Starting generation...');
+    
+    // Clear states at the start
     setError(null);
     setGeneratedContent(null);
 
@@ -50,17 +73,18 @@ export default function NotesRagContent() {
       return;
     }
 
-    if (!profile) {
+    if (!localProfile) {
       setError('User profile not found');
       return;
     }
 
-    if (profile.credits < creditCost) {
+    if (localProfile.credits < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
       return;
     }
 
     setLoading(true);
+    console.log('Set loading state, starting API call...');
 
     try {
       const response = await fetch('/api/notes-rag/analyze', {
@@ -75,35 +99,44 @@ export default function NotesRagContent() {
         })
       });
 
+      console.log('API call completed, checking response...');
+
       if (!response.ok) {
         throw new Error('Failed to generate content');
       }
 
       const data = await response.json();
+      console.log('Received data from API:', data);
       
       if (!data.result) {
         throw new Error('No content received from the API');
       }
 
+      // Set content first
+      console.log('Setting generated content...');
       setGeneratedContent(data.result);
+      
+      // Show success toast
       toast.success('Notes generated successfully!');
       
-      await updateProfile({
-        ...profile,
-        credits: profile.credits - creditCost
-      });
+      // Update profile last
+      console.log('Updating profile...');
+      try {
+        await updateProfile({
+          credits: localProfile.credits - creditCost
+        });
+      } catch (profileError) {
+        console.error('Error updating profile:', profileError);
+        // Don't throw here, we still want to show the generated content
+      }
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
     } finally {
+      console.log('Setting loading state to false...');
       setLoading(false);
     }
   };
-
-  // Auth check
-  if (!user || !profile) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -129,7 +162,7 @@ export default function NotesRagContent() {
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
           <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
             <span className="text-amber-700">Credits required: {creditCost}</span>
-            <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+            <span className="font-medium text-amber-700">Your balance: {localProfile?.credits ?? 0}</span>
           </div>
 
           {error && (
@@ -164,7 +197,7 @@ export default function NotesRagContent() {
 
             <Button
               type="submit"
-              disabled={loading || !notes.trim() || (profile?.credits || 0) < creditCost}
+              disabled={loading || !notes.trim() || (localProfile?.credits || 0) < creditCost}
               className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
