@@ -25,7 +25,8 @@ export default function TitleGenerator() {
     }
   };
 
-  const handleGenerateTitles = async () => {
+  const handleGenerateTitles = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError('');
     setGeneratedTitles([]);
 
@@ -47,14 +48,14 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/generate-titles', {
+      const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: topic,
-          count: 5,
+          theme: topic,
+          userId: user?.id,
         }),
       });
 
@@ -63,14 +64,21 @@ export default function TitleGenerator() {
       }
 
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       setGeneratedTitles(data.titles);
       
-      await updateProfile({
-        credits: profile.credits - creditCost,
-      });
+      if (profile.credits >= creditCost) {
+        await updateProfile({
+          credits: profile.credits - creditCost,
+        });
+      }
     } catch (err) {
       console.error('Error in title generation:', err);
-      setError('Failed to generate titles. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
     } finally {
       setLoading(false);
     }

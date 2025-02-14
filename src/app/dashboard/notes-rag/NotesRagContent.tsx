@@ -56,25 +56,23 @@ export default function NotesRagContent() {
         }
 
         try {
+          const updatedCredits = profile.credits - creditCost;
           await updateProfile({
-            credits: profile.credits - creditCost
+            credits: updatedCredits
           });
+          // Only set to false after successful update
           profileUpdatePendingRef.current = false;
           lastProfileUpdateRef.current = now;
+          console.log('Credits updated successfully:', updatedCredits);
         } catch (error) {
           console.error('Failed to update profile credits:', error);
+          // Keep profileUpdatePendingRef.current as true so it can retry
         }
       }
     };
 
     updateProfileCredits();
   }, [profile, updateProfile, creditCost]);
-
-  useEffect(() => {
-    if (generatedContentRef.current) {
-      setGeneratedContent(generatedContentRef.current);
-    }
-  }, [profile]);
 
   // Loading state check
   if (isLoading) {
@@ -110,7 +108,6 @@ export default function NotesRagContent() {
     setError(null);
     setGeneratedContent(null);
     generatedContentRef.current = null;
-    profileUpdatePendingRef.current = false;
 
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
@@ -156,23 +153,22 @@ export default function NotesRagContent() {
         throw new Error('No content received from the API');
       }
 
-      // Store in ref first
+      // Update both ref and state immediately
       generatedContentRef.current = data.result;
-      
-      // Then update state
-      console.log('Setting generated content...');
       setGeneratedContent(data.result);
+      
+      // Flag that we should update the profile AFTER successful generation
+      console.log('Flagging profile update...');
+      profileUpdatePendingRef.current = true;
       
       // Show success toast
       toast.success('Notes generated successfully!');
       
-      // Flag that we should update the profile
-      console.log('Flagging profile update...');
-      profileUpdatePendingRef.current = true;
-      
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
+      // Ensure we don't deduct credits on error
+      profileUpdatePendingRef.current = false;
     } finally {
       console.log('Setting loading state to false...');
       setLoading(false);
