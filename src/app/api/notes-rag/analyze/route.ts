@@ -396,6 +396,7 @@ export async function POST(req: Request) {
     const generationPrompt = buildPrompt(selectedExamplesText, userTopic);
     console.log("Final generation prompt:", generationPrompt);
 
+    /* Commenting out Llama completion to save budget
     // Generate with Groq (llama)
     const llamaCompletion = await groq.chat.completions.create({
       messages: [
@@ -410,7 +411,9 @@ export async function POST(req: Request) {
       top_p: 1,
       stream: false,
     });
+    */
 
+    /* Commenting out O1-mini completion to save budget
     // Generate with OpenAI
     const openaiCompletion = await openai.chat.completions.create({
       model: "o1-mini",
@@ -424,9 +427,11 @@ export async function POST(req: Request) {
       max_completion_tokens: 2048,
       top_p: 1
     });
+    */
 
-    const llamaResult = llamaCompletion.choices[0]?.message?.content || '';
-    const openaiResult = openaiCompletion.choices[0]?.message?.content || '';
+    // Initialize empty results for disabled models
+    const llamaResult = '';
+    const openaiResult = '';
 
     // Generate with GPT-4o (V2)
     const gpt4oPrompt = `Act like a seasoned Substack creator who consistently goes viral with impactful notes.
@@ -443,9 +448,13 @@ If the topic is about Substack, highlight consistency, value, and playing the lo
 
 For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
 
-Each note should start with a strong hook. What's a perfect hook?
+Each note should start with a strong hook. What's a strong hook?
 
 It's creative. Outside the box. Eye-catching. It creates an emotion, a feeling. It makes people stop scrolling.
+
+A great hook has maximum 10 words, always contains a number, an intriguing question, or a surprising statistic. 
+Best if written from the perspective of the reader. 
+The hook is always followed by a re-hook in the first sentence of the note.
 
 It avoids jargon, fancy words, questions, emojis at all costs. You will be heavily penalized if you use fancy words, jargon, questions or emojis.
 
