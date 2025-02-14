@@ -48,10 +48,18 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
+      // Get the session token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session?.access_token) {
+        throw new Error('Authentication error. Please try logging in again.');
+      }
+
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           theme: topic,
@@ -60,7 +68,8 @@ export default function TitleGenerator() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate titles');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate titles');
       }
 
       const data = await response.json();
@@ -71,11 +80,7 @@ export default function TitleGenerator() {
       
       setGeneratedTitles(data.titles);
       
-      if (profile.credits >= creditCost) {
-        await updateProfile({
-          credits: profile.credits - creditCost,
-        });
-      }
+      // Credit deduction is handled by the API
     } catch (err) {
       console.error('Error in title generation:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');

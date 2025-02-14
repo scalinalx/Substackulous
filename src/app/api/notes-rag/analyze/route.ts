@@ -438,13 +438,13 @@ export async function POST(req: Request) {
 
 USER TOPIC = ${userTopic}
 
-Write a 5 highly engaging notes designed to go viral on the USER TOPIC above. Keep them engaging, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
+Write 7 highly engaging notes designed to go viral on the USER TOPIC above. Keep them engaging, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
 
-The note sshould challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
+The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
 
 Tailor the notes to the theme of USER TOPIC while maintaining a focus on progress, action, and cutting through distractions. 
 
-If the topic is about Substack, highlight consistency, value, and playing the long game. Highlight and praise Substack's advantages over other social media platform. Highlight and praise Substack's organic nature. 
+If the topic is about Substack, highlight consistency, value, and playing the long game. Highlight Substack's advantages over other social media platforms, its organic nature. 
 
 For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
 
@@ -465,7 +465,9 @@ Use short & sweet sentences that pack a punch and easily digestible.
 Separate each note with the markdown delimiter ###---###.
 Ensure a balanced mixture of short-form and long-form notes. 
 Short form notes are concise, punchy and easy to read.
-Long form notes are educational, personal and share a story.
+Long-form notes are educational, personal and share a story. Long-form notes have at least 400 words. 
+Output only the notes and nothing else - no explanations or additional content or anything. just the notes separated by the delimiter. 
+DO NOT END YOUR NOTES WITH A QUESTION!
 Think through this step by step. `;
 
     const gpt4oCompletion = await openai.chat.completions.create({

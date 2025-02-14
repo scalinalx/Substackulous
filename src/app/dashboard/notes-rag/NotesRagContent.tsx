@@ -46,34 +46,6 @@ export default function NotesRagContent() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  useEffect(() => {
-    const updateProfileCredits = async () => {
-      if (profileUpdatePendingRef.current && profile) {
-        const now = Date.now();
-        // Prevent updates more frequent than every 2 seconds
-        if (now - lastProfileUpdateRef.current < 2000) {
-          return;
-        }
-
-        try {
-          const updatedCredits = profile.credits - creditCost;
-          await updateProfile({
-            credits: updatedCredits
-          });
-          // Only set to false after successful update
-          profileUpdatePendingRef.current = false;
-          lastProfileUpdateRef.current = now;
-          console.log('Credits updated successfully:', updatedCredits);
-        } catch (error) {
-          console.error('Failed to update profile credits:', error);
-          // Keep profileUpdatePendingRef.current as true so it can retry
-        }
-      }
-    };
-
-    updateProfileCredits();
-  }, [profile, updateProfile, creditCost]);
-
   // Loading state check
   if (isLoading) {
     return (
@@ -128,6 +100,14 @@ export default function NotesRagContent() {
     console.log('Set loading state, starting API call...');
 
     try {
+      // First, try to update credits immediately
+      const updatedCredits = profile.credits - creditCost;
+      await updateProfile({
+        credits: updatedCredits
+      });
+      console.log('Credits deducted successfully:', updatedCredits);
+
+      // Then make the API call
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
@@ -143,6 +123,10 @@ export default function NotesRagContent() {
       console.log('API call completed, checking response...');
 
       if (!response.ok) {
+        // If API call fails, refund the credits
+        await updateProfile({
+          credits: profile.credits
+        });
         throw new Error('Failed to generate content');
       }
 
@@ -150,16 +134,15 @@ export default function NotesRagContent() {
       console.log('Received data from API:', data);
       
       if (!data.result) {
+        // If no result, refund the credits
+        await updateProfile({
+          credits: profile.credits
+        });
         throw new Error('No content received from the API');
       }
 
-      // Update both ref and state immediately
-      generatedContentRef.current = data.result;
+      // Update content state directly
       setGeneratedContent(data.result);
-      
-      // Flag that we should update the profile AFTER successful generation
-      console.log('Flagging profile update...');
-      profileUpdatePendingRef.current = true;
       
       // Show success toast
       toast.success('Notes generated successfully!');
@@ -167,8 +150,15 @@ export default function NotesRagContent() {
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
-      // Ensure we don't deduct credits on error
-      profileUpdatePendingRef.current = false;
+      
+      // Ensure credits are refunded on error
+      try {
+        await updateProfile({
+          credits: profile.credits
+        });
+      } catch (refundError) {
+        console.error('Error refunding credits:', refundError);
+      }
     } finally {
       console.log('Setting loading state to false...');
       setLoading(false);
