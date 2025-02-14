@@ -98,14 +98,7 @@ export default function NotesRagContent() {
     setLoading(true);
 
     try {
-      // First, try to update credits immediately
-      const updatedCredits = profile.credits - creditCost;
-      await updateProfile({
-        credits: updatedCredits
-      });
-      console.log('Credits deducted successfully:', updatedCredits);
-
-      // Then make the API call
+      // Make the API call first
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
@@ -119,22 +112,20 @@ export default function NotesRagContent() {
       });
 
       if (!response.ok) {
-        // If API call fails, refund the credits
-        await updateProfile({
-          credits: profile.credits
-        });
         throw new Error('Failed to generate content');
       }
 
       const data = await response.json();
       
       if (!data.result) {
-        // If no result, refund the credits
-        await updateProfile({
-          credits: profile.credits
-        });
         throw new Error('No content received from the API');
       }
+
+      // Only deduct credits after successful API call
+      const updatedCredits = profile.credits - creditCost;
+      await updateProfile({
+        credits: updatedCredits
+      });
 
       // Update content state
       setGeneratedContent(data.result);
@@ -143,15 +134,6 @@ export default function NotesRagContent() {
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
-      
-      // Ensure credits are refunded on error
-      try {
-        await updateProfile({
-          credits: profile.credits
-        });
-      } catch (refundError) {
-        console.error('Error refunding credits:', refundError);
-      }
     } finally {
       setLoading(false);
     }

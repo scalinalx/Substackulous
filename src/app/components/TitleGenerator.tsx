@@ -49,13 +49,7 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      // First deduct credits
-      const updatedCredits = profile.credits - creditCost;
-      await updateProfile({
-        credits: updatedCredits
-      });
-
-      // Then make API call
+      // Make API call first
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
@@ -68,10 +62,6 @@ export default function TitleGenerator() {
       });
 
       if (!response.ok) {
-        // Refund credits on error
-        await updateProfile({
-          credits: profile.credits
-        });
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to generate titles');
       }
@@ -79,12 +69,14 @@ export default function TitleGenerator() {
       const data = await response.json();
       
       if (data.error) {
-        // Refund credits on error
-        await updateProfile({
-          credits: profile.credits
-        });
         throw new Error(data.error);
       }
+
+      // Only deduct credits after successful API call
+      const updatedCredits = profile.credits - creditCost;
+      await updateProfile({
+        credits: updatedCredits
+      });
       
       setGeneratedTitles(data.titles);
       toast.success('Titles generated successfully!');
@@ -92,15 +84,6 @@ export default function TitleGenerator() {
     } catch (err) {
       console.error('Error in title generation:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
-      
-      // Ensure credits are refunded on error
-      try {
-        await updateProfile({
-          credits: profile.credits
-        });
-      } catch (refundError) {
-        console.error('Error refunding credits:', refundError);
-      }
     } finally {
       setLoading(false);
     }
