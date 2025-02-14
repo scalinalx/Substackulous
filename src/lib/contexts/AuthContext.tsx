@@ -44,9 +44,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isInitializing = useRef(true);
   const lastActivity = useRef(Date.now());
   const sessionCheckInterval = useRef<NodeJS.Timeout>();
+  const mountedRef = useRef(true);
 
-  // Fetch user profile
-  const fetchProfile = useCallback(async (userId: string) => {
+  // Safe state updates for specific types
+  const safeSetUser = useCallback((value: User | null) => {
+    if (mountedRef.current) {
+      setUser(value);
+    }
+  }, []);
+
+  const safeSetSession = useCallback((value: Session | null) => {
+    if (mountedRef.current) {
+      setSession(value);
+    }
+  }, []);
+
+  const safeSetProfile = useCallback((value: UserProfile | null) => {
+    if (mountedRef.current) {
+      setProfile(value);
+    }
+  }, []);
+
+  const safeSetLoading = useCallback((value: boolean) => {
+    if (mountedRef.current) {
+      setIsLoading(value);
+    }
+  }, []);
+
+  const safeSetInitialized = useCallback((value: boolean) => {
+    if (mountedRef.current) {
+      setIsInitialized(value);
+    }
+  }, []);
+
+  // Fetch user profile with retry
+  const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
+    if (!userId || retryCount > 3) return;
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -54,110 +88,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        if (retryCount < 3) {
+          // Exponential backoff retry
+          setTimeout(() => {
+            fetchProfile(userId, retryCount + 1);
+          }, Math.pow(2, retryCount) * 1000);
+          return;
+        }
+        throw error;
+      }
       
-      // Only update profile if it's different
-      if (JSON.stringify(data) !== JSON.stringify(profile)) {
-        setProfile(data);
+      if (mountedRef.current && JSON.stringify(data) !== JSON.stringify(profile)) {
+        safeSetProfile(data);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setProfile(null);
+      if (mountedRef.current) {
+        safeSetProfile(null);
+      }
     }
-  }, [profile]);
-
-  // Check session status periodically
-  const startSessionCheck = useCallback(() => {
-    if (sessionCheckInterval.current) {
-      clearInterval(sessionCheckInterval.current);
-    }
-
-    sessionCheckInterval.current = setInterval(async () => {
-      const now = Date.now();
-      const inactiveTime = now - lastActivity.current;
-
-      // If inactive for more than 5 minutes, check session
-      if (inactiveTime > 5 * 60 * 1000) {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        if (!currentSession && user) {
-          // Session expired, reset state
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          router.replace('/login');
-        }
-        lastActivity.current = now;
-      }
-    }, 30 * 1000); // Check every 30 seconds
-
-    return () => {
-      if (sessionCheckInterval.current) {
-        clearInterval(sessionCheckInterval.current);
-      }
-    };
-  }, [router, user]);
-
-  // Handle visibility change
-  useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        lastActivity.current = Date.now();
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (currentSession) {
-          setSession(currentSession);
-          setUser(currentSession.user);
-          await fetchProfile(currentSession.user.id);
-        } else if (session) {
-          // Session expired while away
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          router.replace('/login');
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [fetchProfile, router, session]);
+  }, [profile, safeSetProfile]);
 
   // Initialize auth state
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
     let cleanup: (() => void) | undefined;
 
     const initializeAuth = async () => {
+      if (!isInitializing.current) return;
+      
       try {
-        if (!isInitializing.current) return;
-        
-        setIsLoading(true);
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
-        if (!mounted) return;
+        if (!mountedRef.current) return;
         
         if (error) throw error;
 
-        if (initialSession) {
-          setSession(initialSession);
-          setUser(initialSession.user);
+        if (initialSession?.user) {
+          safeSetSession(initialSession);
+          safeSetUser(initialSession.user);
           await fetchProfile(initialSession.user.id);
         }
 
-        // Start session check and store cleanup
-        cleanup = startSessionCheck();
+        // Start session check
+        const checkSession = setInterval(async () => {
+          if (!mountedRef.current) return;
+          
+          const now = Date.now();
+          const inactiveTime = now - lastActivity.current;
+
+          if (inactiveTime > 5 * 60 * 1000) {
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            if (!currentSession && user) {
+              safeSetSession(null);
+              safeSetUser(null);
+              safeSetProfile(null);
+              router.replace('/login');
+            }
+            lastActivity.current = now;
+          }
+        }, 30 * 1000);
+
+        sessionCheckInterval.current = checkSession;
+        cleanup = () => clearInterval(checkSession);
         
       } catch (error) {
         console.error('Auth initialization error:', error);
-        setUser(null);
-        setSession(null);
-        setProfile(null);
+        if (mountedRef.current) {
+          safeSetUser(null);
+          safeSetSession(null);
+          safeSetProfile(null);
+        }
       } finally {
-        if (mounted) {
-          setIsLoading(false);
-          setIsInitialized(true);
+        if (mountedRef.current) {
+          safeSetLoading(false);
+          safeSetInitialized(true);
           isInitializing.current = false;
         }
       }
@@ -167,46 +173,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        if (!mounted) return;
+        if (!mountedRef.current) return;
 
         try {
-          setIsLoading(true);
+          safeSetLoading(true);
           lastActivity.current = Date.now();
+
+          const sessionChanged = JSON.stringify(currentSession) !== JSON.stringify(session);
           
-          // Only update if session actually changed
-          if (JSON.stringify(currentSession) !== JSON.stringify(session)) {
-            setSession(currentSession);
-            setUser(currentSession?.user ?? null);
+          if (sessionChanged) {
+            safeSetSession(currentSession);
+            safeSetUser(currentSession?.user ?? null);
 
             if (currentSession?.user) {
               await fetchProfile(currentSession.user.id);
             } else {
-              setProfile(null);
+              safeSetProfile(null);
             }
 
             // Handle navigation after auth state changes
             if (event === 'SIGNED_IN') {
-              router.replace('/dashboard');
+              await router.replace('/dashboard');
             } else if (event === 'SIGNED_OUT') {
-              router.replace('/login');
+              await router.replace('/login');
             }
           }
         } catch (error) {
           console.error('Auth state change error:', error);
         } finally {
-          if (mounted) {
-            setIsLoading(false);
+          if (mountedRef.current) {
+            safeSetLoading(false);
           }
         }
       }
     );
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       if (cleanup) cleanup();
+      if (sessionCheckInterval.current) {
+        clearInterval(sessionCheckInterval.current);
+      }
       subscription.unsubscribe();
     };
-  }, [fetchProfile, router, startSessionCheck, session]);
+  }, [fetchProfile, router, safeSetUser, safeSetSession, safeSetProfile, safeSetLoading, safeSetInitialized, session, user]);
+
+  // Handle visibility change
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (!mountedRef.current) return;
+      
+      if (document.visibilityState === 'visible') {
+        lastActivity.current = Date.now();
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (currentSession?.user) {
+          safeSetSession(currentSession);
+          safeSetUser(currentSession.user);
+          await fetchProfile(currentSession.user.id);
+        } else if (session) {
+          safeSetSession(null);
+          safeSetUser(null);
+          safeSetProfile(null);
+          router.replace('/login');
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [fetchProfile, router, session, safeSetUser, safeSetSession, safeSetProfile]);
 
   const signOut = useCallback(async () => {
     try {
