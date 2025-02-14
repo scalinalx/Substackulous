@@ -460,7 +460,7 @@ Long form notes are educational, personal and share a story.
 Think through this step by step. `;
 
     const gpt4oCompletion = await openai.chat.completions.create({
-      model: "gpt-4o-latest",
+      model: "chatgpt-4o-latest",
       messages: [
         {
           role: "user",
