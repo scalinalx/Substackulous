@@ -231,13 +231,13 @@ Below are 5 example viral Substack notes:\n\n`;
   const basePrompt = `
 User topic= ${userTopic}
 
-Rewrite each example note to focus on the user topic.
-- Transform each example into a new note on this topic.
-- Keep the same structure, same bullet points, same line breaks, and overall length.
+For each example write a very similar note that focuses on the user topic.
+- Transform each example into a new note on this topic by writing a new note that is very similar to the original.
+- Keep the same structure, and overall length.
 - Rewrite sentences to avoid duplication but keep the tone, style, and formatting of the original.
 - For instance, if a note starts with a short story, keep it as a short story but adapt it to ${userTopic}.
 - If a note ends with a direct prompt, do so here as well.
-- Output exactly 5 rewritten notes, separated by the Markdown delimiter:
+- Output exactly 5 notes, separated by the Markdown delimiter:
 
 ###---###
 
@@ -357,8 +357,20 @@ export async function POST(req: Request) {
       await init();
     }
 
-    // Step 1: Use LLM to select the most appropriate examples
-    console.log("Step 1: Selecting examples with LLM");
+    // Step 1: Select examples
+    console.log("Step 1: Selecting examples");
+    
+    // Random selection function
+    const getRandomExamples = (count: number) => {
+      const shuffled = [...examples].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, count).map(ex => ex.note).join('\n\n###---###\n\n');
+    };
+
+    // Get random examples
+    const selectedExamplesText = getRandomExamples(5);
+    console.log("Randomly selected examples:", selectedExamplesText);
+
+    /* Commenting out LLM-based selection for now
     const selectionPrompt = buildExampleSelectionPrompt(examples, userTopic);
     console.log("Example selection prompt:", selectionPrompt);
 
@@ -377,8 +389,8 @@ export async function POST(req: Request) {
     });
 
     const selectedExamplesText = selectionCompletion.choices[0]?.message?.content || '';
-    console.log("Selected examples:", selectedExamplesText);
-
+    */
+    
     // Step 2: Generate new notes using the selected examples with both models
     console.log("Step 2: Generating new notes using selected examples");
     const generationPrompt = buildPrompt(selectedExamplesText, userTopic);
