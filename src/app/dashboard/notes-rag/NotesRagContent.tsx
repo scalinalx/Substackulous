@@ -32,7 +32,7 @@ export default function NotesRagContent() {
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const creditCost = 1;
+  const creditCost = 2;
 
   // Refs
   const generatedContentRef = useRef<GeneratedResult | null>(null);
@@ -257,91 +257,11 @@ export default function NotesRagContent() {
 
           {generatedContent && (
             <div className="mt-8">
-              {/* Llama Notes */}
-              {generatedContent.llama.shortNotes.length > 0 && (
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold text-[#181819] mb-4">
-                    Generated Notes using Llama 3.3 70B for: {notes}
-                  </h3>
-                  <div className="grid gap-4">
-                    {generatedContent.llama.shortNotes.map((note, index) => (
-                      <div
-                        key={index}
-                        className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        <div 
-                          className="whitespace-pre-wrap font-sans text-[#181819] pr-12"
-                          dangerouslySetInnerHTML={{ __html: note }}
-                        />
-                        <button
-                          onClick={() => copyToClipboard(note, index)}
-                          className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
-                            copiedIndex === index
-                              ? 'text-green-600 bg-green-50'
-                              : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
-                          }`}
-                        >
-                          {copiedIndex === index ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* OpenAI Notes */}
-              {generatedContent.openai.shortNotes.length > 0 && (
-                <div className="mt-12">
-                  <h3 className="text-lg font-semibold text-[#181819] mb-4">
-                    Generated Notes using O1-mini for: {notes}
-                  </h3>
-                  <div className="grid gap-4">
-                    {generatedContent.openai.shortNotes.map((note, index) => (
-                      <div
-                        key={index}
-                        className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        <div 
-                          className="whitespace-pre-wrap font-sans text-[#181819] pr-12"
-                          dangerouslySetInnerHTML={{ __html: note }}
-                        />
-                        <button
-                          onClick={() => copyToClipboard(note, index + 100)}
-                          className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
-                            copiedIndex === index + 100
-                              ? 'text-green-600 bg-green-50'
-                              : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
-                          }`}
-                        >
-                          {copiedIndex === index + 100 ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* GPT-4o (V2) Notes */}
               {generatedContent.openai_v2.shortNotes.length > 0 && (
-                <div className="mt-12">
+                <div className="mt-8">
                   <h3 className="text-lg font-semibold text-[#181819] mb-4">
-                    GPT-4o (V2) result for: {notes}
+                    Custom Model result for: {notes}
                   </h3>
                   <div className="grid gap-4">
                     {generatedContent.openai_v2.shortNotes.map((note, index) => (
