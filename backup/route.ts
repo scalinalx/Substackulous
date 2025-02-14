@@ -428,52 +428,13 @@ export async function POST(req: Request) {
     const llamaResult = llamaCompletion.choices[0]?.message?.content || '';
     const openaiResult = openaiCompletion.choices[0]?.message?.content || '';
 
-    // Generate with GPT-4o (V2)
-    const gpt4oPrompt = `Act like a seasoned Substack creator who consistently goes viral with impactful notes.
-
-USER TOPIC = ${userTopic}
-
-Write a 5 highly engaging notes designed to go viral on the USER TOPIC above. Keep them engaging, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
-
-The note sshould challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
-
-Tailor the notes to the theme of USER TOPIC while maintaining a focus on progress, action, and cutting through distractions. 
-
-If the topic is about Substack, highlight consistency, value, and playing the long game. Highlight and praise Substack's advantages over other social media platform. Highlight and praise Substack's organic nature. 
-
-For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
-
-Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.`;
-
-    const gpt4oCompletion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: gpt4oPrompt
-        }
-      ],
-      response_format: {
-        "type": "text"
-      },
-      temperature: 1,
-      max_completion_tokens: 2048,
-      top_p: 1,
-      frequency_penalty: 0.4,
-      presence_penalty: 0
-    });
-
-    const openai_v2Result = gpt4oCompletion.choices[0]?.message?.content || '';
-
     const parsedLlamaNotes = parseGeneratedNotes(llamaResult);
     const parsedOpenAINotes = parseGeneratedNotes(openaiResult);
-    const parsedOpenAIV2Notes = parseGeneratedNotes(openai_v2Result);
 
     return NextResponse.json({
       result: {
         llama: parsedLlamaNotes,
-        openai: parsedOpenAINotes,
-        openai_v2: parsedOpenAIV2Notes
+        openai: parsedOpenAINotes
       },
       selectedExamples: selectedExamplesText
     });
