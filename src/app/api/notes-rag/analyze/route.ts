@@ -443,10 +443,24 @@ If the topic is about Substack, highlight consistency, value, and playing the lo
 
 For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
 
-Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.`;
+Each note should start with a strong hook. What's a perfect hook?
+
+It's creative. Outside the box. Eye-catching. It creates an emotion, a feeling. It makes people stop scrolling.
+
+It avoids jargon, fancy words, questions, emojis at all costs. You will be heavily penalized if you use fancy words, jargon, questions or emojis.
+
+Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
+Each sentence should be written on a new line. 
+Maximize readability through structure and formatting. 
+Use short & sweet sentences that pack a punch and easily digestible.
+Separate each note with the markdown delimiter ###---###.
+Ensure a balanced mixture of short-form and long-form notes. 
+Short form notes are concise, punchy and easy to read.
+Long form notes are educational, personal and share a story.
+Think through this step by step. `;
 
     const gpt4oCompletion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-latest",
       messages: [
         {
           role: "user",
