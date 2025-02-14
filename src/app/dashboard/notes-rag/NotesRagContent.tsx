@@ -72,14 +72,13 @@ export default function NotesRagContent() {
     }
   };
 
-  const handleGenerate = async (e: React.FormEvent) => {
+  const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log('Starting generation...');
     
     // Clear states at the start
     setError(null);
     setGeneratedContent(null);
-    generatedContentRef.current = null;
 
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
@@ -97,7 +96,6 @@ export default function NotesRagContent() {
     }
 
     setLoading(true);
-    console.log('Set loading state, starting API call...');
 
     try {
       // First, try to update credits immediately
@@ -120,8 +118,6 @@ export default function NotesRagContent() {
         })
       });
 
-      console.log('API call completed, checking response...');
-
       if (!response.ok) {
         // If API call fails, refund the credits
         await updateProfile({
@@ -131,7 +127,6 @@ export default function NotesRagContent() {
       }
 
       const data = await response.json();
-      console.log('Received data from API:', data);
       
       if (!data.result) {
         // If no result, refund the credits
@@ -141,10 +136,8 @@ export default function NotesRagContent() {
         throw new Error('No content received from the API');
       }
 
-      // Update content state directly
+      // Update content state
       setGeneratedContent(data.result);
-      
-      // Show success toast
       toast.success('Notes generated successfully!');
       
     } catch (err) {
@@ -160,7 +153,6 @@ export default function NotesRagContent() {
         console.error('Error refunding credits:', refundError);
       }
     } finally {
-      console.log('Setting loading state to false...');
       setLoading(false);
     }
   };

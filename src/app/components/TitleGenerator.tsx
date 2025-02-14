@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import supabase from '@/lib/supabase';
+import { toast } from 'sonner';
 
 export default function TitleGenerator() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function TitleGenerator() {
     }
   };
 
-  const handleGenerateTitles = async (e: React.FormEvent) => {
+  const handleGenerateTitles = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setGeneratedTitles([]);
@@ -48,18 +49,17 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      // Get the session token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session?.access_token) {
-        throw new Error('Authentication error. Please try logging in again.');
-      }
+      // First deduct credits
+      const updatedCredits = profile.credits - creditCost;
+      await updateProfile({
+        credits: updatedCredits
+      });
 
+      // Then make API call
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           theme: topic,
@@ -68,6 +68,10 @@ export default function TitleGenerator() {
       });
 
       if (!response.ok) {
+        // Refund credits on error
+        await updateProfile({
+          credits: profile.credits
+        });
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to generate titles');
       }
@@ -75,15 +79,28 @@ export default function TitleGenerator() {
       const data = await response.json();
       
       if (data.error) {
+        // Refund credits on error
+        await updateProfile({
+          credits: profile.credits
+        });
         throw new Error(data.error);
       }
       
       setGeneratedTitles(data.titles);
+      toast.success('Titles generated successfully!');
       
-      // Credit deduction is handled by the API
     } catch (err) {
       console.error('Error in title generation:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
+      
+      // Ensure credits are refunded on error
+      try {
+        await updateProfile({
+          credits: profile.credits
+        });
+      } catch (refundError) {
+        console.error('Error refunding credits:', refundError);
+      }
     } finally {
       setLoading(false);
     }
