@@ -46,20 +46,12 @@ export default function NotesRagContent() {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // Loading state check
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
-        <p className="text-gray-600">Securing your session...</p>
-      </div>
-    );
-  }
-
-  // Auth check
-  if (!user || !profile) {
-    return null;
-  }
+  // Add useEffect to persist generated content across auth updates
+  useEffect(() => {
+    if (generatedContent) {
+      console.log('Content available:', generatedContent);
+    }
+  }, [generatedContent]);
 
   const copyToClipboard = async (text: string, index: number) => {
     try {
@@ -121,23 +113,45 @@ export default function NotesRagContent() {
         throw new Error('No content received from the API');
       }
 
-      // Only deduct credits after successful API call
-      const updatedCredits = profile.credits - creditCost;
-      await updateProfile({
-        credits: updatedCredits
-      });
-
-      // Update content state
+      // First update the content state
       setGeneratedContent(data.result);
-      toast.success('Notes generated successfully!');
+      
+      // Then update credits
+      try {
+        const updatedCredits = profile.credits - creditCost;
+        await updateProfile({
+          credits: updatedCredits
+        });
+        toast.success('Notes generated successfully!');
+      } catch (creditError) {
+        console.error('Error updating credits:', creditError);
+        // Even if credit update fails, we still show the content
+        toast.error('Generated successfully but failed to update credits');
+      }
       
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
+      setGeneratedContent(null);
     } finally {
       setLoading(false);
     }
   };
+
+  // Loading state check
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-600">Securing your session...</p>
+      </div>
+    );
+  }
+
+  // Auth check
+  if (!user || !profile) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
