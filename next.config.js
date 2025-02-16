@@ -1,5 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  swcMinify: true,
+  experimental: {
+    // Enable modern build optimizations
+    optimizeCss: true,
+    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
+  },
+  // Configure SWC
+  compiler: {
+    // Remove console.log in production
+    removeConsole: process.env.NODE_ENV === 'production',
+    // Enable proper TypeScript handling
+    styledComponents: true,
+  },
+  typescript: {
+    // Handle TypeScript errors as warnings during development
+    ignoreBuildErrors: process.env.NODE_ENV === 'development',
+  },
   webpack: (config, { isServer }) => {
     // Handle source map files
     config.module.rules.push({
@@ -20,6 +37,18 @@ const nextConfig = {
         'puppeteer-core': 'commonjs puppeteer-core'
       });
     }
+
+    // Handle non-standard packages
+    config.module.rules.push({
+      test: /\.(mp3|wav|ogg)$/,
+      type: 'asset/resource',
+    });
+
+    // Null loader for packages that cause issues
+    config.module.rules.push({
+      test: /\.wasm$/,
+      loader: 'null-loader',
+    });
 
     return config;
   },
