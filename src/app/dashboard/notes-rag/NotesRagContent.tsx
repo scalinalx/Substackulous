@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from '@/app/components/ui/button';
 import { toast } from 'sonner';
+import supabase from '@/lib/supabase';
 
 type GeneratedResult = {
   llama: {
@@ -89,11 +90,19 @@ export default function NotesRagContent() {
     setLoading(true);
 
     try {
+      // Get session first
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
       // Store the API response in a variable first
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           userTopic: notes,
@@ -103,7 +112,8 @@ export default function NotesRagContent() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate content');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate content');
       }
 
       const data = await response.json();
@@ -113,9 +123,9 @@ export default function NotesRagContent() {
         throw new Error('Invalid response format from API');
       }
 
-      // Only update state after we've validated the response
-      setGeneratedContent(data.result);
+      // Store in ref first, then update state to prevent race conditions
       generatedContentRef.current = data.result;
+      setGeneratedContent(data.result);
       
       // Update credits only after content is successfully set
       try {

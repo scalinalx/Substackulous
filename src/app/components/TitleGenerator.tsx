@@ -49,12 +49,19 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      // Make API call first
+      // Get session first
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('Not authenticated');
+      }
+
+      // Make API call with valid token
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await supabase.auth.getSession().then(res => res.data.session?.access_token)}`,
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           theme: topic,
