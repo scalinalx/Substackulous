@@ -54,6 +54,7 @@ export default function TitleGenerator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await supabase.auth.getSession().then(res => res.data.session?.access_token)}`,
         },
         body: JSON.stringify({
           theme: topic,

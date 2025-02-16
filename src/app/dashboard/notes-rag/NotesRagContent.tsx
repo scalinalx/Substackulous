@@ -68,9 +68,8 @@ export default function NotesRagContent() {
     e.preventDefault();
     console.log('Starting generation...');
     
-    // Clear states at the start
+    // Only clear error, keep existing content until new content arrives
     setError(null);
-    setGeneratedContent(null);
 
     if (!notes.trim()) {
       setError('Please enter some notes to generate from');
@@ -90,7 +89,7 @@ export default function NotesRagContent() {
     setLoading(true);
 
     try {
-      // Make the API call first
+      // Store the API response in a variable first
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
@@ -109,14 +108,16 @@ export default function NotesRagContent() {
 
       const data = await response.json();
       
-      if (!data.result) {
-        throw new Error('No content received from the API');
+      // Validate the response data structure
+      if (!data.result || !data.result.openai_v2 || !Array.isArray(data.result.openai_v2.shortNotes)) {
+        throw new Error('Invalid response format from API');
       }
 
-      // First update the content state
+      // Only update state after we've validated the response
       setGeneratedContent(data.result);
+      generatedContentRef.current = data.result;
       
-      // Then update credits
+      // Update credits only after content is successfully set
       try {
         const updatedCredits = profile.credits - creditCost;
         await updateProfile({
@@ -125,14 +126,13 @@ export default function NotesRagContent() {
         toast.success('Notes generated successfully!');
       } catch (creditError) {
         console.error('Error updating credits:', creditError);
-        // Even if credit update fails, we still show the content
         toast.error('Generated successfully but failed to update credits');
       }
       
     } catch (err) {
       console.error('Error generating content:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
-      setGeneratedContent(null);
+      // Don't clear existing content on error
     } finally {
       setLoading(false);
     }
