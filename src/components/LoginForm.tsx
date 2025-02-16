@@ -52,27 +52,35 @@ function LoginFormContent() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log('1. Form submission started');
     setError(null);
     
     if (!signIn) {
-      console.error('signIn function not available');
+      console.error('2. Error: signIn function not available');
       setError('Authentication not properly initialized');
       return;
     }
 
+    console.log('3. SignIn function is available, proceeding with authentication');
+
     try {
       if (!email || !password) {
+        console.error('4. Error: Missing email or password');
         throw new Error('Please enter both email and password');
       }
 
-      const { error: signInError } = await signIn(email, password);
+      console.log('5. Calling signIn function');
+      const result = await signIn(email, password);
+      console.log('6. SignIn function returned:', { hasError: !!result.error });
       
-      if (signInError) {
-        console.error('Sign in error:', signInError);
-        throw signInError;
+      if (result.error) {
+        console.error('7. SignIn returned error:', result.error);
+        throw result.error;
       }
+
+      console.log('8. SignIn successful');
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('9. Login error:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
   };

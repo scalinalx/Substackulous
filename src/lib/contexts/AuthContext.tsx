@@ -303,36 +303,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
-      console.log('AuthContext: Starting sign in process');
+      console.log('AuthContext: 1. Starting sign in process');
       safeSetLoading(true);
 
       // First check if we have a valid client
       if (!supabase) {
+        console.error('AuthContext: 2. Error - Supabase client not initialized');
         throw new Error('Supabase client not initialized');
       }
 
+      console.log('AuthContext: 3. Making sign in request');
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
         password,
       });
       
-      console.log('AuthContext: Sign in response:', {
+      console.log('AuthContext: 4. Sign in response:', {
         hasData: !!data,
         hasError: !!error,
         hasSession: !!data?.session,
         hasUser: !!data?.user,
+        errorMessage: error?.message
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('AuthContext: 5. Sign in error:', error);
+        throw error;
+      }
 
       // If successful, update the session and redirect
       if (data.session) {
-        console.log('AuthContext: Updating session state and redirecting');
+        console.log('AuthContext: 6. Updating session state');
         safeSetSession(data.session);
         safeSetUser(data.session.user);
+        
+        console.log('AuthContext: 7. Fetching user profile');
         await fetchProfile(data.session.user.id);
+        
+        console.log('AuthContext: 8. Refreshing router');
         router.refresh();
+        
+        console.log('AuthContext: 9. Redirecting to dashboard');
         await router.replace('/dashboard');
+        
+        console.log('AuthContext: 10. Sign in process complete');
+      } else {
+        console.error('AuthContext: Error - No session in response data');
+        throw new Error('No session returned from authentication');
       }
 
       return { error: null };
@@ -344,6 +361,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : new Error('Authentication failed. Please check your credentials.')
       };
     } finally {
+      console.log('AuthContext: Setting loading to false');
       safeSetLoading(false);
     }
   }, [safeSetLoading, safeSetSession, safeSetUser, fetchProfile, router]);
