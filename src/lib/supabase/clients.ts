@@ -8,7 +8,6 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Debug environment variables
 console.log('Supabase Environment Check:', {
-  url: supabaseUrl?.substring(0, 10) + '...',
   hasUrl: !!supabaseUrl,
   hasAnonKey: !!supabaseAnonKey,
   urlLength: supabaseUrl?.length || 0,
@@ -16,41 +15,38 @@ console.log('Supabase Environment Check:', {
   isDevelopment: process.env.NODE_ENV === 'development'
 });
 
-if (!supabaseUrl) {
-  console.error('CRITICAL: Missing NEXT_PUBLIC_SUPABASE_URL');
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL');
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    `Missing Supabase environment variables:\n` +
+    `NEXT_PUBLIC_SUPABASE_URL: ${!!supabaseUrl}\n` +
+    `NEXT_PUBLIC_SUPABASE_ANON_KEY: ${!!supabaseAnonKey}`
+  );
 }
-
-if (!supabaseAnonKey) {
-  console.error('CRITICAL: Missing NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY');
-}
-
-console.log('Initializing Supabase client...');
 
 // Create a single instance of the Supabase client
-const supabaseClient = createClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      flowType: 'pkce',
-      debug: true
-    },
-    global: {
-      headers: {
-        'apikey': supabaseAnonKey
-      }
+const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    debug: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined
+  },
+  global: {
+    headers: {
+      'apikey': supabaseAnonKey,
+      'Authorization': `Bearer ${supabaseAnonKey}`
     }
   }
-);
+});
+
+// Log successful initialization
+console.log('Supabase client initialized with URL:', supabaseUrl);
 
 // Test the client initialization
 supabaseClient.auth.onAuthStateChange((event, session) => {
-  console.log('Supabase Auth State Changed:', { 
+  console.log('Auth State Changed:', { 
     event, 
     hasSession: !!session,
     timestamp: new Date().toISOString()
@@ -71,8 +67,6 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
     console.error('Failed to check initial Supabase session:', err);
   }
 })();
-
-console.log('Supabase client initialized');
 
 export default supabaseClient;
 export const supabase = supabaseClient;

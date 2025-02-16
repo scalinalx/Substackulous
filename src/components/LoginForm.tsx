@@ -39,30 +39,28 @@ class ErrorBoundary extends React.Component<
 }
 
 function LoginFormContent() {
-  console.log('LoginFormContent rendering');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   
-  // Log auth hook values
   const auth = useAuth();
-  
+  const { signIn, signInWithGoogle, isLoading, isInitialized } = auth;
+
+  // Check auth state on mount and update
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check Supabase initialization
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        // Get environment info
         const envInfo = {
           hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
           hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
           isDev: process.env.NODE_ENV === 'development'
         };
 
-        setDebugInfo({
+        const info = {
           auth: {
             isLoading: auth.isLoading,
             isInitialized: auth.isInitialized,
@@ -74,21 +72,10 @@ function LoginFormContent() {
             sessionError: sessionError?.message,
           },
           env: envInfo
-        });
+        };
 
-        console.log('Auth Debug Info:', {
-          auth: {
-            isLoading: auth.isLoading,
-            isInitialized: auth.isInitialized,
-            hasSignIn: !!auth.signIn,
-            hasSignInWithGoogle: !!auth.signInWithGoogle
-          },
-          supabase: {
-            hasSession: !!session,
-            sessionError: sessionError?.message,
-          },
-          env: envInfo
-        });
+        console.log('Auth Debug Info:', info);
+        setDebugInfo(info);
       } catch (err) {
         console.error('Error checking auth:', err);
         setDebugInfo({ error: err instanceof Error ? err.message : 'Unknown error' });
@@ -97,118 +84,54 @@ function LoginFormContent() {
 
     checkAuth();
   }, [auth]);
-  
-  const { signIn, signInWithGoogle, isLoading, isInitialized } = auth;
 
   useEffect(() => {
-    console.log('LoginForm mounting...');
-    try {
-      setMounted(true);
-      console.log('LoginForm mounted successfully');
-    } catch (err) {
-      console.error('Error in mount effect:', err);
-    }
+    setMounted(true);
   }, []);
 
   const handleSubmitClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    console.log('Submit button clicked');
     e.preventDefault();
-    e.stopPropagation();
+    console.log('Submit button clicked');
     
-    // Check if we have the required auth functions
     if (!signIn) {
       console.error('signIn function not available');
       setError('Authentication not properly initialized');
       return;
     }
 
-    await handleEmailSignIn(e as any);
-  };
-
-  const handleEmailSignIn = async (e: React.FormEvent) => {
-    console.log('handleEmailSignIn called');
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Log the current state
-    const currentState = { 
-      email, 
-      hasPassword: !!password,
-      isLoading, 
-      mounted, 
-      isInitialized,
-      hasSignInFunction: !!signIn,
-      debugInfo
-    };
-    
-    console.log('Attempting sign in with state:', currentState);
-    
-    if (!mounted || !isInitialized) {
-      console.log('Component not ready', { mounted, isInitialized });
-      return;
-    }
-
-    if (!signIn) {
-      console.error('signIn function not available');
-      setError('Authentication not initialized properly');
-      return;
-    }
-
-    if (isLoading) {
-      console.log('Already loading, preventing duplicate submission');
-      return;
-    }
-
-    setError(null);
-    
     try {
       if (!email || !password) {
         throw new Error('Please enter both email and password');
       }
 
-      console.log('Calling signIn function...');
+      console.log('Attempting sign in...');
       const { error: signInError } = await signIn(email, password);
-      console.log('Sign in response received', { hasError: !!signInError });
       
-      if (signInError) throw signInError;
-    } catch (err: unknown) {
+      if (signInError) {
+        console.error('Sign in error:', signInError);
+        throw signInError;
+      }
+    } catch (err) {
       console.error('Login error:', err);
-      setError(
-        err instanceof Error ? err.message :
-        typeof err === 'string' ? err :
-        'An unknown error occurred'
-      );
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
     }
   };
 
   const handleGoogleSignIn = async () => {
-    console.log('Google sign in started');
-    setError(null);
+    if (!signInWithGoogle) {
+      setError('Google sign in not available');
+      return;
+    }
+
     try {
       await signInWithGoogle();
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('Google sign in error:', err);
-      setError(
-        err instanceof Error ? err.message :
-        typeof err === 'string' ? err :
-        'Failed to sign in with Google'
-      );
+      setError(err instanceof Error ? err.message : 'Failed to sign in with Google');
     }
   };
 
-  // Debug render
-  console.log('Rendering form with state:', {
-    mounted,
-    isLoading,
-    isInitialized,
-    hasError: !!error,
-    debugInfo
-  });
-
-  if (!mounted) {
-    console.log('Not mounted, returning null');
-    return null;
-  }
+  if (!mounted) return null;
 
   return (
     <div className="max-w-md w-full space-y-6 p-8 bg-white rounded-lg shadow-md">
@@ -217,17 +140,14 @@ function LoginFormContent() {
         <p className="text-gray-600 mt-2">Sign in to your account</p>
       </div>
 
-      <form onSubmit={handleEmailSignIn} className="space-y-4">
+      <form className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Email
             <input
               type="email"
               value={email}
-              onChange={(e) => {
-                console.log('Email changed:', e.target.value);
-                setEmail(e.target.value);
-              }}
+              onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               required
               disabled={isLoading}
@@ -242,10 +162,7 @@ function LoginFormContent() {
             <input
               type="password"
               value={password}
-              onChange={(e) => {
-                console.log('Password changed');
-                setPassword(e.target.value);
-              }}
+              onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               required
               disabled={isLoading}
@@ -269,19 +186,6 @@ function LoginFormContent() {
           {isLoading ? 'Signing in...' : 'Sign in'}
         </button>
 
-        {isLoading && (
-          <div className="text-sm text-gray-600 text-center">
-            Processing your request...
-          </div>
-        )}
-
-        <div className="text-sm text-gray-600 text-center border border-gray-200 rounded p-2 bg-gray-50">
-          <strong>Debug Info:</strong><br />
-          <pre className="whitespace-pre-wrap text-left">
-            {JSON.stringify(debugInfo, null, 2)}
-          </pre>
-        </div>
-
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300" />
@@ -295,7 +199,7 @@ function LoginFormContent() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={isLoading}
-          className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path
@@ -318,6 +222,13 @@ function LoginFormContent() {
           Google
         </button>
       </form>
+
+      <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Debug Info</h3>
+        <pre className="text-xs text-gray-600 whitespace-pre-wrap">
+          {JSON.stringify(debugInfo, null, 2)}
+        </pre>
+      </div>
     </div>
   );
 }

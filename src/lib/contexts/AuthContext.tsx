@@ -305,15 +305,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log('AuthContext: Starting sign in process');
       safeSetLoading(true);
+
+      // First check if we have a valid client
+      if (!supabase) {
+        throw new Error('Supabase client not initialized');
+      }
+
+      // Log the request we're about to make
+      console.log('AuthContext: Making sign in request with:', {
+        email,
+        hasPassword: !!password,
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 10) + '...',
+        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      });
+
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
-        password 
+        password,
       });
       
       console.log('AuthContext: Sign in response:', {
         hasData: !!data,
         hasError: !!error,
-        errorMessage: error?.message
+        errorMessage: error?.message,
+        status: error?.status
       });
       
       if (error) throw error;
