@@ -1,25 +1,75 @@
 // src/components/LoginForm.tsx
 'use client';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
-export default function LoginForm() {
+// Error boundary component
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('LoginForm Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+          <h2 className="text-red-700">Something went wrong.</h2>
+          <pre className="mt-2 text-sm text-red-600">
+            {this.state.error?.message}
+          </pre>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function LoginFormContent() {
+  console.log('LoginFormContent rendering');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const { signIn, signInWithGoogle, isLoading, isInitialized } = useAuth();
   const [mounted, setMounted] = useState(false);
+  
+  // Log auth hook values
+  const auth = useAuth();
+  console.log('Auth hook values:', {
+    isLoading: auth.isLoading,
+    isInitialized: auth.isInitialized,
+    hasSignIn: !!auth.signIn,
+    hasSignInWithGoogle: !!auth.signInWithGoogle
+  });
+  
+  const { signIn, signInWithGoogle, isLoading, isInitialized } = auth;
 
   useEffect(() => {
-    setMounted(true);
-    console.log('LoginForm mounted');
+    console.log('LoginForm mounting...');
+    try {
+      setMounted(true);
+      console.log('LoginForm mounted successfully');
+    } catch (err) {
+      console.error('Error in mount effect:', err);
+    }
   }, []);
 
-  // Add direct click handler for the submit button
-  const handleSubmitClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSubmitClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    console.log('Submit button clicked');
     e.preventDefault();
-    console.log('Submit button clicked directly');
-    handleEmailSignIn(e as any);
+    e.stopPropagation();
+    await handleEmailSignIn(e as any);
   };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
@@ -32,11 +82,18 @@ export default function LoginForm() {
       hasPassword: !!password,
       isLoading, 
       mounted, 
-      isInitialized 
+      isInitialized,
+      hasSignInFunction: !!signIn
     });
     
     if (!mounted || !isInitialized) {
       console.log('Component not ready', { mounted, isInitialized });
+      return;
+    }
+
+    if (!signIn) {
+      console.error('signIn function not available');
+      setError('Authentication not initialized properly');
       return;
     }
 
@@ -82,8 +139,16 @@ export default function LoginForm() {
     }
   };
 
-  // Don't render until mounted to prevent hydration issues
+  // Debug render
+  console.log('Rendering form with state:', {
+    mounted,
+    isLoading,
+    isInitialized,
+    hasError: !!error
+  });
+
   if (!mounted) {
+    console.log('Not mounted, returning null');
     return null;
   }
 
@@ -152,10 +217,12 @@ export default function LoginForm() {
           </div>
         )}
 
-        <div className="text-sm text-gray-600 text-center">
-          Status: {isLoading ? 'Loading' : 'Ready'} | 
-          Mounted: {mounted ? 'Yes' : 'No'} | 
-          Initialized: {isInitialized ? 'Yes' : 'No'}
+        <div className="text-sm text-gray-600 text-center border border-gray-200 rounded p-2 bg-gray-50">
+          Debug Info:<br />
+          Status: {isLoading ? 'Loading' : 'Ready'}<br />
+          Mounted: {mounted ? 'Yes' : 'No'}<br />
+          Initialized: {isInitialized ? 'Yes' : 'No'}<br />
+          Has SignIn: {!!signIn ? 'Yes' : 'No'}
         </div>
 
         <div className="relative my-6">
@@ -195,5 +262,13 @@ export default function LoginForm() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function LoginForm() {
+  return (
+    <ErrorBoundary>
+      <LoginFormContent />
+    </ErrorBoundary>
   );
 }
