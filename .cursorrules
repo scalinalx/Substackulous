@@ -1,22 +1,108 @@
 You are an expert in TypeScript, Next.js App Router, React, and Tailwind. Follow @Next.js 14 App Router docs for Data Fetching, Rendering, and Routing. Use Vercel AI SDK for handling AI interactions and streaming responses.
 
+Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can abbreviate the rule description to a single word or phrase.
+
+State Management
+- Use React Context for global state when needed
+- Implement proper state persistence using chrome.storage (for extension)
+- Implement proper cleanup in useEffect hooks
+
+Syntax and Formatting
+- Use "function" keyword for pure functions
+- Avoid unnecessary curly braces in conditionals
+- Use declarative JSX
+- Implement proper TypeScript discriminated unions for message types
+
+UI and Styling
+- Use Shadcn UI and Radix for components
+- use npx shadcn@latest add <component-name> to add new shadcn components
+- Implement Tailwind CSS for styling
+- Consider extension-specific constraints (popup dimensions, permissions)
+- Follow Material Design guidelines for Chrome extensions
+- When adding new shadcn component, document the installation command
+
+Error Handling
+- Implement proper error boundaries
+- Log errors appropriately for debugging
+- Provide user-friendly error messages
+- Handle network failures gracefully
+
+Testing
+- Write unit tests for utilities and components
+- Implement E2E tests for critical flows
+- Test across different Chrome versions
+- Test memory usage and performance
+
+Security
+- Implement Content Security Policy
+- Sanitize user inputs
+- Handle sensitive data properly
+- Follow Chrome extension security best practices
+- Implement proper CORS handling
+
+
+Git Usage
+Commit Message Prefixes:
+
+"fix:" for bug fixes
+"feat:" for new features
+"perf:" for performance improvements
+"docs:" for documentation changes
+"style:" for formatting changes
+"refactor:" for code refactoring
+"test:" for adding missing tests
+"chore:" for maintenance tasks
+Rules:
+
+- Use lowercase for commit messages
+- Keep the summary line concise
+- Include description for non-obvious changes
+- Reference issue numbers when applicable
+
+
+Documentation
+Maintain clear README with setup instructions
+Document API interactions and data flows
+Keep manifest.json well-documented
+Don't include comments unless it's for complex logic
+Document permission requirements
+
+
+Development Workflow
+Use proper version control
+Implement proper code review process
+Test in multiple environments
+Follow semantic versioning for releases
+Maintain changelog
+
+Naming Conventions
+Use lowercase with dashes for directories (e.g., components/form-wizard)
+Favor named exports for components and utilities
+Use PascalCase for component files (e.g., LoginForm.tsx)
+Use camelCase for utility files ()
+
+
+TypeScript Usage
+Use TypeScript for all code; prefer interfaces over types
+Avoid enums; use const objects with 'as const' assertion
+Use functional components with TypeScript interfaces
+Define strict types for message passing between different parts of the extension
+Use absolute imports for all files @/...
+Avoid try/catch blocks unless there's good reason to translate or handle error in that abstraction
+Use explicit return types for all functions
+
+
+
 - All project files are saved in the /src folder. 
   - src/app has the page.tsx and layout.tsx files
   - src/app/api has the API routes
   - src/app/components has all the React components
   - src/app/lib has all the other code like helpers, hooks, and contexts
 
-There are some pre-configured APIs in this template that can be used but only if required by the current project. These have already been created:
-- Firebase
-  - In src/lib/firebase there is a firebase.ts configuration file as well as firebaseUtils.ts for various utility functions when interacting with Firebase Database, Storage, and Authencation
-  - In src/lib/contexts there is an AuthContext.tsx file that has user authentication with Firebase set up with the onAuthStateChanged listener.
-  - In src/lib/hooks there is a useAuth.ts hook
-- OpenAI 
-  - src/app/api/openai has chat/route.ts which is a simple API calling streamText from openai using the Vercel AI library
-- Anthropic
-  - src/app/api/anthropic has chat/route.ts which is a simple API calling streamText from Anthropic using the Vercel AI library
-- Replicate
-  - src/app/api/replicate has generate-image/route.ts which is a simple API calling the Stable Diffusion model hosted on Replicate to generate images
-- Deepgram
-  - src/app/api/deepgram has transcribe-audio/route.ts which is a simple API that returns the Deepgram API key to be used in the client side to transcribe audio in real-time.
-  - src/lib/contexts has a DeepgramContext.tsx file that has the Deepgram API key set up with the useDeepgram hook to be used in any component.
+Code Style and Structure
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
+- Structure repository files as follows:
+
