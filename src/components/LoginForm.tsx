@@ -43,45 +43,67 @@ function LoginFormContent() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { signIn, signInWithGoogle, isLoading, isInitialized } = useAuth();
 
+  // Log state changes
+  useEffect(() => {
+    console.log('Form State:', {
+      mounted,
+      isLoading,
+      isInitialized,
+      isSubmitting,
+      hasEmail: !!email,
+      hasPassword: !!password,
+      hasError: !!error
+    });
+  }, [mounted, isLoading, isInitialized, isSubmitting, email, password, error]);
+
   useEffect(() => {
     setMounted(true);
+    console.log('LoginForm mounted');
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('1. Form submission started');
-    setError(null);
+    console.log('Form submission started');
     
-    if (!signIn) {
-      console.error('2. Error: signIn function not available');
-      setError('Authentication not properly initialized');
-      return;
-    }
+    // Log form state
+    console.log('Form submission state:', {
+      email: email ? 'provided' : 'missing',
+      password: password ? 'provided' : 'missing',
+      signInAvailable: !!signIn,
+      mounted,
+      isInitialized,
+      isLoading
+    });
 
-    console.log('3. SignIn function is available, proceeding with authentication');
+    setError(null);
+    setIsSubmitting(true);
 
     try {
+      if (!signIn) {
+        throw new Error('Authentication not properly initialized');
+      }
+
       if (!email || !password) {
-        console.error('4. Error: Missing email or password');
         throw new Error('Please enter both email and password');
       }
 
-      console.log('5. Calling signIn function');
+      console.log('Attempting sign in...');
       const result = await signIn(email, password);
-      console.log('6. SignIn function returned:', { hasError: !!result.error });
       
       if (result.error) {
-        console.error('7. SignIn returned error:', result.error);
         throw result.error;
       }
 
-      console.log('8. SignIn successful');
+      console.log('Sign in successful');
     } catch (err) {
-      console.error('9. Login error:', err);
+      console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -99,10 +121,23 @@ function LoginFormContent() {
     }
   };
 
-  if (!mounted) return null;
+  // Add debug panel
+  const debugPanel = process.env.NODE_ENV === 'development' && (
+    <div className="mb-4 p-4 bg-gray-100 rounded-md text-xs font-mono">
+      <div>Mounted: {String(mounted)}</div>
+      <div>Initialized: {String(isInitialized)}</div>
+      <div>Loading: {String(isLoading)}</div>
+      <div>Submitting: {String(isSubmitting)}</div>
+      <div>Has Email: {String(!!email)}</div>
+      <div>Has Password: {String(!!password)}</div>
+      <div>Has Error: {String(!!error)}</div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 bg-white p-8 rounded-lg shadow-md">
+      {debugPanel}
+
       <div className="text-center">
         <h1 className="text-2xl font-bold">Welcome Back</h1>
         <p className="text-gray-600 mt-2">Sign in to your account</p>
@@ -118,7 +153,7 @@ function LoginFormContent() {
               onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               required
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
               autoComplete="email"
             />
           </label>
@@ -133,7 +168,7 @@ function LoginFormContent() {
               onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               required
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
               autoComplete="current-password"
             />
           </label>
@@ -147,10 +182,10 @@ function LoginFormContent() {
 
         <button
           type="submit"
-          disabled={isLoading || !mounted || !isInitialized}
+          disabled={isLoading || isSubmitting || !mounted || !isInitialized}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Signing in...' : 'Sign in'}
+          {isSubmitting ? 'Signing in...' : 'Sign in'}
         </button>
 
         <div className="relative my-6">
@@ -165,7 +200,7 @@ function LoginFormContent() {
         <button
           type="button"
           onClick={handleGoogleSignIn}
-          disabled={isLoading}
+          disabled={isLoading || isSubmitting}
           className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
