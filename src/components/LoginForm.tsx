@@ -2,6 +2,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { supabase } from '@/lib/supabase/clients';
 
 // Error boundary component
 class ErrorBoundary extends React.Component<
@@ -43,15 +44,59 @@ function LoginFormContent() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   
   // Log auth hook values
   const auth = useAuth();
-  console.log('Auth hook values:', {
-    isLoading: auth.isLoading,
-    isInitialized: auth.isInitialized,
-    hasSignIn: !!auth.signIn,
-    hasSignInWithGoogle: !!auth.signInWithGoogle
-  });
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // Check Supabase initialization
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        // Get environment info
+        const envInfo = {
+          hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          isDev: process.env.NODE_ENV === 'development'
+        };
+
+        setDebugInfo({
+          auth: {
+            isLoading: auth.isLoading,
+            isInitialized: auth.isInitialized,
+            hasSignIn: !!auth.signIn,
+            hasSignInWithGoogle: !!auth.signInWithGoogle
+          },
+          supabase: {
+            hasSession: !!session,
+            sessionError: sessionError?.message,
+          },
+          env: envInfo
+        });
+
+        console.log('Auth Debug Info:', {
+          auth: {
+            isLoading: auth.isLoading,
+            isInitialized: auth.isInitialized,
+            hasSignIn: !!auth.signIn,
+            hasSignInWithGoogle: !!auth.signInWithGoogle
+          },
+          supabase: {
+            hasSession: !!session,
+            sessionError: sessionError?.message,
+          },
+          env: envInfo
+        });
+      } catch (err) {
+        console.error('Error checking auth:', err);
+        setDebugInfo({ error: err instanceof Error ? err.message : 'Unknown error' });
+      }
+    };
+
+    checkAuth();
+  }, [auth]);
   
   const { signIn, signInWithGoogle, isLoading, isInitialized } = auth;
 
@@ -69,6 +114,14 @@ function LoginFormContent() {
     console.log('Submit button clicked');
     e.preventDefault();
     e.stopPropagation();
+    
+    // Check if we have the required auth functions
+    if (!signIn) {
+      console.error('signIn function not available');
+      setError('Authentication not properly initialized');
+      return;
+    }
+
     await handleEmailSignIn(e as any);
   };
 
@@ -77,14 +130,18 @@ function LoginFormContent() {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('Form submitted', { 
+    // Log the current state
+    const currentState = { 
       email, 
       hasPassword: !!password,
       isLoading, 
       mounted, 
       isInitialized,
-      hasSignInFunction: !!signIn
-    });
+      hasSignInFunction: !!signIn,
+      debugInfo
+    };
+    
+    console.log('Attempting sign in with state:', currentState);
     
     if (!mounted || !isInitialized) {
       console.log('Component not ready', { mounted, isInitialized });
@@ -109,7 +166,7 @@ function LoginFormContent() {
         throw new Error('Please enter both email and password');
       }
 
-      console.log('Attempting sign in...');
+      console.log('Calling signIn function...');
       const { error: signInError } = await signIn(email, password);
       console.log('Sign in response received', { hasError: !!signInError });
       
@@ -144,7 +201,8 @@ function LoginFormContent() {
     mounted,
     isLoading,
     isInitialized,
-    hasError: !!error
+    hasError: !!error,
+    debugInfo
   });
 
   if (!mounted) {
@@ -218,11 +276,10 @@ function LoginFormContent() {
         )}
 
         <div className="text-sm text-gray-600 text-center border border-gray-200 rounded p-2 bg-gray-50">
-          Debug Info:<br />
-          Status: {isLoading ? 'Loading' : 'Ready'}<br />
-          Mounted: {mounted ? 'Yes' : 'No'}<br />
-          Initialized: {isInitialized ? 'Yes' : 'No'}<br />
-          Has SignIn: {!!signIn ? 'Yes' : 'No'}
+          <strong>Debug Info:</strong><br />
+          <pre className="whitespace-pre-wrap text-left">
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
         </div>
 
         <div className="relative my-6">
