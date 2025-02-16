@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import supabase from '@/lib/supabase';
@@ -14,7 +14,18 @@ export default function TitleGenerator() {
   const [topic, setTopic] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
   const creditCost = 1;
+
+  // Handle mounting to prevent hydration issues
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Don't render anything until mounted
+  if (!mounted) {
+    return null;
+  }
 
   const copyToClipboard = async (text: string, index: number) => {
     try {
@@ -29,8 +40,8 @@ export default function TitleGenerator() {
   const handleGenerateTitles = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-    setGeneratedTitles([]);
-
+    
+    // Don't clear titles until we have new ones
     if (!topic.trim()) {
       setError('Please enter a topic');
       return;
@@ -67,6 +78,7 @@ export default function TitleGenerator() {
           theme: topic,
           userId: user?.id,
         }),
+        cache: 'no-store'
       });
 
       if (!response.ok) {
@@ -80,13 +92,15 @@ export default function TitleGenerator() {
         throw new Error(data.error);
       }
 
+      // Set new titles before updating credits
+      setGeneratedTitles(data.titles);
+
       // Only deduct credits after successful API call
       const updatedCredits = profile.credits - creditCost;
       await updateProfile({
         credits: updatedCredits
       });
       
-      setGeneratedTitles(data.titles);
       toast.success('Titles generated successfully!');
       
     } catch (err) {

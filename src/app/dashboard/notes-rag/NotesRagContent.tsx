@@ -33,6 +33,8 @@ export default function NotesRagContent() {
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [session, setSession] = useState<any>(null);
   const creditCost = 2;
 
   // Refs
@@ -40,6 +42,30 @@ export default function NotesRagContent() {
   const profileUpdatePendingRef = useRef(false);
   const lastProfileUpdateRef = useRef<number>(0);
   
+  // Handle mounting and session
+  useEffect(() => {
+    const initializeComponent = async () => {
+      try {
+        setMounted(true);
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
+
+        // Set up session change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          setSession(session);
+        });
+
+        return () => {
+          subscription?.unsubscribe();
+        };
+      } catch (error) {
+        console.error('Error initializing component:', error);
+      }
+    };
+
+    initializeComponent();
+  }, []);
+
   // All useEffects together
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -51,6 +77,7 @@ export default function NotesRagContent() {
   useEffect(() => {
     if (generatedContent) {
       console.log('Content available:', generatedContent);
+      generatedContentRef.current = generatedContent;
     }
   }, [generatedContent]);
 
@@ -82,6 +109,17 @@ export default function NotesRagContent() {
       return;
     }
 
+    if (!session?.access_token) {
+      // Try to refresh the session
+      const { data: { session: refreshedSession } } = await supabase.auth.getSession();
+      if (!refreshedSession?.access_token) {
+        setError('Not authenticated. Please log in again.');
+        router.replace('/login');
+        return;
+      }
+      setSession(refreshedSession);
+    }
+
     if (profile.credits < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
       return;
@@ -90,14 +128,7 @@ export default function NotesRagContent() {
     setLoading(true);
 
     try {
-      // Get session first
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
-        throw new Error('Not authenticated');
-      }
-
-      // Store the API response in a variable first
+      // Make API call with current session token
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
@@ -108,11 +139,17 @@ export default function NotesRagContent() {
           userTopic: notes,
           userId: user?.id,
           model: 'deepseek'
-        })
+        }),
+        cache: 'no-store'
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401) {
+          // Handle authentication error
+          setError('Session expired. Please refresh the page or log in again.');
+          return;
+        }
         throw new Error(errorData.error || 'Failed to generate content');
       }
 
@@ -141,12 +178,21 @@ export default function NotesRagContent() {
       
     } catch (err) {
       console.error('Error generating content:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
-      // Don't clear existing content on error
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate content. Please try again.';
+      setError(errorMessage);
+      
+      if (errorMessage.includes('Not authenticated') || errorMessage.includes('Session expired')) {
+        router.replace('/login');
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Don't render anything until mounted and session is initialized
+  if (!mounted) {
+    return null;
+  }
 
   // Loading state check
   if (isLoading) {
@@ -159,8 +205,18 @@ export default function NotesRagContent() {
   }
 
   // Auth check
-  if (!user || !profile) {
-    return null;
+  if (!user || !profile || !session) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <p className="text-gray-600">Please log in to continue</p>
+        <button
+          onClick={() => router.replace('/login')}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+        >
+          Go to Login
+        </button>
+      </div>
+    );
   }
 
   return (
