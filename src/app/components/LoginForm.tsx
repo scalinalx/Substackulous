@@ -14,13 +14,18 @@ export default function LoginForm() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('LoginForm: 1. Starting sign in submission');
     setError(null);
     setSuccess(null);
     
     try {
+      console.log('LoginForm: 2. Calling signIn with email:', email);
       const { error } = await signIn(email, password);
+      console.log('LoginForm: 3. Sign in response received, error:', error);
       if (error) throw error;
+      console.log('LoginForm: 4. Sign in successful');
     } catch (err) {
+      console.log('LoginForm: 5. Sign in error:', err);
       setError(
         err instanceof Error ? err.message :
         typeof err === 'string' ? err :

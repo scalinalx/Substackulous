@@ -209,15 +209,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!mountedRef.current) return;
 
         try {
+          console.log('AuthContext: Auth state change event:', {
+            event,
+            hasSession: !!currentSession,
+            userId: currentSession?.user?.id,
+            mountedRef: mountedRef.current
+          });
+          
           safeSetLoading(true);
           lastActivity.current = Date.now();
 
           // Always try to refresh the session on auth state change
           let validSession = currentSession;
           if (currentSession) {
+            console.log('AuthContext: Attempting to refresh session');
             const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
             if (!refreshError && refreshedSession) {
+              console.log('AuthContext: Session refreshed successfully');
               validSession = refreshedSession;
+            } else if (refreshError) {
+              console.error('AuthContext: Session refresh error:', refreshError);
             }
           }
           
@@ -225,19 +236,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           safeSetUser(validSession?.user ?? null);
 
           if (validSession?.user) {
+            console.log('AuthContext: Fetching profile for user:', validSession.user.id);
             await fetchProfile(validSession.user.id);
           } else {
+            console.log('AuthContext: No valid session, clearing profile');
             safeSetProfile(null);
           }
 
           // Handle navigation after auth state changes
           if (event === 'SIGNED_IN') {
+            console.log('AuthContext: SIGNED_IN event, redirecting to dashboard');
+            router.refresh();
             await router.replace('/dashboard');
+            console.log('AuthContext: Dashboard redirect complete');
           } else if (event === 'SIGNED_OUT') {
+            console.log('AuthContext: SIGNED_OUT event, redirecting to login');
+            router.refresh();
             await router.replace('/login');
+            console.log('AuthContext: Login redirect complete');
           }
         } catch (error) {
-          console.error('Auth state change error:', error);
+          console.error('AuthContext: Auth state change error:', error);
         } finally {
           if (mountedRef.current) {
             safeSetLoading(false);
@@ -303,52 +322,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
-      console.log('AuthContext: 1. Starting sign in process');
+      console.log('AuthContext: Starting sign in process');
       safeSetLoading(true);
 
       // First check if we have a valid client
       if (!supabase) {
-        console.error('AuthContext: 2. Error - Supabase client not initialized');
+        console.error('AuthContext: Supabase client not initialized');
         throw new Error('Supabase client not initialized');
       }
 
-      console.log('AuthContext: 3. Making sign in request');
+      console.log('AuthContext: Making sign in request');
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
         password,
       });
       
-      console.log('AuthContext: 4. Sign in response:', {
+      console.log('AuthContext: Sign in response:', {
         hasData: !!data,
         hasError: !!error,
         hasSession: !!data?.session,
         hasUser: !!data?.user,
-        errorMessage: error?.message
+        errorMessage: error?.message,
+        userId: data?.user?.id
       });
       
       if (error) {
-        console.error('AuthContext: 5. Sign in error:', error);
+        console.error('AuthContext: Sign in error:', error);
         throw error;
       }
 
       // If successful, update the session and redirect
       if (data.session) {
-        console.log('AuthContext: 6. Updating session state');
+        console.log('AuthContext: Updating session state');
         safeSetSession(data.session);
         safeSetUser(data.session.user);
         
-        console.log('AuthContext: 7. Fetching user profile');
+        console.log('AuthContext: Fetching user profile');
         await fetchProfile(data.session.user.id);
         
-        console.log('AuthContext: 8. Refreshing router');
-        router.refresh();
+        // Force a hard navigation to dashboard
+        console.log('AuthContext: Forcing navigation to dashboard');
+        window.location.href = '/dashboard';
         
-        console.log('AuthContext: 9. Redirecting to dashboard');
-        await router.replace('/dashboard');
-        
-        console.log('AuthContext: 10. Sign in process complete');
+        console.log('AuthContext: Sign in process complete');
       } else {
-        console.error('AuthContext: Error - No session in response data');
+        console.error('AuthContext: No session in response data');
         throw new Error('No session returned from authentication');
       }
 
@@ -364,7 +382,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('AuthContext: Setting loading to false');
       safeSetLoading(false);
     }
-  }, [safeSetLoading, safeSetSession, safeSetUser, fetchProfile, router]);
+  }, [safeSetLoading, safeSetSession, safeSetUser, fetchProfile]);
 
   const signUp = useCallback(async (email: string, password: string) => {
     try {
