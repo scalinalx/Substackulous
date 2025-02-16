@@ -303,12 +303,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
+      console.log('AuthContext: Starting sign in process');
       safeSetLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password 
+      });
+      
+      console.log('AuthContext: Sign in response:', {
+        hasData: !!data,
+        hasError: !!error,
+        errorMessage: error?.message
+      });
       
       if (error) throw error;
+
+      // If successful, update the session
+      if (data.session) {
+        console.log('AuthContext: Updating session state');
+        safeSetSession(data.session);
+        safeSetUser(data.session.user);
+        await fetchProfile(data.session.user.id);
+      }
+
       return { error: null };
     } catch (error) {
+      console.error('AuthContext: Sign in error:', error);
       return { 
         error: error instanceof Error 
           ? error 
@@ -317,7 +337,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       safeSetLoading(false);
     }
-  }, [safeSetLoading]);
+  }, [safeSetLoading, safeSetSession, safeSetUser, fetchProfile]);
 
   const signUp = useCallback(async (email: string, password: string) => {
     try {

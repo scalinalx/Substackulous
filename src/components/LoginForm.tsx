@@ -11,12 +11,16 @@ export default function LoginForm() {
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login attempt started');
     setError(null);
     
     try {
+      console.log('Attempting to sign in with email:', email);
       const { error } = await signIn(email, password);
+      console.log('Sign in response:', error ? 'Error occurred' : 'Success');
       if (error) throw error;
     } catch (err: unknown) {
+      console.error('Login error:', err);
       setError(
         err instanceof Error ? err.message :
         typeof err === 'string' ? err :
@@ -26,10 +30,12 @@ export default function LoginForm() {
   };
 
   const handleGoogleSignIn = async () => {
+    console.log('Google sign in started');
     setError(null);
     try {
       await signInWithGoogle();
     } catch (err: unknown) {
+      console.error('Google sign in error:', err);
       setError(
         err instanceof Error ? err.message :
         typeof err === 'string' ? err :
@@ -84,6 +90,7 @@ export default function LoginForm() {
           type="submit"
           disabled={isLoading}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => console.log('Login button clicked')}
         >
           {isLoading ? 'Signing in...' : 'Sign in'}
         </button>
