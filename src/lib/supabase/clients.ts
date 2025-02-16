@@ -9,7 +9,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 // Debug environment variables
 console.log('Supabase Environment Check:', {
   hasUrl: !!supabaseUrl,
-  hasAnonKey: !!supabaseAnonKey,
+  hasKey: !!supabaseAnonKey,
   urlLength: supabaseUrl?.length || 0,
   anonKeyLength: supabaseAnonKey?.length || 0,
   isDevelopment: process.env.NODE_ENV === 'development'
@@ -31,13 +31,17 @@ const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     flowType: 'pkce',
     debug: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: 'supabase.auth.token',
   },
   global: {
     headers: {
       'apikey': supabaseAnonKey,
       'Authorization': `Bearer ${supabaseAnonKey}`
     }
+  },
+  db: {
+    schema: 'public'
   }
 });
 
@@ -49,7 +53,8 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
   console.log('Auth State Changed:', { 
     event, 
     hasSession: !!session,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    accessToken: session?.access_token ? 'present' : 'none'
   });
 });
 
@@ -61,7 +66,8 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
       hasData: !!data,
       hasSession: !!data?.session,
       hasError: !!error,
-      errorMessage: error?.message
+      errorMessage: error?.message,
+      accessToken: data?.session?.access_token ? 'present' : 'none'
     });
   } catch (err) {
     console.error('Failed to check initial Supabase session:', err);

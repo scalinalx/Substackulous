@@ -48,50 +48,48 @@ function LoginFormContent() {
   const auth = useAuth();
   const { signIn, signInWithGoogle, isLoading, isInitialized } = auth;
 
-  // Check auth state on mount and update
+  // Update debug info whenever auth state changes
   useEffect(() => {
-    const checkAuth = async () => {
+    const updateDebugInfo = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        const envInfo = {
-          hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-          hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-          isDev: process.env.NODE_ENV === 'development'
-        };
-
         const info = {
           auth: {
-            isLoading: auth.isLoading,
-            isInitialized: auth.isInitialized,
-            hasSignIn: !!auth.signIn,
-            hasSignInWithGoogle: !!auth.signInWithGoogle
+            isLoading,
+            isInitialized,
+            hasSignIn: !!signIn,
+            hasSignInWithGoogle: !!signInWithGoogle
           },
           supabase: {
             hasSession: !!session,
             sessionError: sessionError?.message,
           },
-          env: envInfo
+          env: {
+            hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+            hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            isDev: process.env.NODE_ENV === 'development'
+          }
         };
 
-        console.log('Auth Debug Info:', info);
+        console.log('Debug Info Updated:', info);
         setDebugInfo(info);
       } catch (err) {
-        console.error('Error checking auth:', err);
+        console.error('Error updating debug info:', err);
         setDebugInfo({ error: err instanceof Error ? err.message : 'Unknown error' });
       }
     };
 
-    checkAuth();
-  }, [auth]);
+    updateDebugInfo();
+  }, [isLoading, isInitialized, signIn, signInWithGoogle]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleSubmitClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Submit button clicked');
+    console.log('Form submitted');
     
     if (!signIn) {
       console.error('signIn function not available');
@@ -104,13 +102,15 @@ function LoginFormContent() {
         throw new Error('Please enter both email and password');
       }
 
-      console.log('Attempting sign in...');
+      console.log('Attempting sign in with:', { email, hasPassword: !!password });
       const { error: signInError } = await signIn(email, password);
       
       if (signInError) {
         console.error('Sign in error:', signInError);
         throw signInError;
       }
+
+      console.log('Sign in successful');
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -134,13 +134,13 @@ function LoginFormContent() {
   if (!mounted) return null;
 
   return (
-    <div className="max-w-md w-full space-y-6 p-8 bg-white rounded-lg shadow-md">
+    <div className="space-y-6 bg-white p-8 rounded-lg shadow-md">
       <div className="text-center">
         <h1 className="text-2xl font-bold">Welcome Back</h1>
         <p className="text-gray-600 mt-2">Sign in to your account</p>
       </div>
 
-      <form className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Email
@@ -179,7 +179,6 @@ function LoginFormContent() {
 
         <button
           type="submit"
-          onClick={handleSubmitClick}
           disabled={isLoading || !mounted || !isInitialized}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -223,9 +222,10 @@ function LoginFormContent() {
         </button>
       </form>
 
-      <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+      {/* Always show debug panel */}
+      <div className="mt-8 p-4 bg-gray-50 rounded-md border border-gray-200">
         <h3 className="text-sm font-medium text-gray-700 mb-2">Debug Info</h3>
-        <pre className="text-xs text-gray-600 whitespace-pre-wrap">
+        <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto max-h-48">
           {JSON.stringify(debugInfo, null, 2)}
         </pre>
       </div>
@@ -235,8 +235,12 @@ function LoginFormContent() {
 
 export default function LoginForm() {
   return (
-    <ErrorBoundary>
-      <LoginFormContent />
-    </ErrorBoundary>
+    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <div className="w-full max-w-md">
+        <ErrorBoundary>
+          <LoginFormContent />
+        </ErrorBoundary>
+      </div>
+    </div>
   );
 }
