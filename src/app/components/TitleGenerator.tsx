@@ -20,6 +20,7 @@ export default function TitleGenerator() {
   // Handle mounting to prevent hydration issues
   useEffect(() => {
     setMounted(true);
+    return () => setMounted(false);
   }, []);
 
   // Don't render anything until mounted
@@ -83,6 +84,12 @@ export default function TitleGenerator() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 401) {
+          // Handle authentication error
+          setError('Session expired. Please refresh the page or log in again.');
+          router.replace('/login');
+          return;
+        }
         throw new Error(errorData.error || 'Failed to generate titles');
       }
 
@@ -105,7 +112,12 @@ export default function TitleGenerator() {
       
     } catch (err) {
       console.error('Error in title generation:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate titles. Please try again.';
+      setError(errorMessage);
+      
+      if (errorMessage.includes('Not authenticated') || errorMessage.includes('Session expired')) {
+        router.replace('/login');
+      }
     } finally {
       setLoading(false);
     }

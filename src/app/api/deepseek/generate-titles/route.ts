@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-if (!DEEPSEEK_API_KEY) {
-  throw new Error('Deepseek API key not configured');
-}
-
+import { validateSession, validateCredits, deductCredits } from '@/lib/middleware/auth';
 import Groq from 'groq-sdk';
-import { Completions } from 'groq-sdk/resources/completions.mjs';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 if (!GROQ_API_KEY) {
@@ -17,19 +11,6 @@ if (!GROQ_API_KEY) {
 const groq = new Groq({
   apiKey: GROQ_API_KEY
 });
-
-
-// Initialize Supabase client with service role key for admin operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
 
 export async function POST(req: Request) {
   try {
@@ -42,61 +23,28 @@ export async function POST(req: Request) {
       );
     }
 
-    // Get the session from the Authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      console.error('No Authorization header');
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    // Validate session
+    const sessionValidation = await validateSession(req);
+    if ('error' in sessionValidation) {
+      return NextResponse.json(
+        { error: sessionValidation.error }, 
+        { status: sessionValidation.status }
+      );
     }
 
-    const token = authHeader.split(' ')[1];
-    
-    // Verify the token and get the user
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
-
-    const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !sessionUser) {
-      console.error('Auth error:', authError);
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
-
-    if (sessionUser.id !== userId) {
-      console.error('User ID mismatch:', { sessionUserId: sessionUser.id, requestUserId: userId });
+    if (sessionValidation.sessionUser.id !== userId) {
+      console.error('User ID mismatch:', { 
+        sessionUserId: sessionValidation.sessionUser.id, 
+        requestUserId: userId 
+      });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // First, check if user has enough credits
-    let { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('credits')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-      console.error('Profile query error:', profileError);
-      return NextResponse.json({ 
-        error: 'Failed to fetch user profile',
-        details: profileError.message 
-      }, { status: 404 });
-    }
-
-    if (!profile) {
-      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
-    }
-
+    // Validate credits
     const creditCost = 1;
-    if (profile.credits < creditCost) {
-      return NextResponse.json({ error: 'Insufficient credits' }, { status: 400 });
+    const { profile, error: creditError, status: creditStatus } = await validateCredits(userId, creditCost);
+    if (creditError) {
+      return NextResponse.json({ error: creditError }, { status: creditStatus });
     }
 
     const prompt = `Act as a viral content expert with 10+ years experience in crafting high-performing headlines. Generate 10 viral titles for a post about "${theme}" using these proven frameworks:
@@ -124,7 +72,6 @@ Follow these rules:
 9. Use strategic clickbait whenever possible
 
 Output ONLY the titles, one per line. No explanations or frameworks needed.`;
-
 
     const completion = await groq.chat.completions.create({
       messages: [{
@@ -164,17 +111,10 @@ Output ONLY the titles, one per line. No explanations or frameworks needed.`;
       throw new Error('No titles generated');
     }
 
-    // Update the credits using supabaseAdmin
-    const { error: updateError } = await supabaseAdmin
-      .from('profiles')
-      .update({ credits: profile.credits - creditCost })
-      .eq('id', userId);
-
-    if (updateError) {
-      console.error('Failed to update credits:', updateError);
-      return NextResponse.json({ 
-        error: 'Failed to update credits' 
-      }, { status: 500 });
+    // Deduct credits
+    const { error: deductError, status: deductStatus } = await deductCredits(userId, creditCost);
+    if (deductError) {
+      return NextResponse.json({ error: deductError }, { status: deductStatus });
     }
 
     return NextResponse.json({ titles });

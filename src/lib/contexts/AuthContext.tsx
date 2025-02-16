@@ -149,18 +149,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const now = Date.now();
           const inactiveTime = now - lastActivity.current;
 
-          // Increase inactivity timeout to 30 minutes
-          if (inactiveTime > 30 * 60 * 1000) {
-            const { data: { session: currentSession } } = await supabase.auth.getSession();
-            if (!currentSession && user) {
-              safeSetSession(null);
-              safeSetUser(null);
-              safeSetProfile(null);
-              router.replace('/login');
+          // Check session every 5 minutes
+          if (inactiveTime > 5 * 60 * 1000) {
+            // Try to refresh the session first
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError || !refreshedSession) {
+              // If refresh fails, check current session
+              const { data: { session: currentSession } } = await supabase.auth.getSession();
+              if (!currentSession && user) {
+                safeSetSession(null);
+                safeSetUser(null);
+                safeSetProfile(null);
+                router.replace('/login');
+              }
+            } else {
+              // Update session state with refreshed session
+              safeSetSession(refreshedSession);
+              safeSetUser(refreshedSession.user);
+              await fetchProfile(refreshedSession.user.id);
             }
             lastActivity.current = now;
           }
-        }, 60 * 1000); // Check every minute instead of 30 seconds
+        }, 5 * 60 * 1000); // Check every 5 minutes
 
         sessionCheckInterval.current = checkSession;
         cleanup = () => clearInterval(checkSession);

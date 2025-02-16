@@ -33,8 +33,7 @@ export default function NotesRagContent() {
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [session, setSession] = useState<any>(null);
-  const [isClient, setIsClient] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const creditCost = 2;
 
   // All refs at the top
@@ -44,58 +43,18 @@ export default function NotesRagContent() {
 
   // Use useEffect for client-side only code
   useEffect(() => {
-    setIsClient(true);
+    setMounted(true);
+    return () => setMounted(false);
   }, []);
-  
-  // Handle session
-  useEffect(() => {
-    if (!isClient) return;
-
-    let mounted = true;
-    const initializeComponent = async () => {
-      try {
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (mounted) {
-          setSession(currentSession);
-        }
-
-        // Set up session change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-          if (mounted) {
-            setSession(newSession);
-            if (!newSession) {
-              router.replace('/login');
-            }
-          }
-        });
-
-        return () => {
-          subscription?.unsubscribe();
-        };
-      } catch (error) {
-        console.error('Error initializing component:', error);
-        if (mounted) {
-          setError('Failed to initialize session');
-        }
-      }
-    };
-
-    initializeComponent();
-
-    return () => {
-      mounted = false;
-    };
-  }, [isClient, router]);
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (!isClient) return;
+    if (!mounted) return;
     
     if (!authLoading && !isAuthenticated) {
       router.replace('/login');
     }
-  }, [isClient, authLoading, isAuthenticated, router]);
+  }, [mounted, authLoading, isAuthenticated, router]);
 
   // Add useEffect to persist generated content across auth updates
   useEffect(() => {
@@ -106,7 +65,7 @@ export default function NotesRagContent() {
   }, [generatedContent]);
 
   // Server-side and initial client render
-  if (!isClient) {
+  if (!mounted) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
@@ -126,7 +85,7 @@ export default function NotesRagContent() {
   }
 
   // Auth check with better error handling
-  if (!isAuthenticated || !user || !profile || !session) {
+  if (!isAuthenticated || !user || !profile) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <p className="text-gray-600 mb-2">Session expired or not authenticated</p>
