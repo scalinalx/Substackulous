@@ -79,7 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch user profile with retry
   const fetchProfile = useCallback(async (userId: string, retryCount = 0) => {
-    if (!userId || retryCount > 3) return;
+    if (!userId || retryCount > 3) {
+      safeSetProfile(null);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -99,8 +102,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
       
-      if (mountedRef.current && JSON.stringify(data) !== JSON.stringify(profile)) {
+      if (mountedRef.current && data) {
         safeSetProfile(data);
+      } else {
+        safeSetProfile(null);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -108,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         safeSetProfile(null);
       }
     }
-  }, [profile, safeSetProfile]);
+  }, [safeSetProfile]);
 
   // Initialize auth state
   useEffect(() => {
@@ -119,6 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!isInitializing.current) return;
       
       try {
+        safeSetLoading(true);
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
         if (!mountedRef.current) return;
@@ -128,17 +134,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (initialSession?.user) {
           safeSetSession(initialSession);
           safeSetUser(initialSession.user);
+          // Wait for profile fetch before setting initialized
           await fetchProfile(initialSession.user.id);
+        } else {
+          safeSetSession(null);
+          safeSetUser(null);
+          safeSetProfile(null);
         }
 
-        // Start session check
+        // Start session check with longer interval
         const checkSession = setInterval(async () => {
           if (!mountedRef.current) return;
           
           const now = Date.now();
           const inactiveTime = now - lastActivity.current;
 
-          if (inactiveTime > 5 * 60 * 1000) {
+          // Increase inactivity timeout to 30 minutes
+          if (inactiveTime > 30 * 60 * 1000) {
             const { data: { session: currentSession } } = await supabase.auth.getSession();
             if (!currentSession && user) {
               safeSetSession(null);
@@ -148,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             lastActivity.current = now;
           }
-        }, 30 * 1000);
+        }, 60 * 1000); // Check every minute instead of 30 seconds
 
         sessionCheckInterval.current = checkSession;
         cleanup = () => clearInterval(checkSession);
@@ -162,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } finally {
         if (mountedRef.current) {
+          // Only set initialized after everything is done
           safeSetLoading(false);
           safeSetInitialized(true);
           isInitializing.current = false;
@@ -216,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       subscription.unsubscribe();
     };
-  }, [fetchProfile, router, safeSetUser, safeSetSession, safeSetProfile, safeSetLoading, safeSetInitialized, session, user]);
+  }, [fetchProfile, router, safeSetUser, safeSetSession, safeSetProfile, safeSetLoading, safeSetInitialized, user, session]);
 
   // Handle visibility change
   useEffect(() => {
@@ -248,24 +261,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      setIsLoading(true);
+      safeSetLoading(true);
       await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
-      setProfile(null);
+      safeSetUser(null);
+      safeSetSession(null);
+      safeSetProfile(null);
       router.refresh();
       await router.replace('/login');
     } catch (error) {
       console.error('Logout failed:', error);
       throw error;
     } finally {
-      setIsLoading(false);
+      safeSetLoading(false);
     }
-  }, [router]);
+  }, [router, safeSetLoading, safeSetUser, safeSetSession, safeSetProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
-      setIsLoading(true);
+      safeSetLoading(true);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) throw error;
@@ -277,13 +290,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : new Error('Authentication failed. Please check your credentials.')
       };
     } finally {
-      setIsLoading(false);
+      safeSetLoading(false);
     }
-  }, []);
+  }, [safeSetLoading]);
 
   const signUp = useCallback(async (email: string, password: string) => {
     try {
-      setIsLoading(true);
+      safeSetLoading(true);
       const { error } = await supabase.auth.signUp({ email, password });
       
       if (error) throw error;
@@ -295,9 +308,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : new Error('Failed to sign up. Please try again.')
       };
     } finally {
-      setIsLoading(false);
+      safeSetLoading(false);
     }
-  }, []);
+  }, [safeSetLoading]);
 
   const handleGoogleSignIn = useCallback(async () => {
     try {

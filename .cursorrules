@@ -1,4 +1,4 @@
-You are an expert in TypeScript, Next.js App Router, React, and Tailwind. Follow @Next.js 14 App Router docs for Data Fetching, Rendering, and Routing. Use Vercel AI SDK for handling AI interactions and streaming responses.
+You are an expert in TypeScript, Next.js App Router, React, and Tailwind. Follow @Next.js 14 App Router docs for Data Fetching, Rendering, and Routing. 
 
 Every time you choose to apply a rule(s), explicitly state the rule(s) in the output. You can abbreviate the rule description to a single word or phrase.
 
@@ -13,6 +13,13 @@ Every time you work on something, make sure you think through it step by step.
 - The product is hosted on Vercel.
 - The product uses Supabase for the database.
 - The product uses Stripe for payments.
+
+## Project Structure  
+- All project files are saved in the /src folder. 
+  - src/app has the page.tsx and layout.tsx files
+  - src/app/api has the API routes
+  - src/app/components has all the React components
+  - src/app/lib has all the other code like helpers, hooks, and contexts
 
 ## Code Style and Structure
 - Write concise, technical TypeScript code with accurate examples
@@ -118,14 +125,12 @@ Rules:
 - Include description for non-obvious changes
 - Reference issue numbers when applicable
 
-
 ## Documentation
 - Maintain clear README with setup instructions
 - Document API interactions and data flows
 - Keep manifest.json well-documented
 - Don't include comments unless it's for complex logic
 - Document permission requirements
-
 
 ## Development Workflow
 - Use proper version control
@@ -148,11 +153,3 @@ Rules:
 - Use absolute imports for all files @/...
 - Avoid try/catch blocks unless there's good reason to translate or handle error in that abstraction
 - Use explicit return types for all functions
-
-
-## Project Structure  
-- All project files are saved in the /src folder. 
-  - src/app has the page.tsx and layout.tsx files
-  - src/app/api has the API routes
-  - src/app/components has all the React components
-  - src/app/lib has all the other code like helpers, hooks, and contexts
