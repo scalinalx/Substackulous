@@ -1,24 +1,47 @@
 // src/components/LoginForm.tsx
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const { signIn, signInWithGoogle, isLoading } = useAuth();
+  const { signIn, signInWithGoogle, isLoading, isInitialized } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    console.log('LoginForm mounted');
+  }, []);
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Login attempt started');
+    e.stopPropagation();
+    console.log('Form submitted', { email, isLoading, mounted, isInitialized });
+    
+    if (!mounted || !isInitialized) {
+      console.log('Component not ready', { mounted, isInitialized });
+      return;
+    }
+
+    if (isLoading) {
+      console.log('Already loading, preventing duplicate submission');
+      return;
+    }
+
     setError(null);
     
     try {
-      console.log('Attempting to sign in with email:', email);
-      const { error } = await signIn(email, password);
-      console.log('Sign in response:', error ? 'Error occurred' : 'Success');
-      if (error) throw error;
+      if (!email || !password) {
+        throw new Error('Please enter both email and password');
+      }
+
+      console.log('Attempting sign in...');
+      const { error: signInError } = await signIn(email, password);
+      console.log('Sign in response received', { hasError: !!signInError });
+      
+      if (signInError) throw signInError;
     } catch (err: unknown) {
       console.error('Login error:', err);
       setError(
@@ -44,6 +67,11 @@ export default function LoginForm() {
     }
   };
 
+  // Don't render until mounted to prevent hydration issues
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <div className="max-w-md w-full space-y-6 p-8 bg-white rounded-lg shadow-md">
       <div className="text-center">
@@ -58,7 +86,10 @@ export default function LoginForm() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                console.log('Email changed:', e.target.value);
+                setEmail(e.target.value);
+              }}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               required
               disabled={isLoading}
@@ -72,7 +103,10 @@ export default function LoginForm() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                console.log('Password changed');
+                setPassword(e.target.value);
+              }}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               required
               disabled={isLoading}
@@ -88,12 +122,23 @@ export default function LoginForm() {
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || !mounted || !isInitialized}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={() => console.log('Login button clicked')}
         >
           {isLoading ? 'Signing in...' : 'Sign in'}
         </button>
+
+        {isLoading && (
+          <div className="text-sm text-gray-600 text-center">
+            Processing your request...
+          </div>
+        )}
+
+        <div className="text-sm text-gray-600 text-center">
+          Status: {isLoading ? 'Loading' : 'Ready'} | 
+          Mounted: {mounted ? 'Yes' : 'No'} | 
+          Initialized: {isInitialized ? 'Yes' : 'No'}
+        </div>
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
