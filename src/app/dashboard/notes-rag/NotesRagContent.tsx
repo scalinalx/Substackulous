@@ -25,7 +25,7 @@ type GeneratedResult = {
 
 export default function NotesRagContent() {
   const router = useRouter();
-  const { user, profile, updateProfile, isLoading, isAuthenticated } = useAuth();
+  const { user, profile, updateProfile, isLoading: authLoading, isAuthenticated } = useAuth();
   
   // All state hooks at the top
   const [loading, setLoading] = useState(false);
@@ -33,26 +33,41 @@ export default function NotesRagContent() {
   const [error, setError] = useState<string | null>(null);
   const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
   const creditCost = 2;
 
-  // Refs
+  // All refs at the top
   const generatedContentRef = useRef<GeneratedResult | null>(null);
   const profileUpdatePendingRef = useRef(false);
   const lastProfileUpdateRef = useRef<number>(0);
-  
-  // Handle mounting and session
+
+  // Use useEffect for client-side only code
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
+  // Handle session
+  useEffect(() => {
+    if (!isClient) return;
+
+    let mounted = true;
     const initializeComponent = async () => {
       try {
-        setMounted(true);
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        setSession(currentSession);
+        
+        if (mounted) {
+          setSession(currentSession);
+        }
 
         // Set up session change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-          setSession(session);
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+          if (mounted) {
+            setSession(newSession);
+            if (!newSession) {
+              router.replace('/login');
+            }
+          }
         });
 
         return () => {
@@ -60,18 +75,27 @@ export default function NotesRagContent() {
         };
       } catch (error) {
         console.error('Error initializing component:', error);
+        if (mounted) {
+          setError('Failed to initialize session');
+        }
       }
     };
 
     initializeComponent();
-  }, []);
 
-  // All useEffects together
+    return () => {
+      mounted = false;
+    };
+  }, [isClient, router]);
+
+  // Redirect if not authenticated
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isClient) return;
+    
+    if (!authLoading && !isAuthenticated) {
       router.replace('/login');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isClient, authLoading, isAuthenticated, router]);
 
   // Add useEffect to persist generated content across auth updates
   useEffect(() => {
@@ -80,6 +104,46 @@ export default function NotesRagContent() {
       generatedContentRef.current = generatedContent;
     }
   }, [generatedContent]);
+
+  // Server-side and initial client render
+  if (!isClient) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  // Loading state check
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-gray-600">Securing your session...</p>
+      </div>
+    );
+  }
+
+  // Auth check with better error handling
+  if (!isAuthenticated || !user || !profile || !session) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <p className="text-gray-600 mb-2">Session expired or not authenticated</p>
+        <p className="text-sm text-gray-500 mb-4">Please log in again to continue</p>
+        <button
+          onClick={() => {
+            supabase.auth.signOut().then(() => {
+              router.replace('/login');
+            });
+          }}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+        >
+          Return to Login
+        </button>
+      </div>
+    );
+  }
 
   const copyToClipboard = async (text: string, index: number) => {
     try {
@@ -109,15 +173,12 @@ export default function NotesRagContent() {
       return;
     }
 
-    if (!session?.access_token) {
-      // Try to refresh the session
-      const { data: { session: refreshedSession } } = await supabase.auth.getSession();
-      if (!refreshedSession?.access_token) {
-        setError('Not authenticated. Please log in again.');
-        router.replace('/login');
-        return;
-      }
-      setSession(refreshedSession);
+    // Verify session is still valid
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (!currentSession?.access_token) {
+      setError('Session expired. Please log in again.');
+      router.replace('/login');
+      return;
     }
 
     if (profile.credits < creditCost) {
@@ -133,7 +194,7 @@ export default function NotesRagContent() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${currentSession.access_token}`,
         },
         body: JSON.stringify({
           userTopic: notes,
@@ -148,6 +209,7 @@ export default function NotesRagContent() {
         if (response.status === 401) {
           // Handle authentication error
           setError('Session expired. Please refresh the page or log in again.');
+          router.replace('/login');
           return;
         }
         throw new Error(errorData.error || 'Failed to generate content');
@@ -188,36 +250,6 @@ export default function NotesRagContent() {
       setLoading(false);
     }
   };
-
-  // Don't render anything until mounted and session is initialized
-  if (!mounted) {
-    return null;
-  }
-
-  // Loading state check
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
-        <p className="text-gray-600">Securing your session...</p>
-      </div>
-    );
-  }
-
-  // Auth check
-  if (!user || !profile || !session) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-gray-600">Please log in to continue</p>
-        <button
-          onClick={() => router.replace('/login')}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-        >
-          Go to Login
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">

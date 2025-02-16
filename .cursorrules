@@ -14,6 +14,13 @@ Every time you work on something, make sure you think through it step by step.
 - The product uses Supabase for the database.
 - The product uses Stripe for payments.
 
+## Code Style and Structure
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
+- Structure repository files as follows:
+
 server/
 --- src/
     --app
@@ -149,11 +156,3 @@ Rules:
   - src/app/api has the API routes
   - src/app/components has all the React components
   - src/app/lib has all the other code like helpers, hooks, and contexts
-
-## Code Style and Structure
-- Write concise, technical TypeScript code with accurate examples
-- Use functional and declarative programming patterns; avoid classes
-- Prefer iteration and modularization over code duplication
-- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
-- Structure repository files as follows:
-
