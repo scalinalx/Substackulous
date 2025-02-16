@@ -125,32 +125,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       try {
         safeSetLoading(true);
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        // Get initial session and try to refresh it
+        const { data: { session: initialSession }, error: initialError } = await supabase.auth.getSession();
         
         if (!mountedRef.current) return;
         
-        if (error) throw error;
+        if (initialError) throw initialError;
 
-        if (initialSession?.user) {
-          safeSetSession(initialSession);
-          safeSetUser(initialSession.user);
-          // Wait for profile fetch before setting initialized
-          await fetchProfile(initialSession.user.id);
+        let currentSession = initialSession;
+
+        // Try to refresh the session if we have one
+        if (initialSession) {
+          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+          if (!refreshError && refreshedSession) {
+            currentSession = refreshedSession;
+          }
+        }
+
+        if (currentSession?.user) {
+          safeSetSession(currentSession);
+          safeSetUser(currentSession.user);
+          await fetchProfile(currentSession.user.id);
         } else {
           safeSetSession(null);
           safeSetUser(null);
           safeSetProfile(null);
         }
 
-        // Start session check with longer interval
+        // Start session check with shorter interval
         const checkSession = setInterval(async () => {
           if (!mountedRef.current) return;
           
           const now = Date.now();
           const inactiveTime = now - lastActivity.current;
 
-          // Check session every 5 minutes
-          if (inactiveTime > 5 * 60 * 1000) {
+          // Check session every minute
+          if (inactiveTime > 60 * 1000) {
             // Try to refresh the session first
             const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
             
@@ -171,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             lastActivity.current = now;
           }
-        }, 5 * 60 * 1000); // Check every 5 minutes
+        }, 60 * 1000); // Check every minute
 
         sessionCheckInterval.current = checkSession;
         cleanup = () => clearInterval(checkSession);
@@ -185,7 +195,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } finally {
         if (mountedRef.current) {
-          // Only set initialized after everything is done
           safeSetLoading(false);
           safeSetInitialized(true);
           isInitializing.current = false;
@@ -203,24 +212,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           safeSetLoading(true);
           lastActivity.current = Date.now();
 
-          const sessionChanged = JSON.stringify(currentSession) !== JSON.stringify(session);
+          // Always try to refresh the session on auth state change
+          let validSession = currentSession;
+          if (currentSession) {
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+            if (!refreshError && refreshedSession) {
+              validSession = refreshedSession;
+            }
+          }
           
-          if (sessionChanged) {
-            safeSetSession(currentSession);
-            safeSetUser(currentSession?.user ?? null);
+          safeSetSession(validSession);
+          safeSetUser(validSession?.user ?? null);
 
-            if (currentSession?.user) {
-              await fetchProfile(currentSession.user.id);
-            } else {
-              safeSetProfile(null);
-            }
+          if (validSession?.user) {
+            await fetchProfile(validSession.user.id);
+          } else {
+            safeSetProfile(null);
+          }
 
-            // Handle navigation after auth state changes
-            if (event === 'SIGNED_IN') {
-              await router.replace('/dashboard');
-            } else if (event === 'SIGNED_OUT') {
-              await router.replace('/login');
-            }
+          // Handle navigation after auth state changes
+          if (event === 'SIGNED_IN') {
+            await router.replace('/dashboard');
+          } else if (event === 'SIGNED_OUT') {
+            await router.replace('/login');
           }
         } catch (error) {
           console.error('Auth state change error:', error);

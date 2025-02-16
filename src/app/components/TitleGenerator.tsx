@@ -42,7 +42,6 @@ export default function TitleGenerator() {
     e.preventDefault();
     setError('');
     
-    // Don't clear titles until we have new ones
     if (!topic.trim()) {
       setError('Please enter a topic');
       return;
@@ -61,11 +60,17 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      // Get session first
-      const { data: { session } } = await supabase.auth.getSession();
+      // Get fresh session
+      let currentSession = await supabase.auth.getSession();
       
-      if (!session?.access_token) {
-        throw new Error('Not authenticated');
+      if (currentSession.error || !currentSession.data.session?.access_token) {
+        // Try to refresh the session
+        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !refreshedSession) {
+          throw new Error('Session expired. Please log in again.');
+        }
+        // Use refreshed session
+        currentSession = { data: { session: refreshedSession }, error: null };
       }
 
       // Make API call with valid token
@@ -73,7 +78,7 @@ export default function TitleGenerator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${currentSession.data.session!.access_token}`,
         },
         body: JSON.stringify({
           theme: topic,
@@ -85,10 +90,37 @@ export default function TitleGenerator() {
       if (!response.ok) {
         const errorData = await response.json();
         if (response.status === 401) {
-          // Handle authentication error
-          setError('Session expired. Please refresh the page or log in again.');
-          router.replace('/login');
-          return;
+          // Try to refresh session one more time
+          const { data: { session: retrySession }, error: retryError } = await supabase.auth.refreshSession();
+          if (!retryError && retrySession) {
+            // Retry the request with new token
+            const retryResponse = await fetch('/api/deepseek/generate-titles', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${retrySession.access_token}`,
+              },
+              body: JSON.stringify({
+                theme: topic,
+                userId: user?.id,
+              }),
+              cache: 'no-store'
+            });
+
+            if (!retryResponse.ok) {
+              throw new Error(errorData.error || 'Failed to generate titles');
+            }
+
+            const data = await retryResponse.json();
+            if (data.error) {
+              throw new Error(data.error);
+            }
+
+            setGeneratedTitles(data.titles);
+            return;
+          }
+          
+          throw new Error('Session expired. Please refresh the page or log in again.');
         }
         throw new Error(errorData.error || 'Failed to generate titles');
       }
@@ -99,7 +131,6 @@ export default function TitleGenerator() {
         throw new Error(data.error);
       }
 
-      // Set new titles before updating credits
       setGeneratedTitles(data.titles);
 
       // Only deduct credits after successful API call
@@ -116,7 +147,10 @@ export default function TitleGenerator() {
       setError(errorMessage);
       
       if (errorMessage.includes('Not authenticated') || errorMessage.includes('Session expired')) {
-        router.replace('/login');
+        const { data: { session: finalRetry } } = await supabase.auth.refreshSession();
+        if (!finalRetry) {
+          router.replace('/login');
+        }
       }
     } finally {
       setLoading(false);
