@@ -1,6 +1,6 @@
 // src/components/LoginForm.tsx
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { supabase } from '@/lib/supabase/clients';
 
@@ -39,6 +39,8 @@ class ErrorBoundary extends React.Component<
 }
 
 function LoginFormContent() {
+  console.log('LoginFormContent rendering...');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -47,67 +49,96 @@ function LoginFormContent() {
   
   const { signIn, signInWithGoogle, isLoading, isInitialized } = useAuth();
 
+  // Log initial auth state
+  console.log('Initial auth state:', { signIn: !!signIn, isLoading, isInitialized });
+
   // Log state changes
   useEffect(() => {
-    console.log('Form State:', {
+    console.log('Form State Changed:', {
       mounted,
       isLoading,
       isInitialized,
       isSubmitting,
       hasEmail: !!email,
       hasPassword: !!password,
-      hasError: !!error
+      hasError: !!error,
+      hasSignIn: !!signIn
     });
-  }, [mounted, isLoading, isInitialized, isSubmitting, email, password, error]);
+  }, [mounted, isLoading, isInitialized, isSubmitting, email, password, error, signIn]);
 
   useEffect(() => {
+    console.log('Component mounting...');
     setMounted(true);
     console.log('LoginForm mounted');
-  }, []);
+    
+    // Log auth context on mount
+    console.log('Auth context on mount:', {
+      hasSignIn: !!signIn,
+      isLoading,
+      isInitialized
+    });
+  }, [signIn, isLoading, isInitialized]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log('Form submission started');
+  const handleSubmit = useCallback(async (e?: React.FormEvent<HTMLFormElement>) => {
+    if (e) {
+      e.preventDefault();
+    }
+    console.log('🔵 Form submission started');
     
     // Log form state
-    console.log('Form submission state:', {
+    console.log('🔵 Form submission state:', {
       email: email ? 'provided' : 'missing',
       password: password ? 'provided' : 'missing',
       signInAvailable: !!signIn,
       mounted,
       isInitialized,
-      isLoading
+      isLoading,
+      isSubmitting
     });
+
+    if (isSubmitting) {
+      console.log('🔴 Already submitting, preventing duplicate submission');
+      return;
+    }
 
     setError(null);
     setIsSubmitting(true);
 
     try {
+      console.log('🔵 Checking signIn availability...');
       if (!signIn) {
+        console.log('🔴 signIn not available');
         throw new Error('Authentication not properly initialized');
       }
 
+      console.log('🔵 Checking credentials...');
       if (!email || !password) {
+        console.log('🔴 Missing credentials');
         throw new Error('Please enter both email and password');
       }
 
-      console.log('Attempting sign in...');
+      console.log('🔵 Attempting sign in...');
       const result = await signIn(email, password);
       
+      console.log('🔵 Sign in result:', { hasError: !!result.error });
+      
       if (result.error) {
+        console.log('🔴 Sign in error:', result.error);
         throw result.error;
       }
 
-      console.log('Sign in successful');
+      console.log('🟢 Sign in successful');
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('🔴 Login error:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
     } finally {
+      console.log('🔵 Resetting submit state');
       setIsSubmitting(false);
     }
-  };
+  }, [email, password, signIn, mounted, isInitialized, isLoading, isSubmitting]);
 
   const handleGoogleSignIn = async () => {
+    console.log('Google sign in clicked');
     if (!signInWithGoogle) {
       setError('Google sign in not available');
       return;
@@ -121,8 +152,8 @@ function LoginFormContent() {
     }
   };
 
-  // Add debug panel
-  const debugPanel = process.env.NODE_ENV === 'development' && (
+  // Always show debug panel now
+  const debugPanel = (
     <div className="mb-4 p-4 bg-gray-100 rounded-md text-xs font-mono">
       <div>Mounted: {String(mounted)}</div>
       <div>Initialized: {String(isInitialized)}</div>
@@ -131,8 +162,18 @@ function LoginFormContent() {
       <div>Has Email: {String(!!email)}</div>
       <div>Has Password: {String(!!password)}</div>
       <div>Has Error: {String(!!error)}</div>
+      <div>Has SignIn: {String(!!signIn)}</div>
     </div>
   );
+
+  console.log('Rendering form with state:', {
+    mounted,
+    isLoading,
+    isInitialized,
+    isSubmitting,
+    hasEmail: !!email,
+    hasPassword: !!password
+  });
 
   return (
     <div className="space-y-6 bg-white p-8 rounded-lg shadow-md">
@@ -150,7 +191,10 @@ function LoginFormContent() {
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                console.log('Email changed:', e.target.value ? 'provided' : 'empty');
+                setEmail(e.target.value);
+              }}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               required
               disabled={isLoading || isSubmitting}
@@ -165,7 +209,10 @@ function LoginFormContent() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                console.log('Password changed:', e.target.value ? 'provided' : 'empty');
+                setPassword(e.target.value);
+              }}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               required
               disabled={isLoading || isSubmitting}
@@ -182,6 +229,10 @@ function LoginFormContent() {
 
         <button
           type="submit"
+          onClick={() => {
+            console.log('🔵 Submit button clicked');
+            handleSubmit();
+          }}
           disabled={isLoading || isSubmitting || !mounted || !isInitialized}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -229,6 +280,7 @@ function LoginFormContent() {
 }
 
 export default function LoginForm() {
+  console.log('LoginForm wrapper rendering');
   return (
     <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
       <div className="w-full max-w-md">
