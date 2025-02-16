@@ -30,14 +30,13 @@ const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     flowType: 'pkce',
-    debug: true,
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     storageKey: 'supabase.auth.token',
+    debug: process.env.NODE_ENV === 'development'
   },
   global: {
     headers: {
-      'apikey': supabaseAnonKey,
-      'Authorization': `Bearer ${supabaseAnonKey}`
+      'apikey': supabaseAnonKey
     }
   },
   db: {
@@ -62,13 +61,9 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 (async () => {
   try {
     const { data, error } = await supabaseClient.auth.getSession();
-    console.log('Initial Supabase session check:', {
-      hasData: !!data,
-      hasSession: !!data?.session,
-      hasError: !!error,
-      errorMessage: error?.message,
-      accessToken: data?.session?.access_token ? 'present' : 'none'
-    });
+    if (error) {
+      console.error('Failed to get initial Supabase session:', error);
+    }
   } catch (err) {
     console.error('Failed to check initial Supabase session:', err);
   }

@@ -43,45 +43,8 @@ function LoginFormContent() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
   
-  const auth = useAuth();
-  const { signIn, signInWithGoogle, isLoading, isInitialized } = auth;
-
-  // Update debug info whenever auth state changes
-  useEffect(() => {
-    const updateDebugInfo = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        const info = {
-          auth: {
-            isLoading,
-            isInitialized,
-            hasSignIn: !!signIn,
-            hasSignInWithGoogle: !!signInWithGoogle
-          },
-          supabase: {
-            hasSession: !!session,
-            sessionError: sessionError?.message,
-          },
-          env: {
-            hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-            hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            isDev: process.env.NODE_ENV === 'development'
-          }
-        };
-
-        console.log('Debug Info Updated:', info);
-        setDebugInfo(info);
-      } catch (err) {
-        console.error('Error updating debug info:', err);
-        setDebugInfo({ error: err instanceof Error ? err.message : 'Unknown error' });
-      }
-    };
-
-    updateDebugInfo();
-  }, [isLoading, isInitialized, signIn, signInWithGoogle]);
+  const { signIn, signInWithGoogle, isLoading, isInitialized } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -89,7 +52,7 @@ function LoginFormContent() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Form submitted');
+    setError(null);
     
     if (!signIn) {
       console.error('signIn function not available');
@@ -102,15 +65,12 @@ function LoginFormContent() {
         throw new Error('Please enter both email and password');
       }
 
-      console.log('Attempting sign in with:', { email, hasPassword: !!password });
       const { error: signInError } = await signIn(email, password);
       
       if (signInError) {
         console.error('Sign in error:', signInError);
         throw signInError;
       }
-
-      console.log('Sign in successful');
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -221,14 +181,6 @@ function LoginFormContent() {
           Google
         </button>
       </form>
-
-      {/* Always show debug panel */}
-      <div className="mt-8 p-4 bg-gray-50 rounded-md border border-gray-200">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Debug Info</h3>
-        <pre className="text-xs text-gray-600 whitespace-pre-wrap overflow-auto max-h-48">
-          {JSON.stringify(debugInfo, null, 2)}
-        </pre>
-      </div>
     </div>
   );
 }

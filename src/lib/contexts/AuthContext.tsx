@@ -311,14 +311,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Supabase client not initialized');
       }
 
-      // Log the request we're about to make
-      console.log('AuthContext: Making sign in request with:', {
-        email,
-        hasPassword: !!password,
-        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 10) + '...',
-        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-      });
-
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email, 
         password,
@@ -327,18 +319,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('AuthContext: Sign in response:', {
         hasData: !!data,
         hasError: !!error,
-        errorMessage: error?.message,
-        status: error?.status
+        hasSession: !!data?.session,
+        hasUser: !!data?.user,
       });
       
       if (error) throw error;
 
-      // If successful, update the session
+      // If successful, update the session and redirect
       if (data.session) {
-        console.log('AuthContext: Updating session state');
+        console.log('AuthContext: Updating session state and redirecting');
         safeSetSession(data.session);
         safeSetUser(data.session.user);
         await fetchProfile(data.session.user.id);
+        router.refresh();
+        await router.replace('/dashboard');
       }
 
       return { error: null };
@@ -352,7 +346,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       safeSetLoading(false);
     }
-  }, [safeSetLoading, safeSetSession, safeSetUser, fetchProfile]);
+  }, [safeSetLoading, safeSetSession, safeSetUser, fetchProfile, router]);
 
   const signUp = useCallback(async (email: string, password: string) => {
     try {
