@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { validateSession } from '@/lib/middleware/auth';
 
 
 // Set the maximum duration for the route to 35 seconds
@@ -345,11 +346,44 @@ Think through this step by step, but only output the final selection.`;
  * Next.js App Router API route handler for POST /api/notes-rag/analyze.
  */
 export async function POST(req: Request) {
+  console.log('API Route: Starting /api/notes-rag/analyze');
+  
   try {
+    // Log the incoming request headers
+    console.log('Request headers:', {
+      authorization: req.headers.get('Authorization')?.substring(0, 20) + '...',
+      contentType: req.headers.get('Content-Type'),
+    });
+
     const { userTopic, userId, model = 'deepseek', isLongForm = false } = await req.json();
+    console.log('Request body:', { userTopic, userId, model });
 
     if (!userTopic) {
+      console.log('Validation error: Topic is required');
       return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
+    }
+
+    // Validate session
+    console.log('Validating session...');
+    const sessionValidation = await validateSession(req);
+    
+    if ('error' in sessionValidation) {
+      console.error('Session validation failed:', sessionValidation);
+      return NextResponse.json(
+        { error: sessionValidation.error },
+        { status: sessionValidation.status }
+      );
+    }
+
+    console.log('Session validation successful, user:', sessionValidation.sessionUser.id);
+
+    // Verify user ID matches
+    if (sessionValidation.sessionUser.id !== userId) {
+      console.error('User ID mismatch:', {
+        sessionUserId: sessionValidation.sessionUser.id,
+        requestUserId: userId
+      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     // Initialize if needed
@@ -504,7 +538,7 @@ Think through this step by step. `;
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('API Route Error:', error);
     return NextResponse.json(
       { error: 'Failed to analyze content' },
       { status: 500 }

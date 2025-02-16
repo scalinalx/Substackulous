@@ -51,17 +51,11 @@ export default function NotesRagContent() {
   useEffect(() => {
     if (!mounted) return;
     
-    const checkAuth = async () => {
-      if (!authLoading && !isAuthenticated) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          router.replace('/login');
-        }
-      }
-    };
-
-    checkAuth();
-  }, [mounted, authLoading, isAuthenticated, router]);
+    if (!authLoading && !isAuthenticated) {
+      console.log('Auth state:', { authLoading, isAuthenticated, user: !!user, profile: !!profile });
+      router.replace('/login');
+    }
+  }, [mounted, authLoading, isAuthenticated, router, user, profile]);
 
   // Add useEffect to persist generated content across auth updates
   useEffect(() => {
@@ -125,6 +119,11 @@ export default function NotesRagContent() {
   const handleGenerate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log('Starting generation...');
+    console.log('Current auth state:', { 
+      isAuthenticated, 
+      hasUser: !!user, 
+      hasProfile: !!profile 
+    });
     
     setError(null);
 
@@ -146,25 +145,27 @@ export default function NotesRagContent() {
     setLoading(true);
 
     try {
-      // Get fresh session
-      let currentSession = await supabase.auth.getSession();
+      // Use the current session from auth context first
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      console.log('Got session:', { 
+        hasSession: !!currentSession, 
+        hasToken: !!currentSession?.access_token 
+      });
       
-      if (currentSession.error || !currentSession.data.session?.access_token) {
-        // Try to refresh the session
-        const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError || !refreshedSession) {
-          throw new Error('Session expired. Please log in again.');
-        }
-        // Use refreshed session
-        currentSession = { data: { session: refreshedSession }, error: null };
+      if (!currentSession?.access_token) {
+        console.error('No access token found in current session');
+        setError('Authentication error. Please try logging in again.');
+        router.replace('/login');
+        return;
       }
 
-      // Make API call with valid token
+      // Make API call with current session token
+      console.log('Making API call with token length:', currentSession.access_token.length);
       const response = await fetch('/api/notes-rag/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentSession.data.session!.access_token}`,
+          'Authorization': `Bearer ${currentSession.access_token}`,
         },
         body: JSON.stringify({
           userTopic: notes,
@@ -176,45 +177,71 @@ export default function NotesRagContent() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('API error:', { 
+          status: response.status, 
+          error: errorData.error 
+        });
+        
+        // Only try refresh if we get a 401
         if (response.status === 401) {
-          // Try to refresh session one more time
-          const { data: { session: retrySession }, error: retryError } = await supabase.auth.refreshSession();
-          if (!retryError && retrySession) {
-            // Retry the request with new token
-            const retryResponse = await fetch('/api/notes-rag/analyze', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${retrySession.access_token}`,
-              },
-              body: JSON.stringify({
-                userTopic: notes,
-                userId: user?.id,
-                model: 'deepseek'
-              }),
-              cache: 'no-store'
-            });
-
-            if (!retryResponse.ok) {
-              throw new Error(errorData.error || 'Failed to generate content');
-            }
-
-            const data = await retryResponse.json();
-            if (!data.result || !data.result.openai_v2 || !Array.isArray(data.result.openai_v2.shortNotes)) {
-              throw new Error('Invalid response format from API');
-            }
-
-            generatedContentRef.current = data.result;
-            setGeneratedContent(data.result);
-            return;
-          }
+          console.error('Received 401, attempting session refresh');
+          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
           
-          throw new Error('Session expired. Please refresh the page or log in again.');
+          if (refreshError || !refreshedSession) {
+            console.error('Session refresh failed:', refreshError);
+            throw new Error('Authentication error. Please try logging in again.');
+          }
+
+          console.log('Session refreshed, retrying with new token');
+          // Retry with new token
+          const retryResponse = await fetch('/api/notes-rag/analyze', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${refreshedSession.access_token}`,
+            },
+            body: JSON.stringify({
+              userTopic: notes,
+              userId: user?.id,
+              model: 'deepseek'
+            }),
+            cache: 'no-store'
+          });
+
+          if (!retryResponse.ok) {
+            const retryErrorData = await retryResponse.json();
+            console.error('Retry failed:', retryErrorData);
+            throw new Error(retryErrorData.error || 'Failed to generate content');
+          }
+
+          const data = await retryResponse.json();
+          if (!data.result || !data.result.openai_v2 || !Array.isArray(data.result.openai_v2.shortNotes)) {
+            throw new Error('Invalid response format from API');
+          }
+
+          generatedContentRef.current = data.result;
+          setGeneratedContent(data.result);
+          
+          // Update credits after successful generation
+          try {
+            const updatedCredits = profile.credits - creditCost;
+            await updateProfile({
+              credits: updatedCredits
+            });
+            toast.success('Notes generated successfully!');
+          } catch (creditError) {
+            console.error('Error updating credits:', creditError);
+            toast.error('Generated successfully but failed to update credits');
+          }
+          return;
         }
+        
+        // For non-401 errors, just throw the error
         throw new Error(errorData.error || 'Failed to generate content');
       }
 
       const data = await response.json();
+      console.log('API response successful');
       
       if (!data.result || !data.result.openai_v2 || !Array.isArray(data.result.openai_v2.shortNotes)) {
         throw new Error('Invalid response format from API');
@@ -239,11 +266,9 @@ export default function NotesRagContent() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate content. Please try again.';
       setError(errorMessage);
       
-      if (errorMessage.includes('Not authenticated') || errorMessage.includes('Session expired')) {
-        const { data: { session: finalRetry } } = await supabase.auth.refreshSession();
-        if (!finalRetry) {
-          router.replace('/login');
-        }
+      // Only redirect to login if we're sure it's an auth error
+      if (errorMessage.includes('Authentication error')) {
+        router.replace('/login');
       }
     } finally {
       setLoading(false);

@@ -6,14 +6,19 @@ type SessionValidationResult =
   | { sessionUser?: never; error: string; status: number };
 
 export async function validateSession(req: Request): Promise<SessionValidationResult> {
+  console.log('Auth Middleware: Starting session validation');
+  
   // Get the session from the Authorization header
   const authHeader = req.headers.get('Authorization');
+  console.log('Auth header present:', !!authHeader);
+  
   if (!authHeader?.startsWith('Bearer ')) {
-    console.error('No Authorization header');
+    console.error('No Authorization header or invalid format');
     return { error: 'Not authenticated', status: 401 };
   }
 
   const token = authHeader.split(' ')[1];
+  console.log('Token length:', token.length);
   
   // Create Supabase client for auth
   const supabase = createClient(
@@ -27,15 +32,32 @@ export async function validateSession(req: Request): Promise<SessionValidationRe
     }
   );
 
-  // Verify the token and get the user
-  const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser(token);
+  try {
+    console.log('Attempting to get user with token...');
+    // First try to get the user with the token
+    const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser(token);
 
-  if (authError || !sessionUser) {
-    console.error('Auth error:', authError);
-    return { error: 'Not authenticated', status: 401 };
+    if (authError) {
+      console.error('Auth error in validateSession:', {
+        message: authError.message,
+        status: authError.status
+      });
+      return { error: 'Not authenticated', status: 401 };
+    }
+
+    if (!sessionUser) {
+      console.error('No user found for token');
+      return { error: 'Not authenticated', status: 401 };
+    }
+
+    console.log('Successfully validated session for user:', sessionUser.id);
+    // If we got here, the token is valid and we have a user
+    return { sessionUser };
+
+  } catch (error) {
+    console.error('Unexpected error in validateSession:', error);
+    return { error: 'Server error during authentication', status: 500 };
   }
-
-  return { sessionUser };
 }
 
 // Helper to check if user has enough credits
