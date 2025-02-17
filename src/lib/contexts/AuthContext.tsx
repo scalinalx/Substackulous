@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { useRouter, usePathname } from 'next/navigation';
-import { supabase } from '@/lib/supabase/clients';
+import { supabase, withRetry } from '@/lib/supabase/clients';
 import { logoutUser, signInWithGoogle, resetPassword as resetPasswordUtil } from '../supabase/authUtils';
 
 interface UserProfile {
@@ -45,16 +45,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const lastActivity = useRef(Date.now());
   const sessionCheckInterval = useRef<NodeJS.Timeout>();
 
+  // Add these at the top with other imports
+  const RETRY_DELAY = 1000; // 1 second
+  const MAX_RETRIES = 3;
+
   // Fetch user profile
   const fetchProfile = useCallback(async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // Get current session to ensure we're authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No active session when fetching profile');
+        setProfile(null);
+        return;
+      }
 
-      if (error) throw error;
+      const { data, error } = await withRetry<UserProfile>(() => 
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single()
+      );
+
+      if (error) {
+        console.error('Supabase error fetching profile:', error);
+        throw error;
+      }
       
       // Only update profile if it's different
       if (JSON.stringify(data) !== JSON.stringify(profile)) {
@@ -62,7 +79,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-      setProfile(null);
+      // Don't set profile to null if we already have a profile and this is just a refresh error
+      if (!profile) {
+        setProfile(null);
+      }
     }
   }, [profile]);
 
@@ -76,8 +96,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const now = Date.now();
       const inactiveTime = now - lastActivity.current;
 
-      // If inactive for more than 5 minutes, check session
-      if (inactiveTime > 5 * 60 * 1000) {
+      // Increase check interval to 15 minutes instead of 5
+      if (inactiveTime > 15 * 60 * 1000) {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         if (!currentSession && user) {
           // Session expired, reset state
@@ -88,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         lastActivity.current = now;
       }
-    }, 30 * 1000); // Check every 30 seconds
+    }, 60 * 1000); // Check every minute instead of every 30 seconds
 
     return () => {
       if (sessionCheckInterval.current) {

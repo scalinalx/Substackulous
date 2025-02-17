@@ -47,30 +47,49 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/generate-titles', {
+      // Get the current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session');
+      }
+
+      const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          prompt: topic,
-          count: 5,
+          theme: topic,
+          userId: user?.id
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate titles');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to generate titles: ${response.status}`);
       }
 
       const data = await response.json();
+      
+      if (!data.titles || !Array.isArray(data.titles)) {
+        throw new Error('Invalid response format');
+      }
+
       setGeneratedTitles(data.titles);
       
+      // Only update profile if titles were successfully generated
       await updateProfile({
         credits: profile.credits - creditCost,
       });
     } catch (err) {
       console.error('Error in title generation:', err);
-      setError('Failed to generate titles. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
+      // Reset loading state
+      setLoading(false);
+      // Reset any partial state
+      setGeneratedTitles([]);
     } finally {
       setLoading(false);
     }
