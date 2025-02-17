@@ -50,15 +50,17 @@ export default function TitleGenerator() {
       const { data: { session } } = await supabase.auth.getSession();
 
       console.log('[TitleGenerator] session.access_token =', session?.access_token);
+      await new Promise(resolve => setTimeout(resolve, 5000));
       console.log('[TitleGenerator] user.id =', user?.id);
 
-      await new Promise(resolve => setTimeout(resolve, 7000));
-      
+      // Pause for 10 seconds to allow log inspection
+      await new Promise(resolve => setTimeout(resolve, 10000));
+
       if (!session) {
         setError('No active session. Please sign in again.');
         return;
       }
-
+      
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
