@@ -47,24 +47,23 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // Get raw session data first for debugging
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log('[DEBUG] Raw Supabase session:', sessionData.session);
+      console.log('[DEBUG] Raw access token:', sessionData.session?.access_token);
 
-      console.log('[TitleGenerator] session.access_token =', session?.access_token);
-      console.log('[TitleGenerator] user.id =', user?.id);
-
-      // Pause for 10 seconds to allow log inspection
-      await new Promise(resolve => setTimeout(resolve, 10000));
-
-      if (!session) {
-        setError('No active session. Please sign in again.');
+      if (!sessionData.session?.access_token) {
+        console.error('No access token in raw session');
+        setError('No valid session token. Please sign in again.');
         return;
       }
-      
+
+      // Use the raw session data directly instead of fetching again
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${sessionData.session.access_token}`
         },
         body: JSON.stringify({
           theme: topic,
@@ -79,13 +78,13 @@ export default function TitleGenerator() {
         throw new Error(errorData.error || `Failed to generate titles: ${response.status}`);
       }
 
-      const data = await response.json();
+      const responseData = await response.json();
       
-      if (!data.titles || !Array.isArray(data.titles)) {
+      if (!responseData.titles || !Array.isArray(responseData.titles)) {
         throw new Error('Invalid response format');
       }
 
-      setGeneratedTitles(data.titles);
+      setGeneratedTitles(responseData.titles);
       
       // Only update profile if titles were successfully generated
       await updateProfile({
