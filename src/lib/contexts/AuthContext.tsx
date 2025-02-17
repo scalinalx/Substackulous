@@ -60,12 +60,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      const query = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
       const { data, error } = await withRetry<UserProfile>(() => 
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
+        Promise.resolve(query)
       );
 
       if (error) {
