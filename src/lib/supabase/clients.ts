@@ -1,5 +1,6 @@
 // src/lib/supabase/client.ts
-import { createClient, PostgrestResponse, PostgrestSingleResponse, PostgrestBuilder } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+import type { PostgrestResponse, PostgrestSingleResponse } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
 if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -44,7 +45,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
 
 // Create a wrapper function for Supabase queries with retry logic
 export const withRetry = async <T>(
-  operation: () => PostgrestBuilder<T>,
+  operation: () => Promise<PostgrestSingleResponse<T>>,
   maxRetries: number = 3,
   delayMs: number = 1000
 ): Promise<PostgrestSingleResponse<T>> => {
