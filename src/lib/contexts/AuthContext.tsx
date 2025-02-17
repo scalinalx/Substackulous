@@ -101,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Increase check interval to 15 minutes instead of 5
       if (inactiveTime > 15 * 60 * 1000) {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('sessionCheckInterval fired → currentSession:', currentSession);
         if (!currentSession && user) {
           // Session expired, reset state
           setSession(null);
@@ -157,6 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         setIsLoading(true);
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+
+        console.log('AuthContext init → initialSession:', initialSession);
         
         if (!mounted) return;
         

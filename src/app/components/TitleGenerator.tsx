@@ -47,7 +47,6 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      // Get the current session
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -65,6 +64,8 @@ export default function TitleGenerator() {
           userId: session.user.id
         }),
       });
+
+      console.log('Server response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
