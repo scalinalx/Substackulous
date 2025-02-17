@@ -50,7 +50,6 @@ export default function TitleGenerator() {
       const { data: { session } } = await supabase.auth.getSession();
 
       console.log('[TitleGenerator] session.access_token =', session?.access_token);
-      await new Promise(resolve => setTimeout(resolve, 5000));
       console.log('[TitleGenerator] user.id =', user?.id);
 
       // Pause for 10 seconds to allow log inspection
