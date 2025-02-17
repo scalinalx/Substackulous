@@ -48,6 +48,9 @@ export default function TitleGenerator() {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+
+      console.log('[TitleGenerator] session.access_token =', session?.access_token);
+      console.log('[TitleGenerator] user.id =', user?.id);
       
       if (!session) {
         setError('No active session. Please sign in again.');
