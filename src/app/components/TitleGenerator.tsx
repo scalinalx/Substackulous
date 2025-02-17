@@ -34,6 +34,14 @@ export default function TitleGenerator() {
       return;
     }
 
+    const { data: { session }, error } = await supabase.auth.getSession();
+    console.log('[DEBUG] supabase.auth.getSession():', session, 'error:', error);
+
+    if (!session) {
+      console.warn('Still no active session in code');
+      return;
+    }
+
     if (!user || !profile) {
       setError('Please sign in to continue');
       return;
