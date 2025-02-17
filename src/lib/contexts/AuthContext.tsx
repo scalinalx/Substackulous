@@ -73,9 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
       
-      // Only update profile if it's different
-      if (JSON.stringify(data) !== JSON.stringify(profile)) {
-        setProfile(data);
+      // Only update profile if it's different and data exists
+      if (data && JSON.stringify(data) !== JSON.stringify(profile)) {
+        setProfile(data as UserProfile);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
