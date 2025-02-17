@@ -1,22 +1,73 @@
-You are an expert in TypeScript, Next.js App Router, React, and Tailwind. Follow @Next.js 14 App Router docs for Data Fetching, Rendering, and Routing. Use Vercel AI SDK for handling AI interactions and streaming responses.
+project_initialization:
+  purpose: "Set up and maintain the foundation for project management."
+  details:
+    - Ensure a `\\memlog` folder exists to store tasks, changelogs, and persistent data.
+    - Verify and update the `\\memlog` folder before responding to user requests.
+    - Keep a clear record of user progress and system state in the folder.
 
-- All project files are saved in the /src folder. 
-  - src/app has the page.tsx and layout.tsx files
-  - src/app/api has the API routes
-  - src/app/components has all the React components
-  - src/app/lib has all the other code like helpers, hooks, and contexts
+task_execution:
+  purpose: "Break down user requests into actionable steps."
+  details:
+    - Split tasks into clear, numbered steps with explanations for actions and reasoning.
+    - Identify and flag potential issues before they arise.
+    - Verify completion of each step before proceeding.
+    - If errors occur, document them, revert to previous steps, and retry as needed.
 
-There are some pre-configured APIs in this template that can be used but only if required by the current project. These have already been created:
-- Firebase
-  - In src/lib/firebase there is a firebase.ts configuration file as well as firebaseUtils.ts for various utility functions when interacting with Firebase Database, Storage, and Authencation
-  - In src/lib/contexts there is an AuthContext.tsx file that has user authentication with Firebase set up with the onAuthStateChanged listener.
-  - In src/lib/hooks there is a useAuth.ts hook
-- OpenAI 
-  - src/app/api/openai has chat/route.ts which is a simple API calling streamText from openai using the Vercel AI library
-- Anthropic
-  - src/app/api/anthropic has chat/route.ts which is a simple API calling streamText from Anthropic using the Vercel AI library
-- Replicate
-  - src/app/api/replicate has generate-image/route.ts which is a simple API calling the Stable Diffusion model hosted on Replicate to generate images
-- Deepgram
-  - src/app/api/deepgram has transcribe-audio/route.ts which is a simple API that returns the Deepgram API key to be used in the client side to transcribe audio in real-time.
-  - src/lib/contexts has a DeepgramContext.tsx file that has the Deepgram API key set up with the useDeepgram hook to be used in any component.
+credential_management:
+  purpose: "Securely manage user credentials and guide credential-related tasks."
+  details:
+    - Clearly explain the purpose of credentials requested from users.
+    - Guide users in obtaining any missing credentials.
+    - Validate credentials before proceeding with any operations.
+    - Avoid storing credentials in plaintext; provide guidance on secure storage.
+    - Implement and recommend proper refresh procedures for expiring credentials.
+
+file_handling:
+  purpose: "Ensure files are organized, modular, and maintainable."
+  details:
+    - Keep files modular by breaking large components into smaller sections.
+    - Store constants, configurations, and reusable strings in separate files.
+    - Use descriptive names for files and folders for clarity.
+    - Document all file dependencies and maintain a clean project structure.
+
+error_reporting:
+  purpose: "Provide actionable feedback to users and maintain error logs."
+  details:
+    - Create detailed error reports, including context and timestamps.
+    - Suggest recovery steps or alternative solutions for users.
+    - Track error history to identify patterns and improve future responses.
+    - Escalate unresolved issues with context to appropriate channels.
+
+third_party_services:
+  purpose: "Verify and manage connections to third-party services."
+  details:
+    - Ensure all user setup requirements, permissions, and settings are complete.
+    - Test third-party service connections before using them in workflows.
+    - Document version requirements, service dependencies, and expected behavior.
+    - Prepare contingency plans for service outages or unexpected failures.
+
+dependencies_and_libraries:
+  purpose: "Use stable, compatible, and maintainable libraries."
+  details:
+    - Always use the most stable versions of dependencies to ensure compatibility.
+    - Update libraries regularly, avoiding changes that disrupt functionality.
+
+code_documentation:
+  purpose: "Maintain clarity and consistency in project code."
+  details:
+    - Write clear, concise comments for all sections of code.
+    - Use one set of triple quotes for docstrings to prevent syntax errors.
+    - Document the purpose and expected behavior of functions and modules.
+
+change_review:
+  purpose: "Evaluate the impact of project changes and ensure stability."
+  details:
+    - Review all changes to assess their effect on other parts of the project.
+    - Test changes thoroughly to ensure consistency and prevent conflicts.
+    - Document changes, their outcomes, and any corrective actions taken in the `\\memlog` folder.
+
+browser_rules:
+  purpose: "Exhaust all options before determining an action is impossible."
+  details:
+    - When evaluating feasibility, check alternatives in all directions: up/down and left/right.
+    - Only conclude an action cannot be performed after all possibilities are tested.

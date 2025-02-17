@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/clients';
 
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 if (!DEEPSEEK_API_KEY) {
@@ -18,8 +19,7 @@ const groq = new Groq({
   apiKey: GROQ_API_KEY
 });
 
-
-// Initialize Supabase client with service role key for admin operations
+// Initialize Supabase admin client with service role key for admin operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -51,18 +51,7 @@ export async function POST(req: Request) {
 
     const token = authHeader.split(' ')[1];
     
-    // Verify the token and get the user
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
-
+    // Verify the token and get the user using the imported supabase client
     const { data: { user: sessionUser }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !sessionUser) {

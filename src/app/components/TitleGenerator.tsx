@@ -34,8 +34,8 @@ export default function TitleGenerator() {
       return;
     }
 
-    if (!profile) {
-      setError('User profile not found');
+    if (!user || !profile) {
+      setError('Please sign in to continue');
       return;
     }
 
@@ -50,7 +50,8 @@ export default function TitleGenerator() {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        throw new Error('No active session');
+        setError('No active session. Please sign in again.');
+        return;
       }
 
       const response = await fetch('/api/deepseek/generate-titles', {
@@ -61,7 +62,7 @@ export default function TitleGenerator() {
         },
         body: JSON.stringify({
           theme: topic,
-          userId: session.user.id
+          userId: user.id
         }),
       });
 
