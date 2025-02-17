@@ -1,6 +1,18 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { supabase } from '@/lib/supabase/clients';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase admin client with service role key for admin operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  }
+);
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20' as any,
@@ -58,7 +70,7 @@ export async function POST(req: Request) {
 
         // Find user by email from the profiles table
         console.log('\nFinding user profile for email:', customerEmail);
-        const { data: userProfile, error: profileError } = await supabase
+        const { data: userProfile, error: profileError } = await supabaseAdmin
           .from('profiles')
           .select('id, credits, email')
           .eq('email', customerEmail)
@@ -76,7 +88,7 @@ export async function POST(req: Request) {
         console.log('Current credits:', userProfile.credits);
         console.log('Adding credits:', CREDITS_TO_ADD);
         
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
           .from('profiles')
           .update({
             credits: (userProfile.credits || 0) + CREDITS_TO_ADD,

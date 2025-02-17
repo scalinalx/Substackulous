@@ -1,19 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/clients';
 
 export default function TitleGenerator() {
   const router = useRouter();
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
   const [topic, setTopic] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
   const creditCost = 1;
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const copyToClipboard = async (text: string, index: number) => {
     try {
@@ -25,7 +30,8 @@ export default function TitleGenerator() {
     }
   };
 
-  const handleGenerateTitles = async () => {
+  const handleGenerateTitles = async (e: React.FormEvent) => {
+    e.preventDefault(); // Prevent default form submission
     setError('');
     setGeneratedTitles([]);
 
@@ -34,11 +40,8 @@ export default function TitleGenerator() {
       return;
     }
 
-    const { data: { session }, error } = await supabase.auth.getSession();
-    console.log('[DEBUG] supabase.auth.getSession():', session, 'error:', error);
-
-    if (!session) {
-      console.warn('Still no active session in code');
+    if (!session?.access_token) {
+      setError('No valid session. Please sign in again.');
       return;
     }
 
@@ -55,31 +58,19 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      // Get raw session data first for debugging
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log('[DEBUG] Raw Supabase session:', sessionData.session);
-      console.log('[DEBUG] Raw access token:', sessionData.session?.access_token);
-
-      if (!sessionData.session?.access_token) {
-        console.error('No access token in raw session');
-        setError('No valid session token. Please sign in again.');
-        return;
-      }
-
-      // Use the raw session data directly instead of fetching again
+      const controller = new AbortController(); // Add abort controller for cleanup
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           theme: topic,
           userId: user.id
         }),
+        signal: controller.signal
       });
-
-      console.log('Server response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -101,14 +92,16 @@ export default function TitleGenerator() {
     } catch (err) {
       console.error('Error in title generation:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
-      // Reset loading state
-      setLoading(false);
-      // Reset any partial state
       setGeneratedTitles([]);
     } finally {
       setLoading(false);
     }
   };
+
+  // Don't render until after mount to prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -182,6 +175,7 @@ export default function TitleGenerator() {
                   {title}
                 </div>
                 <button
+                  type="button"
                   onClick={() => copyToClipboard(title, index)}
                   className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
                 >

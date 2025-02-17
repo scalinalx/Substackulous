@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/clients';
 
 interface GenerationOptions {
   title: string;
@@ -14,7 +13,7 @@ interface GenerationOptions {
 
 export default function ThumbnailGenerator() {
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<{ urls: string[] } | null>(null);
   const [options, setOptions] = useState<GenerationOptions>({
@@ -34,18 +33,16 @@ export default function ThumbnailGenerator() {
       return;
     }
 
+    if (!session?.access_token) {
+      setError('Authentication error. Please try again.');
+      return;
+    }
+
     setLoading(true);
     setGeneratedImages(null);
     setError(null);
 
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        setError('Authentication error. Please try again.');
-        return;
-      }
-
       const prompt = `A viral thumbnail about "${options.title}". Clickbait, Eye-catchy, Engaging visuals. Viral. ${options.theme} theme. Inspiring. CGI. Text Masking.`;
 
       const response = await fetch('/api/replicate/generate-image', {

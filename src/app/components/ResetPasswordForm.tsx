@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/clients';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function ResetPasswordForm() {
   const [newPassword, setNewPassword] = useState('');
@@ -12,6 +13,7 @@ export default function ResetPasswordForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { session } = useAuth();
 
   // Clean up function to handle navigation interruption
   useEffect(() => {
@@ -31,15 +33,14 @@ export default function ResetPasswordForm() {
     }
 
     // Check if we're already authenticated
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session && !errorDescription) {
-        // If no session and no error, redirect to login
-        router.replace('/');
-      }
-    };
-    checkAuth();
-  }, [searchParams, router]);
+    if (session && !errorDescription) {
+      // If we have a session and no error, redirect to dashboard
+      router.replace('/dashboard');
+    } else if (!session && !errorDescription && !searchParams.get('code')) {
+      // If no session, no error, and no reset code, redirect to login
+      router.replace('/');
+    }
+  }, [searchParams, router, session]);
 
   // Handle redirect after success
   useEffect(() => {
