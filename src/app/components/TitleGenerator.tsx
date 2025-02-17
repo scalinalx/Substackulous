@@ -62,7 +62,7 @@ export default function TitleGenerator() {
         },
         body: JSON.stringify({
           theme: topic,
-          userId: user?.id
+          userId: session.user.id
         }),
       });
 
