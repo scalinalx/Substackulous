@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import supabase from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/clients';
 
 export default function TitleGenerator() {
   const router = useRouter();

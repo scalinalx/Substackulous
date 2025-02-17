@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import supabase from '@/lib/supabase';
+import { supabase } from '@/lib/supabase/clients';
 
 interface GenerationOptions {
   title: string;
