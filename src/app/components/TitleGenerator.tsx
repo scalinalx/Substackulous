@@ -13,32 +13,28 @@ export default function TitleGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [key, setKey] = useState(0);
   const activeRequestRef = useRef<AbortController | null>(null);
+  const titlesRef = useRef<string[]>([]);
   const creditCost = 1;
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
     return () => {
-      // Cleanup any active requests on unmount
       if (activeRequestRef.current) {
         activeRequestRef.current.abort();
       }
     };
   }, []);
 
-  // Debug logging for auth state
+  // Force re-render when titles change
   useEffect(() => {
-    if (mounted) {
-      console.log('Auth state:', {
-        hasUser: !!user,
-        hasProfile: !!profile,
-        hasSession: !!session,
-        credits: profile?.credits,
-        titles: generatedTitles
-      });
+    if (generatedTitles.length > 0) {
+      titlesRef.current = generatedTitles;
+      setKey(prev => prev + 1);
     }
-  }, [mounted, user, profile, session, generatedTitles]);
+  }, [generatedTitles]);
 
   const copyToClipboard = async (text: string, index: number) => {
     try {
@@ -52,7 +48,6 @@ export default function TitleGenerator() {
 
   const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Starting title generation...');
     
     // Clear any existing request
     if (activeRequestRef.current) {
@@ -61,6 +56,7 @@ export default function TitleGenerator() {
     
     setError(null);
     setGeneratedTitles([]);
+    titlesRef.current = [];
 
     if (!topic.trim()) {
       setError('Please enter a topic');
@@ -68,25 +64,21 @@ export default function TitleGenerator() {
     }
 
     if (!session?.access_token) {
-      console.log('No valid session found');
       setError('No valid session. Please sign in again.');
       return;
     }
 
     if (!user || !profile) {
-      console.log('Missing user or profile');
       setError('Please sign in to continue');
       return;
     }
 
     if (profile.credits < creditCost) {
-      console.log('Insufficient credits');
       setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
       return;
     }
 
     setLoading(true);
-    console.log('Starting fetch request...');
 
     try {
       const controller = new AbortController();
@@ -105,45 +97,39 @@ export default function TitleGenerator() {
         signal: controller.signal
       });
 
-      console.log('Response received:', response.status);
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `Failed to generate titles: ${response.status}`);
       }
 
       const responseData = await response.json();
-      console.log('Response data:', responseData);
       
       if (!responseData.titles || !Array.isArray(responseData.titles)) {
-        console.error('Invalid response format:', responseData);
         throw new Error('Invalid response format');
       }
 
       // Clean the titles by removing extra quotes
       const cleanedTitles = responseData.titles.map((title: string) => 
-        title.replace(/^"|"$/g, '')
+        title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
       );
 
-      // Set titles first
-      console.log('Setting generated titles:', cleanedTitles);
+      // Update both state and ref
+      titlesRef.current = cleanedTitles;
       setGeneratedTitles(cleanedTitles);
+      setKey(prev => prev + 1);
       
       // Then update profile
-      console.log('Updating profile credits...');
       await updateProfile({
         credits: profile.credits - creditCost,
       });
       
-      console.log('Title generation complete');
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
-        console.log('Request was aborted');
         return;
       }
-      console.error('Error in title generation:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
       setGeneratedTitles([]);
+      titlesRef.current = [];
     } finally {
       if (activeRequestRef.current) {
         activeRequestRef.current = null;
@@ -154,32 +140,11 @@ export default function TitleGenerator() {
 
   // Don't render until after mount to prevent hydration mismatch
   if (!mounted) {
-    console.log('Component not yet mounted');
     return null;
   }
 
-  // Render debug info in development
-  const debugInfo = process.env.NODE_ENV === 'development' && (
-    <div className="mb-4 p-4 bg-gray-100 rounded-lg text-xs">
-      <pre className="overflow-auto">
-        {JSON.stringify({
-          hasUser: !!user,
-          hasProfile: !!profile,
-          hasSession: !!session,
-          titlesCount: generatedTitles.length,
-          titles: generatedTitles,
-          isLoading: loading,
-          hasError: !!error,
-          topic
-        }, null, 2)}
-      </pre>
-    </div>
-  );
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {debugInfo}
-      
+    <div className="max-w-4xl mx-auto px-4 py-8" key={key}>
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
         <span className="text-amber-700">Credits required: {creditCost}</span>
         <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
@@ -235,15 +200,15 @@ export default function TitleGenerator() {
         </button>
       </form>
 
-      {/* Always render the container, but conditionally show content */}
+      {/* Use titlesRef for rendering to ensure we always have the latest data */}
       <div className="mt-8">
-        {generatedTitles.length > 0 ? (
+        {titlesRef.current.length > 0 ? (
           <>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles</h2>
             <div className="space-y-3">
-              {generatedTitles.map((title, index) => (
+              {titlesRef.current.map((title, index) => (
                 <div
-                  key={`title-${index}`}
+                  key={`title-${index}-${key}`}
                   className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
                 >
                   <span className="flex-none w-8 text-gray-400 text-sm">
