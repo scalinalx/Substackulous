@@ -51,6 +51,8 @@ export default function TitleGenerator() {
 
       console.log('[TitleGenerator] session.access_token =', session?.access_token);
       console.log('[TitleGenerator] user.id =', user?.id);
+
+      await new Promise(resolve => setTimeout(resolve, 7000));
       
       if (!session) {
         setError('No active session. Please sign in again.');
