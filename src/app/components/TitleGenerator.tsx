@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -13,19 +13,18 @@ export default function TitleGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
+  const activeRequestRef = useRef<AbortController | null>(null);
   const creditCost = 1;
-
-  // Debug logging for state changes
-  useEffect(() => {
-    if (generatedTitles.length > 0) {
-      console.log('Titles updated:', generatedTitles);
-    }
-  }, [generatedTitles]);
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
-    console.log('Component mounted');
+    return () => {
+      // Cleanup any active requests on unmount
+      if (activeRequestRef.current) {
+        activeRequestRef.current.abort();
+      }
+    };
   }, []);
 
   // Debug logging for auth state
@@ -35,10 +34,11 @@ export default function TitleGenerator() {
         hasUser: !!user,
         hasProfile: !!profile,
         hasSession: !!session,
-        credits: profile?.credits
+        credits: profile?.credits,
+        titles: generatedTitles
       });
     }
-  }, [mounted, user, profile, session]);
+  }, [mounted, user, profile, session, generatedTitles]);
 
   const copyToClipboard = async (text: string, index: number) => {
     try {
@@ -53,6 +53,11 @@ export default function TitleGenerator() {
   const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Starting title generation...');
+    
+    // Clear any existing request
+    if (activeRequestRef.current) {
+      activeRequestRef.current.abort();
+    }
     
     setError(null);
     setGeneratedTitles([]);
@@ -85,6 +90,8 @@ export default function TitleGenerator() {
 
     try {
       const controller = new AbortController();
+      activeRequestRef.current = controller;
+
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
@@ -113,9 +120,14 @@ export default function TitleGenerator() {
         throw new Error('Invalid response format');
       }
 
+      // Clean the titles by removing extra quotes
+      const cleanedTitles = responseData.titles.map((title: string) => 
+        title.replace(/^"|"$/g, '')
+      );
+
       // Set titles first
-      console.log('Setting generated titles:', responseData.titles);
-      setGeneratedTitles(responseData.titles);
+      console.log('Setting generated titles:', cleanedTitles);
+      setGeneratedTitles(cleanedTitles);
       
       // Then update profile
       console.log('Updating profile credits...');
@@ -125,10 +137,17 @@ export default function TitleGenerator() {
       
       console.log('Title generation complete');
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Request was aborted');
+        return;
+      }
       console.error('Error in title generation:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
       setGeneratedTitles([]);
     } finally {
+      if (activeRequestRef.current) {
+        activeRequestRef.current = null;
+      }
       setLoading(false);
     }
   }, [topic, session, user, profile, creditCost, updateProfile]);
@@ -148,8 +167,10 @@ export default function TitleGenerator() {
           hasProfile: !!profile,
           hasSession: !!session,
           titlesCount: generatedTitles.length,
+          titles: generatedTitles,
           isLoading: loading,
-          hasError: !!error
+          hasError: !!error,
+          topic
         }, null, 2)}
       </pre>
     </div>
@@ -191,6 +212,7 @@ export default function TitleGenerator() {
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
             rows={2}
             required
+            disabled={loading}
           />
         </div>
 
