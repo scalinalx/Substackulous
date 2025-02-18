@@ -7,7 +7,7 @@ import Link from 'next/link'; // Import Link
 
 export default function TitleGenerator() {
     const router = useRouter();
-    const { user, profile, updateCredits, session } = useAuth(); // Use updateCredits
+    const { user, profile, updateCredits, session, credits } = useAuth(); // Use updateCredits, and get credits
     const [loading, setLoading] = useState(false);
     const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
     const [topic, setTopic] = useState('');
@@ -36,7 +36,6 @@ export default function TitleGenerator() {
 
 
 
-
     const copyToClipboard = async (text: string, index: number) => {
         try {
             await navigator.clipboard.writeText(text);
@@ -47,12 +46,12 @@ export default function TitleGenerator() {
         }
     };
 
-    const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
+  const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setGeneratedTitles([]);
         setTitlesGenerated(false); // Reset the flag
-        titlesRef.current = null; // Clear ref
+        titlesRef.current = null; // Clear the ref
 
         if (!topic.trim()) {
             setError('Please enter a topic');
@@ -69,7 +68,8 @@ export default function TitleGenerator() {
             return;
         }
 
-        if (profile.credits < creditCost) {
+        // Use the separate 'credits' value from the context
+        if (credits === null || credits < creditCost) {
             setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
             return;
         }
@@ -116,7 +116,7 @@ export default function TitleGenerator() {
             if (profile) { // Check for profile
                 console.log("Titles generated, updating credits...");
                 try {
-                    await updateCredits(profile.credits - creditCost);
+                    await updateCredits(credits - creditCost);  // Use separate credits value
                     console.log("Credits updated");
                 } catch (updateError) {
                     console.error("Error updating credits:", updateError);
@@ -132,7 +132,7 @@ export default function TitleGenerator() {
         } finally {
             setLoading(false);
         }
-    }, [topic, session, user, profile, creditCost, updateCredits]); // Add updateCredits
+    }, [topic, session, user, profile, creditCost, updateCredits, credits]); // Added credits to dependencies
 
     // useEffect to update the displayed titles *after* mounting/remounting
     useEffect(() => {
@@ -152,7 +152,7 @@ export default function TitleGenerator() {
         console.log("TitleItem UNMOUNTING:", title, index);
       };
     }, [title, index]);
-      console.log("TitleItem rendering:", title, index);
+    console.log("TitleItem rendering:", title, index);
 
     return (
       <div
@@ -216,7 +216,8 @@ export default function TitleGenerator() {
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
             <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
             <span className="text-amber-700">Credits required: {creditCost}</span>
-            <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+            {/* Use the separate credits value from context */}
+            <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
             </div>
             {error && (
             <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4">

@@ -1,23 +1,37 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { User, Session, AuthError } from '@supabase/supabase-js';
-import { useRouter, usePathname } from 'next/navigation';
-import { supabase, withRetry } from '@/lib/supabase/clients';
-import { logoutUser, signInWithGoogle, resetPassword as resetPasswordUtil } from '../supabase/authUtils';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
+import { User, Session, AuthError } from "@supabase/supabase-js";
+import { useRouter, usePathname } from "next/navigation";
+import { supabase, withRetry } from "@/lib/supabase/clients";
+import {
+  logoutUser,
+  signInWithGoogle,
+  resetPassword as resetPasswordUtil,
+} from "../supabase/authUtils";
 
 interface UserProfile {
   id: string;
   email: string;
-  credits: number;
+  // credits: number;  <-- REMOVE credits from here
   created_at?: string;
   updated_at?: string;
 }
 
+// Add credits to the context type
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: UserProfile | null;
+  credits: number | null; // Add credits as a separate state
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -30,22 +44,24 @@ interface AuthContextType {
   updateCredits: (newCredits: number) => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(
+  undefined
+);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [session, setSession] = useState<Session | null>(null);
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isInitialized, setIsInitialized] = useState(false);
-    const router = useRouter();
-    const pathname = usePathname();
-    const isInitializing = useRef(true);
-    const lastActivity = useRef(Date.now());
-    const sessionCheckInterval = useRef<NodeJS.Timeout>();
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [credits, setCredits] = useState<number | null>(null); // Separate credits state
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const router = useRouter();
+  const isInitializing = useRef(true);
+  const lastActivity = useRef(Date.now());
+  const sessionCheckInterval = useRef<NodeJS.Timeout>();
 
-    const RETRY_DELAY = 1000;
-    const MAX_RETRIES = 3;
+  const RETRY_DELAY = 1000; // 1 second
+  const MAX_RETRIES = 3;
 
     const fetchProfile = useCallback(async (userId: string) => {
         try {
@@ -53,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!session) {
                 console.error('No active session when fetching profile');
                 setProfile(null);
+                setCredits(null); // Also reset credits
                 return;
             }
 
@@ -62,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .eq('id', userId)
                 .single();
 
-            const { data, error } = await withRetry<UserProfile>(() =>
+            const { data, error } = await withRetry<any>(() => // Use any for now
                 Promise.resolve(query)
             );
 
@@ -71,16 +88,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 throw error;
             }
 
-            if (data && JSON.stringify(data) !== JSON.stringify(profile)) {
-                setProfile(data as UserProfile);
+          if (data) {
+            // Separate profile data and credits
+            const { credits: fetchedCredits, ...profileData } = data; // Destructure
+            if (JSON.stringify(profileData) !== JSON.stringify(profile)) { // Important comparison
+                setProfile(profileData); // Update profile *without* credits
             }
+            if (fetchedCredits !== credits) {
+               setCredits(fetchedCredits); // Update credits separately
+            }
+          }
+
         } catch (error) {
             console.error('Error fetching profile:', error);
             if (!profile) {
                 setProfile(null);
+                setCredits(null); // Also reset credits
             }
         }
-    }, [profile, supabase]);
+    }, [profile, credits, supabase]); // Add credits to dependencies
+
 
     const startSessionCheck = useCallback(() => {
     if (sessionCheckInterval.current) {
@@ -99,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(null);
           setUser(null);
           setProfile(null);
+          setCredits(null);
           router.replace('/login');
         }
         lastActivity.current = now;
@@ -126,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setSession(null);
                     setUser(null);
                     setProfile(null);
+                    setCredits(null);
                     router.replace('/login');
                 }
             }
@@ -165,6 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(null);
                 setSession(null);
                 setProfile(null);
+                setCredits(null);
             } finally {
                 if (mounted) {
                     setIsLoading(false);
@@ -192,6 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             await fetchProfile(currentSession.user.id);
                         } else {
                             setProfile(null);
+                            setCredits(null);
                         }
 
                         if (event === 'SIGNED_IN') {
@@ -224,6 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setSession(null);
       setProfile(null);
+      setCredits(null);
       router.refresh();
       await router.replace('/login');
     } catch (error) {
@@ -300,61 +332,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-
-      const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    // Keep the original updateProfile, but modify it to *not* update credits.
+    const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
         console.log("updateProfile: STARTING, updates:", updates);
         if (!user) throw new Error('No user logged in');
 
         try {
             setIsLoading(true);
-
             console.log("updateProfile: Fetching current profile from Supabase...");
+
+            // Fetch *only* the non-credit profile data.
             const { data: currentProfile, error: fetchError } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('id, email, created_at, updated_at') // IMPORTANT: Don't select credits
                 .eq('id', user.id)
                 .single();
+
             console.log("updateProfile: Fetched profile:", currentProfile);
-
             if (fetchError) throw fetchError;
-
             if (!currentProfile) {
-                throw new Error("updateProfile: User profile not found."); // Consistent error message
+                throw new Error("updateProfile: User profile not found.");
             }
 
+            // Merge *only* the allowed updates (no credits).
+            const mergedUpdates = {
+                ...currentProfile,
+                ...updates, // This will now *only* contain non-credit updates.
+            };
+
+            // Update *only* the non-credit fields in the database.
             console.log("updateProfile: Updating profile in Supabase...");
             const { error: updateError } = await supabase
                 .from('profiles')
-                .update({ credits: updates.credits! }) // Only update credits.  Assert not null.
+                .update(mergedUpdates) // Update with the merged object
                 .eq('id', user.id)
                 .select()
                 .single();
 
             if (updateError) throw updateError;
 
-            console.log("updateProfile: Calling setProfile with:", { credits: updates.credits });
+            // Update the *local* profile state, but only the non-credit fields
+            console.log("updateProfile: Calling setProfile with:", mergedUpdates);
             setProfile(currentProfile => {
                 if (!currentProfile) {
-                    console.error("updateProfile: currentProfile is unexpectedly null!");
-                    return null; // Or some other appropriate fallback.  This should never happen.
+                  console.error("updateProfile: currentProfile unexpectedly null!");
+                  return null;
                 }
-
                 return {
-                    ...currentProfile, // Keep all existing fields
-                    credits: updates.credits!, // Safely update credits.
+                  ...currentProfile,
+                  ...updates, // Apply only the allowed updates.
                 };
             });
 
-
         } catch (error) {
             console.error('Error updating profile:', error);
-            setIsLoading(false); // Ensure loading is set to false in case of errors.
+            setIsLoading(false);
             throw error;
         } finally {
             setIsLoading(false);
             console.log("updateProfile: COMPLETED");
         }
     }, [user, supabase]);
+
 
     const updateCredits = useCallback(async (newCredits: number) => {
         if (!user) throw new Error('No user logged in');
@@ -372,20 +411,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (updateError) throw updateError;
 
-             // Update the local profile state *only* with the new credits.
-            setProfile(currentProfile => {
-              console.log("setProfile called within updateCredits. currentProfile:", currentProfile);
-              if (!currentProfile) {
-                console.error("updateCredits: currentProfile is unexpectedly null!");
-                return null; // Or a fallback.
-              }
-              return {
-                ...currentProfile,  // Keep all other fields the same
-                credits: newCredits, // Update ONLY the credits
-              };
-            });
+            // Update the local credits state *directly*.
+            setCredits(newCredits); // Update the separate credits state
             console.log("updateCredits: COMPLETED");
-
 
         } catch(error) {
             console.error('Error updating credits', error);
@@ -393,12 +421,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setIsLoading(false);
         }
-    }, [user, supabase]);
+    }, [user, supabase]); // Correct dependencies
+
 
     const contextValue = useMemo(() => ({
         user,
         session,
         profile,
+        credits, // Include credits in the context
         isLoading,
         isAuthenticated: !!user,
         signIn,
@@ -407,21 +437,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithGoogle: handleGoogleSignIn,
         resetPassword: handleResetPassword,
         updateProfile,
-        updateCredits, // Add updateCredits to context
+        updateCredits,
         isInitialized
-    }), [user, session, profile, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits]);
+    // Make sure to add credits to the dependencies array here
+    }), [user, session, profile, credits, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits]);
+
 
     return (
         <AuthContext.Provider value={contextValue}>
-        {children}
+            {children}
         </AuthContext.Provider>
     );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
 }
