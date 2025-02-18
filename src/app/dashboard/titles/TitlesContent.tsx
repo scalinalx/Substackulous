@@ -14,8 +14,7 @@ export default function TitleGenerator() {
     const [error, setError] = useState<string | null>(null);
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
     const [mounted, setMounted] = useState(false);
-    const creditCost = 1;
-    const [titlesGenerated, setTitlesGenerated] = useState(false); // Flag for credit update
+    const [titlesGenerated, setTitlesGenerated] = useState(false); // Flag
 
 
     const isMounted = useRef(true);
@@ -48,6 +47,7 @@ export default function TitleGenerator() {
         setError(null);
         setGeneratedTitles([]);
         setTitlesGenerated(false); // Reset the flag
+        const creditCost = 1;
 
         if (!topic.trim()) {
             setError('Please enter a topic');
@@ -113,9 +113,10 @@ export default function TitleGenerator() {
         } finally {
             setLoading(false);
         }
-    }, [topic, session, user, profile, creditCost]); // Removed generatedTitles
+    }, [topic, session, user, profile]); // Removed generatedTitles, and updateCredits.
 
     useEffect(() => {
+        const creditCost = 1;
         // Only call updateCredits if titlesGenerated is true, loading is false,
         // and the profile is available.
         if (titlesGenerated && !loading && profile) {
@@ -128,60 +129,54 @@ export default function TitleGenerator() {
                     console.error("Error updating credits in useEffect:", updateError);
                     setError("Failed to update credits. Please refresh the page.");
                 } finally {
-                    setTitlesGenerated(false); // Reset flag after updating credits
+                    setTitlesGenerated(false); // Reset the flag!
                 }
             };
             updateCreditsAsync();
         }
-    }, [titlesGenerated, loading, profile, updateCredits, creditCost]);
+    }, [titlesGenerated, loading, profile, updateCredits]);
 
 
-    const TitleItem = ({ title, index }: { title: string; index: number }) => {
-      useEffect(() => {
-        console.log("Rendering title:", title, index);
-    
-        return () => {
-          console.log("TitleItem UNMOUNTING:", title, index); // Add unmount log
-        };
-      }, [title, index]);
-    
-      console.log("TitleItem rendering:", title, index); // Add log *before* return
-    
-      return (
-        <div
-          key={`title-${index}`}
-          className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
-        >
-          <span className="flex-none w-8 text-gray-400 text-sm">
-            {index + 1}.
-          </span>
-          <div className="flex-1 text-gray-900">
-            {title}
-          </div>
-          <button
-            type="button"
-            onClick={() => copyToClipboard(title, index)}
-            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
-          >
-            {copiedIndex === index ? (
-              <span className="flex items-center">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Copied!
-              </span>
-            ) : (
-              <span className="flex items-center">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                </svg>
-                Copy
-              </span>
-            )}
-          </button>
+  const TitleItem = ({ title, index }: { title: string; index: number }) => {
+    useEffect(() => {
+      console.log("Rendering title:", title, index);
+    }, [title, index]);
+
+    return (
+      <div
+        key={`title-${index}`}
+        className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
+      >
+        <span className="flex-none w-8 text-gray-400 text-sm">
+          {index + 1}.
+        </span>
+        <div className="flex-1 text-gray-900">
+          {title}
         </div>
-      );
-    };
+        <button
+          type="button"
+          onClick={() => copyToClipboard(title, index)}
+          className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
+        >
+          {copiedIndex === index ? (
+            <span className="flex items-center">
+              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Copied!
+            </span>
+          ) : (
+            <span className="flex items-center">
+              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              Copy
+            </span>
+          )}
+        </button>
+      </div>
+    );
+  };
 
 
 
@@ -191,23 +186,23 @@ export default function TitleGenerator() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
-            <div className="mb-8 flex items-center justify-between">
-                <div>
-                <Link
-                    href="/dashboard"
-                    className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Back to Dashboard
-                </Link>
-                <h1 className="mt-4 text-3xl font-bold text-gray-900">Clickworthy Title Generator</h1>
-                <p className="mt-2 text-gray-600">
-                    Generate attention-grabbing titles that drive clicks and engagement.
-                </p>
-                </div>
+        <div className="mb-8 flex items-center justify-between">
+            <div>
+            <Link
+                href="/dashboard"
+                className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
+            >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Dashboard
+            </Link>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">Clickworthy Title Generator</h1>
+            <p className="mt-2 text-gray-600">
+                Generate attention-grabbing titles that drive clicks and engagement.
+            </p>
             </div>
+        </div>
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
             <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
             <span className="text-amber-700">Credits required: {creditCost}</span>
