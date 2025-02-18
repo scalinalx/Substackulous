@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -13,28 +13,12 @@ export default function TitleGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [key, setKey] = useState(0);
-  const activeRequestRef = useRef<AbortController | null>(null);
-  const titlesRef = useRef<string[]>([]);
   const creditCost = 1;
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
-    return () => {
-      if (activeRequestRef.current) {
-        activeRequestRef.current.abort();
-      }
-    };
   }, []);
-
-  // Force re-render when titles change
-  useEffect(() => {
-    if (generatedTitles.length > 0) {
-      titlesRef.current = generatedTitles;
-      setKey(prev => prev + 1);
-    }
-  }, [generatedTitles]);
 
   const copyToClipboard = async (text: string, index: number) => {
     try {
@@ -48,15 +32,8 @@ export default function TitleGenerator() {
 
   const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Clear any existing request
-    if (activeRequestRef.current) {
-      activeRequestRef.current.abort();
-    }
-    
     setError(null);
     setGeneratedTitles([]);
-    titlesRef.current = [];
 
     if (!topic.trim()) {
       setError('Please enter a topic');
@@ -81,9 +58,6 @@ export default function TitleGenerator() {
     setLoading(true);
 
     try {
-      const controller = new AbortController();
-      activeRequestRef.current = controller;
-
       const response = await fetch('/api/deepseek/generate-titles', {
         method: 'POST',
         headers: {
@@ -93,8 +67,7 @@ export default function TitleGenerator() {
         body: JSON.stringify({
           theme: topic,
           userId: user.id
-        }),
-        signal: controller.signal
+        })
       });
 
       if (!response.ok) {
@@ -113,10 +86,8 @@ export default function TitleGenerator() {
         title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
       );
 
-      // Update both state and ref
-      titlesRef.current = cleanedTitles;
+      // Update state with cleaned titles
       setGeneratedTitles(cleanedTitles);
-      setKey(prev => prev + 1);
       
       // Then update profile
       await updateProfile({
@@ -124,16 +95,9 @@ export default function TitleGenerator() {
       });
       
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        return;
-      }
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
       setGeneratedTitles([]);
-      titlesRef.current = [];
     } finally {
-      if (activeRequestRef.current) {
-        activeRequestRef.current = null;
-      }
       setLoading(false);
     }
   }, [topic, session, user, profile, creditCost, updateProfile]);
@@ -144,7 +108,7 @@ export default function TitleGenerator() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8" key={key}>
+    <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
         <span className="text-amber-700">Credits required: {creditCost}</span>
         <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
@@ -200,15 +164,14 @@ export default function TitleGenerator() {
         </button>
       </form>
 
-      {/* Use titlesRef for rendering to ensure we always have the latest data */}
       <div className="mt-8">
-        {titlesRef.current.length > 0 ? (
+        {generatedTitles.length > 0 ? (
           <>
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles</h2>
             <div className="space-y-3">
-              {titlesRef.current.map((title, index) => (
+              {generatedTitles.map((title, index) => (
                 <div
-                  key={`title-${index}-${key}`}
+                  key={`title-${index}`}
                   className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
                 >
                   <span className="flex-none w-8 text-gray-400 text-sm">
