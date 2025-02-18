@@ -7,7 +7,7 @@ import Link from 'next/link'; // Import Link
 
 export default function TitleGenerator() {
     const router = useRouter();
-    const { user, profile, updateCredits, session, credits } = useAuth(); // Use updateCredits, and get credits
+    const { user, profile, updateCredits, session, credits } = useAuth(); // Use updateCredits and credits
     const [loading, setLoading] = useState(false);
     const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
     const [topic, setTopic] = useState('');
@@ -16,7 +16,6 @@ export default function TitleGenerator() {
     const [mounted, setMounted] = useState(false);
     const creditCost = 1;
     const [titlesGenerated, setTitlesGenerated] = useState(false); // Flag
-    const titlesRef = useRef<string[] | null>(null); // Ref to store titles temporarily
 
 
     const isMounted = useRef(true);
@@ -35,7 +34,6 @@ export default function TitleGenerator() {
     }, []);
 
 
-
     const copyToClipboard = async (text: string, index: number) => {
         try {
             await navigator.clipboard.writeText(text);
@@ -51,7 +49,7 @@ export default function TitleGenerator() {
         setError(null);
         setGeneratedTitles([]);
         setTitlesGenerated(false); // Reset the flag
-        titlesRef.current = null; // Clear the ref
+        titlesRef.current = null; // Clear ref
 
         if (!topic.trim()) {
             setError('Please enter a topic');
@@ -67,8 +65,7 @@ export default function TitleGenerator() {
             setError('Please sign in to continue');
             return;
         }
-
-        // Use the separate 'credits' value from the context
+      // Use the separate 'credits' value from the context
         if (credits === null || credits < creditCost) {
             setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
             return;
@@ -132,7 +129,7 @@ export default function TitleGenerator() {
         } finally {
             setLoading(false);
         }
-    }, [topic, session, user, profile, creditCost, updateCredits, credits]); // Added credits to dependencies
+    }, [topic, session, user, profile, creditCost, updateCredits, credits]); // Added credits to useCallback
 
     // useEffect to update the displayed titles *after* mounting/remounting
     useEffect(() => {
@@ -152,7 +149,7 @@ export default function TitleGenerator() {
         console.log("TitleItem UNMOUNTING:", title, index);
       };
     }, [title, index]);
-    console.log("TitleItem rendering:", title, index);
+      console.log("TitleItem rendering:", title, index);
 
     return (
       <div
