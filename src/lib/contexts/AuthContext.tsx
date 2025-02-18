@@ -317,6 +317,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
+    console.log("updateProfile: STARTING, updates:", updates); // ADD THIS
     if (!user) throw new Error('No user logged in');
     
     try {
@@ -356,6 +357,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     } finally {
       setIsLoading(false);
+      console.log("updateProfile: COMPLETED"); // ADD THIS
     }
   }, [user]);
 
