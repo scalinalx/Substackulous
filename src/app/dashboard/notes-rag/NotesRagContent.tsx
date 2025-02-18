@@ -44,7 +44,7 @@ export default function NotesRagContent() {
 
   useEffect(() => {
     const updateProfileCredits = async () => {
-      if (profileUpdatePendingRef.current && user) {
+      if (profileUpdatePendingRef.current && user && credits !== null) {
         const now = Date.now();
         // Prevent updates more frequent than every 2 seconds
         if (now - lastProfileUpdateRef.current < 2000) {

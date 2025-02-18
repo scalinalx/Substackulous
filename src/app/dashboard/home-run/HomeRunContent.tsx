@@ -19,12 +19,13 @@ interface AnalysisResults {
 }
 
 export default function HomeRunContent() {
-  const { user, profile } = useAuth();
+  const { user, profile, credits } = useAuth();
   const [substackUrl, setSubstackUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [results, setResults] = useState<AnalysisResults>({ analysis: '', ideas: '', shortNotes: [] });
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
+  const creditCost = 3; // Maximum cost for home run analysis
 
   const constructPrompt = (posts: Post[]) => {
     const postsSection = posts.map(post => (
@@ -265,8 +266,8 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
 
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
           <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-            <span className="text-amber-700">Credits required: 1-3</span>
-            <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+            <span className="text-amber-700">Credits required: {creditCost}</span>
+            <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
           </div>
 
           <div className="space-y-6">

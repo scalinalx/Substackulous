@@ -23,7 +23,7 @@ interface OutlineRequest {
 
 export default function OutlineGenerator() {
   const [mounted, setMounted] = useState(false);
-  const { user, profile, isLoading, updateProfile } = useAuth();
+  const { user, credits, updateCredits } = useAuth();
   const router = useRouter();
   const supabase = createClientComponentClient();
   const [formData, setFormData] = useState<OutlineRequest>({
@@ -46,21 +46,17 @@ export default function OutlineGenerator() {
   }, []);
 
   useEffect(() => {
-    if (mounted && !isLoading && !user) {
+    if (mounted && !user) {
       router.replace('/');
     }
-  }, [mounted, isLoading, user, router]);
+  }, [mounted, user, router]);
 
-  if (!mounted || isLoading) {
+  if (!mounted || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
       </div>
     );
-  }
-
-  if (!user || !profile) {
-    return null;
   }
 
   const handleToneToggle = (tone: string) => {
@@ -75,19 +71,19 @@ export default function OutlineGenerator() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Starting outline generation...');
-    console.log('Profile:', { id: profile?.id, credits: profile?.credits });
+    console.log('Profile:', { id: user?.id, credits: credits });
     
     if (!formData.topic.trim()) {
       setError('Topic is required');
       return;
     }
 
-    if (!profile) {
-      setError('User profile not found');
+    if (!user) {
+      setError('User not found');
       return;
     }
 
-    if ((profile?.credits || 0) < creditCost) {
+    if ((credits ?? 0) < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate an outline.`);
       return;
     }
@@ -127,7 +123,7 @@ export default function OutlineGenerator() {
           'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
-          userId: profile.id,
+          userId: user.id,
           prompt: `Create a ${formData.format} outline using:
 
 **Strategic Foundation**
@@ -185,15 +181,9 @@ Format the outline with clear hierarchical structure using markdown.`
       setOutline(formattedContent);
       console.log('Outline state updated with cleaned and formatted content');
 
-      // Update profile with new credits
-      if (profile) {
-        console.log('Updating profile credits...');
-        const updatedProfile = {
-          ...profile,
-          credits: profile.credits - creditCost
-        };
-        await updateProfile(updatedProfile);
-        console.log('Credits updated successfully');
+      // Update credits after successful generation
+      if (credits !== null) {
+        await updateCredits(credits - creditCost);
       }
     } catch (err) {
       console.error('Error in outline generation:', err);
@@ -243,7 +233,7 @@ Format the outline with clear hierarchical structure using markdown.`
 
           <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
             <span className="text-amber-700">Credits required: {creditCost}</span>
-            <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+            <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -384,7 +374,7 @@ Format the outline with clear hierarchical structure using markdown.`
 
             <button
               type="submit"
-              disabled={generating || (profile?.credits ?? 0) < creditCost}
+              disabled={generating || (credits ?? 0) < creditCost}
               className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white py-3 px-4 rounded-lg 
                        hover:from-amber-600 hover:to-amber-700 transition-all focus:outline-none focus:ring-2 
                        focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed 
