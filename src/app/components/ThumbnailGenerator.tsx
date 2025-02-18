@@ -13,7 +13,7 @@ interface GenerationOptions {
 
 export default function ThumbnailGenerator() {
   const router = useRouter();
-  const { user, profile, session } = useAuth();
+  const { user, credits, updateCredits, session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<{ urls: string[] } | null>(null);
   const [options, setOptions] = useState<GenerationOptions>({
@@ -35,6 +35,11 @@ export default function ThumbnailGenerator() {
 
     if (!session?.access_token) {
       setError('Authentication error. Please try again.');
+      return;
+    }
+
+    if ((credits ?? 0) < creditCost) {
+      setError(`Not enough credits. You need ${creditCost} credits to generate images.`);
       return;
     }
 
@@ -102,6 +107,10 @@ export default function ThumbnailGenerator() {
                   }
                   setGeneratedImages({ urls: data.imageUrls });
                   completionReceived = true;
+                  // Update credits after successful generation
+                  if (credits !== null) {
+                    await updateCredits(credits - creditCost);
+                  }
                   break;
               }
             } catch (e) {
@@ -151,7 +160,7 @@ export default function ThumbnailGenerator() {
         {/* Credit Cost Display */}
         <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
           <span className="text-amber-700">Credits required: {creditCost}</span>
-          <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+          <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
         </div>
 
         <div className="space-y-4">

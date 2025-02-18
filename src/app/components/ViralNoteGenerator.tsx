@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 type PrimaryIntent = 'Growth' | 'Educational' | 'Entertain' | 'Personal Story';
 
 export default function ViralNoteGenerator() {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, credits, updateCredits } = useAuth();
   const [theme, setTheme] = useState('');
   const [coreTopics, setCoreTopics] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
@@ -69,7 +69,7 @@ export default function ViralNoteGenerator() {
       return;
     }
 
-    if (!profile || profile.credits < 2) {
+    if (credits === null || credits < 2) {
       toast.error('Insufficient credits. You need 2 credits to generate notes.');
       return;
     }
@@ -82,15 +82,6 @@ export default function ViralNoteGenerator() {
     localStorage.removeItem('viralNotes'); // Clear previous results
 
     try {
-      // First, update credits to prevent page refresh issues
-      if (profile) {
-        console.log("Updating credits first");
-        await updateProfile({
-          ...profile,
-          credits: profile.credits - 2,
-        });
-      }
-
       const response = await fetch('/api/groq/generate-notes', {
         method: 'POST',
         headers: {
@@ -110,6 +101,11 @@ export default function ViralNoteGenerator() {
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to generate notes');
+      }
+
+      // Update credits after successful generation
+      if (credits !== null) {
+        await updateCredits(credits - 2);
       }
 
       // Set raw response first
@@ -151,7 +147,7 @@ export default function ViralNoteGenerator() {
       return;
     }
 
-    if (!profile || profile.credits < 1) {
+    if (credits === null || credits < 1) {
       toast.error('Insufficient credits. You need 1 credit to generate a note.');
       return;
     }
@@ -181,11 +177,9 @@ export default function ViralNoteGenerator() {
         throw new Error('No note received from API');
       }
 
-      if (profile) {
-        await updateProfile({
-          ...profile,
-          credits: profile.credits - 1
-        });
+      // Update credits after successful generation
+      if (credits !== null) {
+        await updateCredits(credits - 1);
       }
 
       setNotes([data.note]);
@@ -204,7 +198,7 @@ export default function ViralNoteGenerator() {
       <div className="grid gap-6">
         <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
           <span className="text-amber-700">Credits required: 2</span>
-          <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+          <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
         </div>
 
         <div className="space-y-4">
@@ -260,7 +254,7 @@ export default function ViralNoteGenerator() {
           </div>
           <Button 
             onClick={handleGenerate} 
-            disabled={isGenerating || !theme || !primaryIntent || (profile?.credits ?? 0) < 2}
+            disabled={isGenerating || !theme || !primaryIntent || (credits ?? 0) < 2}
             className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
             size="lg"
           >
@@ -283,7 +277,7 @@ export default function ViralNoteGenerator() {
           </div>
           <Button 
             onClick={handleGenerateModel2} 
-            disabled={isGenerating || !subject || (profile?.credits ?? 0) < 1}
+            disabled={isGenerating || !subject || (credits ?? 0) < 1}
             className="w-full bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
             size="lg"
           >

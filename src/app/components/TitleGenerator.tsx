@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 
 export default function TitleGenerator() {
   const router = useRouter();
-  const { user, profile, updateProfile, session } = useAuth();
+  const { user, profile, credits, updateCredits, session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [generatedTitles, setGeneratedTitles] = useState<string[]>([]); // Initialize to empty array, no localStorage
   const [topic, setTopic] = useState('');
@@ -95,7 +95,7 @@ export default function TitleGenerator() {
       return;
     }
 
-    if (profile.credits < creditCost) {
+    if ((credits ?? 0) < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
       return;
     }
@@ -135,7 +135,7 @@ export default function TitleGenerator() {
       // Update state with titles
       setGeneratedTitles(cleanedTitles);
       console.log("State updated with titles");
-      console.log("generatedTitles.length IMMEDIATELY after setState:", generatedTitles.length);
+      console.log("Titles generation complete");
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
@@ -144,26 +144,24 @@ export default function TitleGenerator() {
     } finally {
       setLoading(false);
     }
-  }, [topic, session, user, profile, creditCost]);
+  }, [topic, session, user, profile, credits, creditCost]);
 
   // New useEffect hook to handle credit updates after titles are generated
   useEffect(() => {
-    if (generatedTitles.length > 0 && !loading && profile) {
+    if (generatedTitles.length > 0 && !loading && credits !== null) {
       console.log("Titles generated, updating credits...");
-      const updateCredits = async () => {
+      const updateUserCredits = async () => {
         try {
-          await updateProfile({
-            credits: profile.credits - creditCost,
-          });
+          await updateCredits(credits - creditCost);
           console.log("Credits updated AFTER titles rendered");
         } catch (updateError) {
           console.error("Error updating credits in useEffect:", updateError);
           setError("Failed to update credits. Please refresh the page.");
         }
       };
-      updateCredits();
+      updateUserCredits();
     }
-  }, [generatedTitles, loading, profile, updateProfile, creditCost]);
+  }, [generatedTitles, loading, credits, updateCredits, creditCost]);
 
   // Don't render until after mount to prevent hydration mismatch
   if (!mounted) {
@@ -174,7 +172,7 @@ export default function TitleGenerator() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
         <span className="text-amber-700">Credits required: {creditCost}</span>
-        <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+        <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
       </div>
 
       {error && (
@@ -210,7 +208,7 @@ export default function TitleGenerator() {
 
         <button
           type="submit"
-          disabled={loading || !mounted}
+          disabled={loading || !mounted || (credits ?? 0) < creditCost}
           className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md 
                    hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 
                    focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 
 export default function DashboardNav() {
-  const { user, profile, signOut } = useAuth();
+  const { user, credits, signOut } = useAuth();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handlePurchaseCredits = async () => {
@@ -67,7 +67,7 @@ export default function DashboardNav() {
               <span className="font-medium">Welcome {user.email}</span>
             </div>
             <div className="text-sm text-gray-600">
-              <span className="font-medium">Available credits: {profile?.credits ?? 0}</span>
+              <span className="font-medium">Available credits: {credits ?? 0}</span>
             </div>
             <div className="relative">
               <button
