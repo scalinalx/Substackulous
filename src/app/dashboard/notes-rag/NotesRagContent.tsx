@@ -20,7 +20,7 @@ type GeneratedResult = {
 
 export default function NotesRagContent() {
   const router = useRouter();
-  const { user, profile, updateProfile, isLoading, isAuthenticated } = useAuth();
+  const { user, credits, updateCredits, isLoading, isAuthenticated } = useAuth();
   
   // All state hooks at the top
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,7 @@ export default function NotesRagContent() {
 
   useEffect(() => {
     const updateProfileCredits = async () => {
-      if (profileUpdatePendingRef.current && profile) {
+      if (profileUpdatePendingRef.current && user) {
         const now = Date.now();
         // Prevent updates more frequent than every 2 seconds
         if (now - lastProfileUpdateRef.current < 2000) {
@@ -52,9 +52,7 @@ export default function NotesRagContent() {
         }
 
         try {
-          await updateProfile({
-            credits: profile.credits - creditCost
-          });
+          await updateCredits(credits - creditCost);
           profileUpdatePendingRef.current = false;
           lastProfileUpdateRef.current = now;
         } catch (error) {
@@ -64,13 +62,13 @@ export default function NotesRagContent() {
     };
 
     updateProfileCredits();
-  }, [profile, updateProfile, creditCost]);
+  }, [credits, updateCredits, creditCost, user]);
 
   useEffect(() => {
     if (generatedContentRef.current) {
       setGeneratedContent(generatedContentRef.current);
     }
-  }, [profile]);
+  }, [user]);
 
   // Loading state check
   if (isLoading) {
@@ -83,7 +81,7 @@ export default function NotesRagContent() {
   }
 
   // Auth check
-  if (!user || !profile) {
+  if (!user) {
     return null;
   }
 
@@ -113,12 +111,12 @@ export default function NotesRagContent() {
       return;
     }
 
-    if (!profile) {
-      setError('User profile not found');
+    if (!user) {
+      setError('User not found');
       return;
     }
 
-    if (profile.credits < creditCost) {
+    if ((credits ?? 0) < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
       return;
     }
@@ -159,12 +157,13 @@ export default function NotesRagContent() {
       console.log('Setting generated content...');
       setGeneratedContent(data.result);
       
+      // Update credits after successful generation
+      if (credits !== null) {
+        await updateCredits(credits - creditCost);
+      }
+      
       // Show success toast
       toast.success('Notes generated successfully!');
-      
-      // Flag that we should update the profile
-      console.log('Flagging profile update...');
-      profileUpdatePendingRef.current = true;
       
     } catch (err) {
       console.error('Error generating content:', err);
@@ -199,7 +198,7 @@ export default function NotesRagContent() {
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
           <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
             <span className="text-amber-700">Credits required: {creditCost}</span>
-            <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+            <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
           </div>
 
           {error && (
@@ -234,7 +233,7 @@ export default function NotesRagContent() {
 
             <Button
               type="submit"
-              disabled={loading || !notes.trim() || (profile?.credits || 0) < creditCost}
+              disabled={loading || !notes.trim() || (credits ?? 0) < creditCost}
               className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (

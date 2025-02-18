@@ -11,7 +11,7 @@ interface SimpleGenerateProps {
 
 export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps) {
   const supabase = createClientComponentClient();
-  const { profile, updateProfile } = useAuth();
+  const { credits, updateCredits } = useAuth();
   const [mainIdea, setMainIdea] = useState('');
   const [theme, setTheme] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -36,12 +36,12 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
       return;
     }
 
-    if (!profile) {
-      setError('User profile not found');
+    if (!credits) {
+      setError('User credits not found');
       return;
     }
 
-    if ((profile?.credits || 0) < creditCost) {
+    if (credits < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate illustrations.`);
       return;
     }
@@ -78,7 +78,7 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
           prompt,
           model: 'flux',
           aspectRatio,
-          userId: profile.id
+          userId: sessionData.session.user.id
         }),
       });
 
@@ -116,11 +116,8 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
                   setGeneratedImages([...tempImages]);
                   // Deduct credits after first successful image generation
                   if (tempImages.length === 1) {
-                    const updatedProfile = {
-                      ...profile,
-                      credits: (profile?.credits || 0) - creditCost,
-                    };
-                    await updateProfile(updatedProfile);
+                    const updatedCredits = credits - creditCost;
+                    await updateCredits(updatedCredits);
                   }
                   break;
                 case 'error':
@@ -175,7 +172,7 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
         <span className="text-amber-700">Credits required: {creditCost}</span>
-        <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
+        <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
       </div>
 
       {error && (
@@ -240,7 +237,7 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
 
         <button
           type="submit"
-          disabled={generating || (profile?.credits ?? 0) < creditCost}
+          disabled={generating || (credits ?? 0) < creditCost}
           className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white py-3 px-4 rounded-lg 
                    hover:from-amber-600 hover:to-amber-700 transition-all focus:outline-none focus:ring-2 
                    focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed 
