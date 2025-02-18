@@ -5,20 +5,13 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
 // Add these constants at the top of the file
-const STORAGE_KEY = 'titlegen_temp_titles';
+// const STORAGE_KEY = 'titlegen_temp_titles';
 
 export default function TitleGenerator() {
   const router = useRouter();
   const { user, profile, updateProfile, session } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [generatedTitles, setGeneratedTitles] = useState<string[]>(() => {
-    // Initialize from localStorage if available
-    if (typeof window !== 'undefined') {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    }
-    return [];
-  });
+  const [generatedTitles, setGeneratedTitles] = useState<string[]>([]); // Initialize to empty array, no localStorage
   const [topic, setTopic] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -56,21 +49,21 @@ export default function TitleGenerator() {
     }
   }, [generatedTitles]);
 
-  // Effect to sync state with localStorage
-  useEffect(() => {
-    if (generatedTitles.length > 0) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(generatedTitles));
-    } else {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [generatedTitles]);
+  // Comment out localStorage sync effect
+  // useEffect(() => {
+  //   if (generatedTitles.length > 0) {
+  //     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(generatedTitles));
+  //   } else {
+  //     window.localStorage.removeItem(STORAGE_KEY);
+  //   }
+  // }, [generatedTitles]);
 
-  // Clear storage on unmount
-  useEffect(() => {
-    return () => {
-      window.localStorage.removeItem(STORAGE_KEY);
-    };
-  }, []);
+  // Comment out localStorage cleanup effect
+  // useEffect(() => {
+  //   return () => {
+  //     window.localStorage.removeItem(STORAGE_KEY);
+  //   };
+  // }, []);
 
   const copyToClipboard = async (text: string, index: number) => {
     try {
