@@ -3,34 +3,36 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Link from 'next/link'; // Import Link
 
 export default function TitleGenerator() {
     const router = useRouter();
-    const { user, profile, updateCredits, session } = useAuth();
+    const { user, profile, updateCredits, session } = useAuth(); // Use updateCredits
     const [loading, setLoading] = useState(false);
     const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
     const [topic, setTopic] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
     const [mounted, setMounted] = useState(false);
-    const creditCost = 1; // Moved outside the function
-    const [titlesGenerated, setTitlesGenerated] = useState(false);
+    const creditCost = 1;
+    const titlesRef = useRef<string[] | null>(null); // Ref to store titles temporarily
 
     const isMounted = useRef(true);
 
+
     useEffect(() => {
-        console.log("TitleGenerator mounted");
-        isMounted.current = true;
-        return () => {
-            console.log("TitleGenerator unmounting");
-            isMounted.current = false;
-        };
+      console.log("TitleGenerator mounted");
+      isMounted.current = true;
+      return () => {
+        console.log("TitleGenerator unmounting");
+        isMounted.current = false;
+      };
     }, []);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
 
     const copyToClipboard = async (text: string, index: number) => {
         try {
@@ -43,99 +45,102 @@ export default function TitleGenerator() {
     };
 
   const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
-        setGeneratedTitles([]);
-        setTitlesGenerated(false); // Reset the flag
+    e.preventDefault();
+    setError(null);
+    setGeneratedTitles([]); // Clear any existing titles
+    // setTitlesGenerated(false); // No longer needed
+    titlesRef.current = null; // Clear the ref
 
-        if (!topic.trim()) {
-            setError('Please enter a topic');
-            return;
-        }
+    if (!topic.trim()) {
+      setError('Please enter a topic');
+      return;
+    }
 
-        if (!session?.access_token) {
-            setError('No valid session. Please sign in again.');
-            return;
-        }
+    if (!session?.access_token) {
+      setError('No valid session. Please sign in again.');
+      return;
+    }
 
-        if (!user || !profile) {
-            setError('Please sign in to continue');
-            return;
-        }
+    if (!user || !profile) {
+      setError('Please sign in to continue');
+      return;
+    }
 
-        if (profile.credits < creditCost) {
-            setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
-            return;
-        }
+    if (profile.credits < creditCost) {
+      setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
+      return;
+    }
 
-        setLoading(true);
+    setLoading(true);
 
+    try {
+      const response = await fetch('/api/deepseek/generate-titles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          theme: topic,
+          userId: user.id
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to generate titles: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+
+      if (!responseData.titles || !Array.isArray(responseData.titles)) {
+        throw new Error('Invalid response format');
+      }
+
+      console.log("Raw titles received:", responseData.titles);
+
+      const cleanedTitles = responseData.titles.map((title: string) =>
+        title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
+      );
+
+      // Store titles in the ref *immediately*
+      titlesRef.current = cleanedTitles;
+      console.log("Titles stored in ref:", titlesRef.current);
+
+      // We do *NOT* call setGeneratedTitles here
+
+      // Update credits (this will likely trigger the remount)
+      if (profile) {
+        console.log("Titles generated, updating credits...");
         try {
-            const response = await fetch('/api/deepseek/generate-titles', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({
-                    theme: topic,
-                    userId: user.id
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Failed to generate titles: ${response.status}`);
-            }
-
-            const responseData = await response.json();
-
-            if (!responseData.titles || !Array.isArray(responseData.titles)) {
-                throw new Error('Invalid response format');
-            }
-
-            console.log("Raw titles received:", responseData.titles);
-
-            const cleanedTitles = responseData.titles.map((title: string) =>
-                title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
-            );
-
-            setGeneratedTitles(cleanedTitles);
-            console.log("State updated with titles");
-            console.log("generatedTitles.length IMMEDIATELY after setState:", generatedTitles.length);
-            setTitlesGenerated(true); // Set flag to true after successful generation
-
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
-            setGeneratedTitles([]);
-            return;
-        } finally {
-            setLoading(false);
+          await updateCredits(profile.credits - creditCost);
+          console.log("Credits updated");
+        } catch (updateError) {
+          console.error("Error updating credits:", updateError);
+          setError("Failed to update credits. Please refresh the page.");
+          return; // Exit early if credit update fails
         }
-    }, [topic, session, user, profile, creditCost]); // Removed generatedTitles
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
+      // No need to reset generatedTitles here, as it's already been cleared
+    } finally {
+      setLoading(false);
+    }
+  }, [topic, session, user, profile, creditCost, updateCredits]); // Add updateCredits to useCallback dependencies
 
+
+    // useEffect to update the displayed titles *after* mounting/remounting
     useEffect(() => {
-        // Only call updateCredits if titlesGenerated is true, loading is false,
-        // and the profile is available.
-        if (titlesGenerated && !loading && profile) {
-            console.log("Titles generated, updating credits...");
-            const updateCreditsAsync = async () => {
-                try {
-                    await updateCredits(profile.credits - creditCost);
-                    console.log("Credits updated AFTER titles rendered");
-                } catch (updateError) {
-                    console.error("Error updating credits in useEffect:", updateError);
-                    setError("Failed to update credits. Please refresh the page.");
-                } finally {
-                    setTitlesGenerated(false); // Reset the flag!
-                }
-            };
-            updateCreditsAsync();
+        if (titlesRef.current && isMounted.current) { // Check if titlesRef has a value. && Check if mounted
+            console.log("Setting generatedTitles from ref:", titlesRef.current);
+            setGeneratedTitles(titlesRef.current); // Update the state *now*
+            titlesRef.current = null; // Clear the ref after using it
         }
-    }, [titlesGenerated, loading, profile, updateCredits, creditCost]);
+    }, [mounted]); // Very important: run when the compoenent mounts/remounts.
 
 
-  const TitleItem = ({ title, index }: { title: string; index: number }) => {
+    const TitleItem = ({ title, index }: { title: string; index: number }) => {
     useEffect(() => {
       console.log("Rendering title:", title, index);
     }, [title, index]);
