@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
-  
+
   // Use refs to track initialization and prevent race conditions
   const isInitializing = useRef(true);
   const lastActivity = useRef(Date.now());
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      const { data, error } = await withRetry<UserProfile>(() => 
+      const { data, error } = await withRetry<UserProfile>(() =>
         Promise.resolve(query)
       );
 
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Supabase error fetching profile:', error);
         throw error;
       }
-      
+
       // Only update profile if it's different and data exists
       if (data && JSON.stringify(data) !== JSON.stringify(profile)) {
         setProfile(data as UserProfile);
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (document.visibilityState === 'visible') {
         lastActivity.current = Date.now();
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
+
         if (currentSession) {
           setSession(currentSession);
           setUser(currentSession.user);
@@ -155,14 +155,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         if (!isInitializing.current) return;
-        
+
         setIsLoading(true);
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
 
         console.log('AuthContext init → initialSession:', initialSession);
-        
+
         if (!mounted) return;
-        
+
         if (error) throw error;
 
         if (initialSession) {
@@ -173,7 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Start session check and store cleanup
         cleanup = startSessionCheck();
-        
+
       } catch (error) {
         console.error('Auth initialization error:', error);
         setUser(null);
@@ -197,7 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           setIsLoading(true);
           lastActivity.current = Date.now();
-          
+
           // Only update if session actually changed
           if (JSON.stringify(currentSession) !== JSON.stringify(session)) {
             setSession(currentSession);
@@ -254,13 +254,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      
+
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      return { 
-        error: error instanceof Error 
-          ? error 
+      return {
+        error: error instanceof Error
+          ? error
           : new Error('Authentication failed. Please check your credentials.')
       };
     } finally {
@@ -272,13 +272,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       const { error } = await supabase.auth.signUp({ email, password });
-      
+
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      return { 
-        error: error instanceof Error 
-          ? error 
+      return {
+        error: error instanceof Error
+          ? error
           : new Error('Failed to sign up. Please try again.')
       };
     } finally {
@@ -306,9 +306,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      return { 
-        error: error instanceof Error 
-          ? error 
+      return {
+        error: error instanceof Error
+          ? error
           : new Error('Failed to reset password. Please try again.')
       };
     } finally {
@@ -317,54 +317,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    console.log("updateProfile: STARTING, updates:", updates); // ADD THIS (already there)
+    console.log("updateProfile: STARTING, updates:", updates);
     if (!user) throw new Error('No user logged in');
 
     try {
       setIsLoading(true);
 
-      // Get the latest profile state first
-      console.log("updateProfile: Fetching current profile from Supabase..."); // NEW LOG
+      console.log("updateProfile: Fetching current profile from Supabase...");
       const { data: currentProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
-
-      console.log("updateProfile: Fetched profile:", currentProfile); // NEW LOG
+      console.log("updateProfile: Fetched profile:", currentProfile);
 
       if (fetchError) throw fetchError;
 
-      // Merge current profile with updates
-      const mergedUpdates = {
-        ...currentProfile,
-        ...updates,
-      };
+      // Check if currentProfile is null.  If it is, we have a problem,
+      // and we should not proceed.  The user *should* have a profile at this point.
+      if (!currentProfile) {
+        throw new Error("updateProfile: User profile not found."); // Consistent error message
+      }
 
-      console.log("updateProfile: Updating profile in Supabase..."); // NEW LOG
+      console.log("updateProfile: Updating profile in Supabase...");
       const { error: updateError } = await supabase
         .from('profiles')
-        .update(mergedUpdates)
+        .update({ credits: updates.credits! }) // Only update credits.  Assert not null.
         .eq('id', user.id)
         .select()
         .single();
 
       if (updateError) throw updateError;
 
-      // Update local state with merged updates
-      console.log("updateProfile: Calling setProfile with:", mergedUpdates); // NEW LOG - VERY IMPORTANT
-      setProfile(mergedUpdates); // <--- This is the MOST likely cause of a re-render
+      console.log("updateProfile: Calling setProfile with:", { credits: updates.credits });
+        setProfile(currentProfile => {
+            if (!currentProfile) {
+                // Handle the case where currentProfile is null.
+                // This *should* never happen, but it's good to be defensive.
+                console.error("updateProfile: currentProfile is unexpectedly null!");
+                return null; // Or some other appropriate fallback
+            }
 
+            return {
+              ...currentProfile, // Keep all existing fields
+              credits: updates.credits!, // Safely update credits.
+            };
+          });
     } catch (error) {
       console.error('Error updating profile:', error);
-      // Reset loading state even on error
-      setIsLoading(false);
+      setIsLoading(false); // Ensure loading is set to false in case of errors.
       throw error;
     } finally {
       setIsLoading(false);
-      console.log("updateProfile: COMPLETED"); // ADD THIS (already there)
+      console.log("updateProfile: COMPLETED");
     }
-  }, [user]);
+  }, [user, supabase]);
 
   const contextValue = useMemo(() => ({
     user,
