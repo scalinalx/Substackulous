@@ -307,54 +307,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) throw new Error('No user logged in');
 
     try {
-      setIsLoading(true);
+        setIsLoading(true);
 
-      console.log("updateProfile: Fetching current profile from Supabase...");
-      const { data: currentProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      console.log("updateProfile: Fetched profile:", currentProfile);
+        console.log("updateProfile: Fetching current profile from Supabase...");
+        const { data: currentProfile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+        console.log("updateProfile: Fetched profile:", currentProfile);
 
-      if (fetchError) throw fetchError;
+        if (fetchError) throw fetchError;
 
-      if (!currentProfile) {
-        throw new Error("updateProfile: User profile not found.");
-      }
+        if (!currentProfile) {
+            throw new Error("updateProfile: User profile not found."); // Consistent error message
+        }
 
-      console.log("updateProfile: Updating profile in Supabase...");
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ credits: updates.credits! }) // Only update credits.  Assert not null.
-        .eq('id', user.id)
-        .select()
-        .single();
+        console.log("updateProfile: Updating profile in Supabase...");
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ credits: updates.credits! }) // Only update credits.  Assert not null.
+            .eq('id', user.id)
+            .select()
+            .single();
 
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
 
-      console.log("updateProfile: Calling setProfile with:", { credits: updates.credits });
-
-      // KEY CHANGE: Only update credits in the local state
+        console.log("updateProfile: Calling setProfile with:", { credits: updates.credits });
         setProfile(currentProfile => {
             if (!currentProfile) {
                 console.error("updateProfile: currentProfile is unexpectedly null!");
                 return null; // Or some other appropriate fallback.  This should never happen.
             }
+
             return {
-                ...currentProfile, // Keep *all* other fields the same
-                credits: updates.credits!
-            }
+                ...currentProfile, // Keep all existing fields
+                credits: updates.credits!, // Safely update credits.
+            };
         });
 
 
     } catch (error) {
-      console.error('Error updating profile:', error);
-      setIsLoading(false); // Ensure loading is set to false in case of errors.
-      throw error;
+        console.error('Error updating profile:', error);
+        setIsLoading(false); // Ensure loading is set to false in case of errors.
+        throw error;
     } finally {
-      setIsLoading(false);
-      console.log("updateProfile: COMPLETED");
+        setIsLoading(false);
+        console.log("updateProfile: COMPLETED");
     }
 }, [user, supabase]);
 
@@ -399,32 +398,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
     const contextValue = useMemo(() => ({
-        user,
-        session,
-        profile,
-        isLoading,
-        isAuthenticated: !!user,
-        signIn,
-        signUp,
-        signOut,
-        signInWithGoogle: handleGoogleSignIn,
-        resetPassword: handleResetPassword,
-        updateProfile,
-        updateCredits, // Add updateCredits to context
-        isInitialized
-    }), [user, session, profile, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits]);
+    user,
+    session,
+    profile,
+    isLoading,
+    isAuthenticated: !!user,
+    signIn,
+    signUp,
+    signOut,
+    signInWithGoogle: handleGoogleSignIn,
+    resetPassword: handleResetPassword,
+    updateProfile,
+    updateCredits, // Add updateCredits to context
+    isInitialized
+}), [user, session, profile, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits]);
 
-    return (
-        <AuthContext.Provider value={contextValue}>
-        {children}
-        </AuthContext.Provider>
-    );
-    }
 
-    export function useAuth() {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
-    }
+return (
+    <AuthContext.Provider value={contextValue}>
+    {children}
+    </AuthContext.Provider>
+);
+}
+
+export function useAuth() {
+const context = useContext(AuthContext);
+if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+}
+return context;
+}
