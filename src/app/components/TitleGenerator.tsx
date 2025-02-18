@@ -78,7 +78,7 @@ export default function TitleGenerator() {
   const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setGeneratedTitles([]);
+    setGeneratedTitles([]); // Clear titles immediately on new generate
 
     if (!topic.trim()) {
       setError('Please enter a topic');
@@ -101,7 +101,6 @@ export default function TitleGenerator() {
     }
 
     setLoading(true);
-    let titles: string[] = [];
 
     try {
       const response = await fetch('/api/deepseek/generate-titles', {
@@ -129,32 +128,42 @@ export default function TitleGenerator() {
 
       console.log("Raw titles received:", responseData.titles);
 
-      titles = responseData.titles.map((title: string) => 
+      const cleanedTitles = responseData.titles.map((title: string) => 
         title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
       );
       
       // Update state with titles
-      setGeneratedTitles(titles);
+      setGeneratedTitles(cleanedTitles);
       console.log("State updated with titles");
       console.log("generatedTitles.length IMMEDIATELY after setState:", generatedTitles.length);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
       setGeneratedTitles([]);
-      return; // Return early to prevent profile update on error
+      return;
     } finally {
       setLoading(false);
     }
+  }, [topic, session, user, profile, creditCost]);
 
-    // Only update profile if we successfully generated titles
-    if (titles.length > 0) {
-      await updateProfile({
-        credits: profile.credits - creditCost,
-      });
-      // Add another check after profile update
-      console.log("generatedTitles.length AFTER profile update:", generatedTitles.length);
+  // New useEffect hook to handle credit updates after titles are generated
+  useEffect(() => {
+    if (generatedTitles.length > 0 && !loading && profile) {
+      console.log("Titles generated, updating credits...");
+      const updateCredits = async () => {
+        try {
+          await updateProfile({
+            credits: profile.credits - creditCost,
+          });
+          console.log("Credits updated AFTER titles rendered");
+        } catch (updateError) {
+          console.error("Error updating credits in useEffect:", updateError);
+          setError("Failed to update credits. Please refresh the page.");
+        }
+      };
+      updateCredits();
     }
-  }, [topic, session, user, profile, creditCost, updateProfile]);
+  }, [generatedTitles, loading, profile, updateProfile, creditCost]);
 
   // Don't render until after mount to prevent hydration mismatch
   if (!mounted) {
