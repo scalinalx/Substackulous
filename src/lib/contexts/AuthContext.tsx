@@ -27,7 +27,6 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
   isInitialized: boolean;
-  // Add a separate function for updating credits
   updateCredits: (newCredits: number) => Promise<void>;
 }
 
@@ -81,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setProfile(null);
             }
         }
-    }, [profile]);
+    }, [profile, supabase]);
 
     const startSessionCheck = useCallback(() => {
     if (sessionCheckInterval.current) {
@@ -302,62 +301,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
 
-  const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    console.log("updateProfile: STARTING, updates:", updates);
-    if (!user) throw new Error('No user logged in');
+      const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
+        console.log("updateProfile: STARTING, updates:", updates);
+        if (!user) throw new Error('No user logged in');
 
-    try {
-        setIsLoading(true);
+        try {
+            setIsLoading(true);
 
-        console.log("updateProfile: Fetching current profile from Supabase...");
-        const { data: currentProfile, error: fetchError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-        console.log("updateProfile: Fetched profile:", currentProfile);
+            console.log("updateProfile: Fetching current profile from Supabase...");
+            const { data: currentProfile, error: fetchError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            console.log("updateProfile: Fetched profile:", currentProfile);
 
-        if (fetchError) throw fetchError;
+            if (fetchError) throw fetchError;
 
-        if (!currentProfile) {
-            throw new Error("updateProfile: User profile not found."); // Consistent error message
-        }
-
-        console.log("updateProfile: Updating profile in Supabase...");
-        const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ credits: updates.credits! }) // Only update credits.  Assert not null.
-            .eq('id', user.id)
-            .select()
-            .single();
-
-        if (updateError) throw updateError;
-
-        console.log("updateProfile: Calling setProfile with:", { credits: updates.credits });
-        setProfile(currentProfile => {
             if (!currentProfile) {
-                console.error("updateProfile: currentProfile is unexpectedly null!");
-                return null; // Or some other appropriate fallback.  This should never happen.
+                throw new Error("updateProfile: User profile not found."); // Consistent error message
             }
 
-            return {
-                ...currentProfile, // Keep all existing fields
-                credits: updates.credits!, // Safely update credits.
-            };
-        });
+            console.log("updateProfile: Updating profile in Supabase...");
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ credits: updates.credits! }) // Only update credits.  Assert not null.
+                .eq('id', user.id)
+                .select()
+                .single();
+
+            if (updateError) throw updateError;
+
+            console.log("updateProfile: Calling setProfile with:", { credits: updates.credits });
+            setProfile(currentProfile => {
+                if (!currentProfile) {
+                    console.error("updateProfile: currentProfile is unexpectedly null!");
+                    return null; // Or some other appropriate fallback.  This should never happen.
+                }
+
+                return {
+                    ...currentProfile, // Keep all existing fields
+                    credits: updates.credits!, // Safely update credits.
+                };
+            });
 
 
-    } catch (error) {
-        console.error('Error updating profile:', error);
-        setIsLoading(false); // Ensure loading is set to false in case of errors.
-        throw error;
-    } finally {
-        setIsLoading(false);
-        console.log("updateProfile: COMPLETED");
-    }
-}, [user, supabase]);
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            setIsLoading(false); // Ensure loading is set to false in case of errors.
+            throw error;
+        } finally {
+            setIsLoading(false);
+            console.log("updateProfile: COMPLETED");
+        }
+    }, [user, supabase]);
 
-    // NEW FUNCTION: updateCredits
     const updateCredits = useCallback(async (newCredits: number) => {
         if (!user) throw new Error('No user logged in');
 
@@ -374,17 +372,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (updateError) throw updateError;
 
-             // Update the local profile state *only* with the new credits.
+            // Key change: Update profile state directly with the new credits.
             setProfile(currentProfile => {
-                if (!currentProfile) {
-                    console.error("updateCredits: currentProfile is unexpectedly null!");
-                    return null; // Or a fallback.
-                }
-                return {
-                    ...currentProfile,  // Keep all other fields the same
-                    credits: newCredits, // Update ONLY the credits
-                };
+              console.log("setProfile called within updateCredits. currentProfile:", currentProfile);
+              if (!currentProfile) {
+                console.error("updateCredits: currentProfile is unexpectedly null!");
+                return null;
+              }
+              return {
+                ...currentProfile,
+                credits: newCredits,
+              };
             });
+
             console.log("updateCredits: COMPLETED");
 
 
@@ -394,37 +394,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setIsLoading(false);
         }
-    }, [user, supabase]); // Correct dependencies
-
+    }, [user, supabase]); // Correct dependencies.  profile is *not* a dependency.
 
     const contextValue = useMemo(() => ({
-    user,
-    session,
-    profile,
-    isLoading,
-    isAuthenticated: !!user,
-    signIn,
-    signUp,
-    signOut,
-    signInWithGoogle: handleGoogleSignIn,
-    resetPassword: handleResetPassword,
-    updateProfile,
-    updateCredits, // Add updateCredits to context
-    isInitialized
-}), [user, session, profile, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits]);
+        user,
+        session,
+        profile,
+        isLoading,
+        isAuthenticated: !!user,
+        signIn,
+        signUp,
+        signOut,
+        signInWithGoogle: handleGoogleSignIn,
+        resetPassword: handleResetPassword,
+        updateProfile, // Keep this for potential other uses
+        updateCredits, // Add updateCredits to context
+        isInitialized
+    }), [user, session, profile, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits]);
 
 
-return (
-    <AuthContext.Provider value={contextValue}>
-    {children}
-    </AuthContext.Provider>
-);
-}
+    return (
+        <AuthContext.Provider value={contextValue}>
+        {children}
+        </AuthContext.Provider>
+    );
+    }
 
-export function useAuth() {
-const context = useContext(AuthContext);
-if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-}
-return context;
-}
+    export function useAuth() {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+    }
