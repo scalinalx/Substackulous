@@ -16,22 +16,24 @@ export default function TitleGenerator() {
     const [mounted, setMounted] = useState(false);
     const creditCost = 1;
     const [titlesGenerated, setTitlesGenerated] = useState(false); // Flag
+    const titlesRef = useRef<string[] | null>(null); // Ref to store titles temporarily
 
 
     const isMounted = useRef(true);
 
     useEffect(() => {
         console.log("TitleGenerator mounted");
-        isMounted.current = true;  // Update the ref
+        isMounted.current = true;
         return () => {
             console.log("TitleGenerator unmounting");
-            isMounted.current = false; // Update the ref
+            isMounted.current = false;
         };
     }, []);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
 
 
 
@@ -50,6 +52,7 @@ export default function TitleGenerator() {
         setError(null);
         setGeneratedTitles([]);
         setTitlesGenerated(false); // Reset the flag
+        titlesRef.current = null; // Clear ref
 
         if (!topic.trim()) {
             setError('Please enter a topic');
@@ -139,6 +142,7 @@ export default function TitleGenerator() {
             titlesRef.current = null; // Clear the ref
         }
     }, [isMounted.current]); // Correct dependency
+
 
   const TitleItem = ({ title, index }: { title: string; index: number }) => {
     useEffect(() => {
