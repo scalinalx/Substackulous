@@ -4,11 +4,21 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
+// Add these constants at the top of the file
+const STORAGE_KEY = 'titlegen_temp_titles';
+
 export default function TitleGenerator() {
   const router = useRouter();
   const { user, profile, updateProfile, session } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
+  const [generatedTitles, setGeneratedTitles] = useState<string[]>(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    }
+    return [];
+  });
   const [topic, setTopic] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -17,17 +27,17 @@ export default function TitleGenerator() {
   
   // Add a ref to persist titles through remounts
   const titlesRef = useRef<string[]>([]);
+  // Add a mounted ref to track component mounted state
+  const isMounted = useRef(true);
 
   // Track component lifecycle
   useEffect(() => {
     console.log("TitleGenerator mounted");
-    // When component mounts, if we have titles in ref, set them to state
-    if (titlesRef.current.length > 0) {
-      console.log("Restoring titles from ref:", titlesRef.current);
-      setGeneratedTitles(titlesRef.current);
-    }
+    isMounted.current = true;
+    
     return () => {
       console.log("TitleGenerator unmounting");
+      isMounted.current = false;
     };
   }, []);
 
@@ -46,6 +56,22 @@ export default function TitleGenerator() {
     }
   }, [generatedTitles]);
 
+  // Effect to sync state with localStorage
+  useEffect(() => {
+    if (generatedTitles.length > 0) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(generatedTitles));
+    } else {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [generatedTitles]);
+
+  // Clear storage on unmount
+  useEffect(() => {
+    return () => {
+      window.localStorage.removeItem(STORAGE_KEY);
+    };
+  }, []);
+
   const copyToClipboard = async (text: string, index: number) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -60,7 +86,7 @@ export default function TitleGenerator() {
     e.preventDefault();
     setError(null);
     setGeneratedTitles([]);
-    titlesRef.current = []; // Clear ref as well
+    window.localStorage.removeItem(STORAGE_KEY);
 
     if (!topic.trim()) {
       setError('Please enter a topic');
@@ -114,25 +140,29 @@ export default function TitleGenerator() {
         title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
       );
 
-      console.log("Before setGeneratedTitles call:", cleanedTitles.length);
+      // Store in localStorage before any state updates
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedTitles));
+      
+      // Update state
+      setGeneratedTitles(cleanedTitles);
+      console.log("State updated with titles");
 
-      // Store titles in ref first
-      titlesRef.current = cleanedTitles;
-      console.log("Titles stored in ref:", titlesRef.current);
-
-      // First update profile
+      // Update profile
       await updateProfile({
         credits: profile.credits - creditCost,
       });
 
-      // Then update state with cleaned titles
-      setGeneratedTitles(cleanedTitles);
-      console.log("State updated with titles");
+      // After profile update, ensure titles are still set by reading from localStorage
+      const storedTitles = window.localStorage.getItem(STORAGE_KEY);
+      if (storedTitles) {
+        setGeneratedTitles(JSON.parse(storedTitles));
+        console.log("State restored after profile update");
+      }
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
       setGeneratedTitles([]);
-      titlesRef.current = []; // Clear ref on error
+      window.localStorage.removeItem(STORAGE_KEY);
     } finally {
       setLoading(false);
     }
