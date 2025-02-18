@@ -317,18 +317,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateProfile = useCallback(async (updates: Partial<UserProfile>) => {
-    console.log("updateProfile: STARTING, updates:", updates); // ADD THIS
+    console.log("updateProfile: STARTING, updates:", updates); // ADD THIS (already there)
     if (!user) throw new Error('No user logged in');
-    
+
     try {
       setIsLoading(true);
-      
+
       // Get the latest profile state first
+      console.log("updateProfile: Fetching current profile from Supabase..."); // NEW LOG
       const { data: currentProfile, error: fetchError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
+
+      console.log("updateProfile: Fetched profile:", currentProfile); // NEW LOG
 
       if (fetchError) throw fetchError;
 
@@ -338,6 +341,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...updates,
       };
 
+      console.log("updateProfile: Updating profile in Supabase..."); // NEW LOG
       const { error: updateError } = await supabase
         .from('profiles')
         .update(mergedUpdates)
@@ -348,8 +352,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (updateError) throw updateError;
 
       // Update local state with merged updates
-      setProfile(mergedUpdates);
-      
+      console.log("updateProfile: Calling setProfile with:", mergedUpdates); // NEW LOG - VERY IMPORTANT
+      setProfile(mergedUpdates); // <--- This is the MOST likely cause of a re-render
+
     } catch (error) {
       console.error('Error updating profile:', error);
       // Reset loading state even on error
@@ -357,7 +362,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     } finally {
       setIsLoading(false);
-      console.log("updateProfile: COMPLETED"); // ADD THIS
+      console.log("updateProfile: COMPLETED"); // ADD THIS (already there)
     }
   }, [user]);
 
