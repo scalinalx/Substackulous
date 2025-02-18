@@ -86,7 +86,6 @@ export default function TitleGenerator() {
     e.preventDefault();
     setError(null);
     setGeneratedTitles([]);
-    window.localStorage.removeItem(STORAGE_KEY);
 
     if (!topic.trim()) {
       setError('Please enter a topic');
@@ -109,6 +108,7 @@ export default function TitleGenerator() {
     }
 
     setLoading(true);
+    let titles: string[] = [];
 
     try {
       const response = await fetch('/api/deepseek/generate-titles', {
@@ -136,35 +136,27 @@ export default function TitleGenerator() {
 
       console.log("Raw titles received:", responseData.titles);
 
-      const cleanedTitles = responseData.titles.map((title: string) => 
+      titles = responseData.titles.map((title: string) => 
         title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
       );
-
-      // Store in localStorage before any state updates
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedTitles));
       
-      // Update state
-      setGeneratedTitles(cleanedTitles);
+      // Update state with titles
+      setGeneratedTitles(titles);
       console.log("State updated with titles");
-
-      // Update profile
-      await updateProfile({
-        credits: profile.credits - creditCost,
-      });
-
-      // After profile update, ensure titles are still set by reading from localStorage
-      const storedTitles = window.localStorage.getItem(STORAGE_KEY);
-      if (storedTitles) {
-        setGeneratedTitles(JSON.parse(storedTitles));
-        console.log("State restored after profile update");
-      }
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
       setGeneratedTitles([]);
-      window.localStorage.removeItem(STORAGE_KEY);
+      return; // Return early to prevent profile update on error
     } finally {
       setLoading(false);
+    }
+
+    // Only update profile if we successfully generated titles
+    if (titles.length > 0) {
+      await updateProfile({
+        credits: profile.credits - creditCost,
+      });
     }
   }, [topic, session, user, profile, creditCost, updateProfile]);
 
