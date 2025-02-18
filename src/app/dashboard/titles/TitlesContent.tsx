@@ -3,19 +3,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
 
 export default function TitleGenerator() {
     const router = useRouter();
-    const { user, profile, updateCredits, session } = useAuth(); // Use updateCredits
+    const { user, profile, updateCredits, session } = useAuth();
     const [loading, setLoading] = useState(false);
     const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
     const [topic, setTopic] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
     const [mounted, setMounted] = useState(false);
-    const [titlesGenerated, setTitlesGenerated] = useState(false); // Flag
-
+    const creditCost = 1; // Moved outside the function
+    const [titlesGenerated, setTitlesGenerated] = useState(false);
 
     const isMounted = useRef(true);
 
@@ -42,12 +42,11 @@ export default function TitleGenerator() {
         }
     };
 
-    const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
+  const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setGeneratedTitles([]);
         setTitlesGenerated(false); // Reset the flag
-        const creditCost = 1;
 
         if (!topic.trim()) {
             setError('Please enter a topic');
@@ -113,10 +112,9 @@ export default function TitleGenerator() {
         } finally {
             setLoading(false);
         }
-    }, [topic, session, user, profile]); // Removed generatedTitles, and updateCredits.
+    }, [topic, session, user, profile, creditCost]); // Removed generatedTitles
 
     useEffect(() => {
-        const creditCost = 1;
         // Only call updateCredits if titlesGenerated is true, loading is false,
         // and the profile is available.
         if (titlesGenerated && !loading && profile) {
@@ -134,7 +132,7 @@ export default function TitleGenerator() {
             };
             updateCreditsAsync();
         }
-    }, [titlesGenerated, loading, profile, updateCredits]);
+    }, [titlesGenerated, loading, profile, updateCredits, creditCost]);
 
 
   const TitleItem = ({ title, index }: { title: string; index: number }) => {
@@ -177,8 +175,6 @@ export default function TitleGenerator() {
       </div>
     );
   };
-
-
 
     if (!mounted) {
         return null;

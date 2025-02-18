@@ -372,19 +372,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (updateError) throw updateError;
 
-            // Key change: Update profile state directly with the new credits.
+             // Update the local profile state *only* with the new credits.
             setProfile(currentProfile => {
               console.log("setProfile called within updateCredits. currentProfile:", currentProfile);
               if (!currentProfile) {
                 console.error("updateCredits: currentProfile is unexpectedly null!");
-                return null;
+                return null; // Or a fallback.
               }
               return {
-                ...currentProfile,
-                credits: newCredits,
+                ...currentProfile,  // Keep all other fields the same
+                credits: newCredits, // Update ONLY the credits
               };
             });
-
             console.log("updateCredits: COMPLETED");
 
 
@@ -394,7 +393,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } finally {
             setIsLoading(false);
         }
-    }, [user, supabase]); // Correct dependencies.  profile is *not* a dependency.
+    }, [user, supabase]);
 
     const contextValue = useMemo(() => ({
         user,
@@ -407,23 +406,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         signInWithGoogle: handleGoogleSignIn,
         resetPassword: handleResetPassword,
-        updateProfile, // Keep this for potential other uses
+        updateProfile,
         updateCredits, // Add updateCredits to context
         isInitialized
     }), [user, session, profile, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits]);
-
 
     return (
         <AuthContext.Provider value={contextValue}>
         {children}
         </AuthContext.Provider>
     );
-    }
+}
 
-    export function useAuth() {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
-    }
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
