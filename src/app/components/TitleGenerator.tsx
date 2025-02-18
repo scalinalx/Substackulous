@@ -15,6 +15,14 @@ export default function TitleGenerator() {
   const [mounted, setMounted] = useState(false);
   const creditCost = 1;
 
+  // Track component lifecycle
+  useEffect(() => {
+    console.log("TitleGenerator mounted");
+    return () => {
+      console.log("TitleGenerator unmounting");
+    };
+  }, []);
+
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
     setMounted(true);
@@ -26,7 +34,7 @@ export default function TitleGenerator() {
       console.log("generatedTitles.length before render condition:", generatedTitles.length);
     }
     else {
-      console.log("generatedTitles.length before render condition:", generatedTitles.length);
+      console.log("generatedTitles.length beba1:", generatedTitles.length);
     }
   }, [generatedTitles]);
 
@@ -98,8 +106,10 @@ export default function TitleGenerator() {
         title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
       );
 
+      console.log("Before setGeneratedTitles call:", cleanedTitles.length);
       // Update state with cleaned titles
       setGeneratedTitles(cleanedTitles);
+      console.log("Immediately after setGeneratedTitles call"); // This will run before state actually updates
       console.log("Generated titles state updated:", cleanedTitles); // Debugging log: State update
 
       // Then update profile
@@ -168,8 +178,13 @@ export default function TitleGenerator() {
 
   // Create a wrapper component for titles rendering
   const TitlesRenderer = ({ titles, loading }: { titles: string[], loading: boolean }) => {
+    useEffect(() => {
+      console.log("TitlesRenderer mounted/updated with titles length:", titles.length);
+      console.log("Actual titles:", titles);
+    }, [titles]);
+
     // This will log every time this component tries to render
-    console.log("About to render titles, length is:", titles.length);
+    console.log("TitlesRenderer render attempt, titles length:", titles.length);
     
     return (
       <div className="mt-8">
