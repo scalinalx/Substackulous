@@ -153,85 +153,6 @@ export default function TitleGenerator() {
     }
   }, [topic, session, user, profile, creditCost, updateProfile]);
 
-  // Create a separate component for individual title rendering
-  const TitleItem = ({ title, index }: { title: string; index: number }) => {
-    useEffect(() => {
-      console.log("Rendering title:", title, index);
-    }, [title, index]);
-
-    return (
-      <div
-        key={`title-${index}`}
-        className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
-      >
-        <span className="flex-none w-8 text-gray-400 text-sm">
-          {index + 1}.
-        </span>
-        <div className="flex-1 text-gray-900">
-          {title}
-        </div>
-        <button
-          type="button"
-          onClick={() => copyToClipboard(title, index)}
-          className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
-        >
-          {copiedIndex === index ? (
-            <span className="flex items-center">
-              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Copied!
-            </span>
-          ) : (
-            <span className="flex items-center">
-              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-              </svg>
-              Copy
-            </span>
-          )}
-        </button>
-      </div>
-    );
-  };
-
-  // Debug component to track render attempts
-  const DebugRender = ({ titles }: { titles: string[] }) => {
-    useEffect(() => {
-      console.log("Render attempt with titles:", titles);
-      console.log("Titles length in render:", titles.length);
-    }, [titles]);
-    return null;
-  };
-
-  // Create a wrapper component for titles rendering
-  const TitlesRenderer = ({ titles, loading }: { titles: string[], loading: boolean }) => {
-    useEffect(() => {
-      console.log("TitlesRenderer mounted/updated with titles length:", titles.length);
-      console.log("Actual titles:", titles);
-    }, [titles]);
-
-    // This will log every time this component tries to render
-    console.log("TitlesRenderer render attempt, titles length:", titles.length);
-    
-    return (
-      <div className="mt-8">
-        {titles.length > 0 ? (
-          <>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles</h2>
-            <div className="space-y-3">
-              {titles.map((title, index) => (
-                <TitleItem key={`title-${index}`} title={title} index={index} />
-              ))}
-            </div>
-          </>
-        ) : loading ? (
-          <div className="text-center text-gray-500">Generating titles...</div>
-        ) : null}
-      </div>
-    );
-  };
-
   // Don't render until after mount to prevent hydration mismatch
   if (!mounted) {
     return null;
@@ -239,7 +160,6 @@ export default function TitleGenerator() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <DebugRender titles={generatedTitles} />
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
         <span className="text-amber-700">Credits required: {creditCost}</span>
         <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
@@ -295,7 +215,23 @@ export default function TitleGenerator() {
         </button>
       </form>
 
-      <TitlesRenderer titles={generatedTitles} loading={loading} />
+      {/* Simplified test render */}
+      <div className="mt-8">
+        {generatedTitles.length > 0 ? (
+          <>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles (TEST)</h2>
+            <div className="space-y-3">
+              {generatedTitles.map((title, index) => (
+                <div key={`title-${index}`}>
+                  <p>Titles are here!</p> {/* VERY SIMPLE TEST RENDER */}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : loading ? (
+          <div className="text-center text-gray-500">Generating titles...</div>
+        ) : null}
+      </div>
     </div>
   );
 } 
