@@ -136,6 +136,7 @@ export default function TitleGenerator() {
       // Update state with titles
       setGeneratedTitles(titles);
       console.log("State updated with titles");
+      console.log("generatedTitles.length IMMEDIATELY after setState:", generatedTitles.length);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
@@ -150,6 +151,8 @@ export default function TitleGenerator() {
       await updateProfile({
         credits: profile.credits - creditCost,
       });
+      // Add another check after profile update
+      console.log("generatedTitles.length AFTER profile update:", generatedTitles.length);
     }
   }, [topic, session, user, profile, creditCost, updateProfile]);
 
