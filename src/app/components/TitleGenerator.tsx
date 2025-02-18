@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -14,10 +14,18 @@ export default function TitleGenerator() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
   const creditCost = 1;
+  
+  // Add a ref to persist titles through remounts
+  const titlesRef = useRef<string[]>([]);
 
   // Track component lifecycle
   useEffect(() => {
     console.log("TitleGenerator mounted");
+    // When component mounts, if we have titles in ref, set them to state
+    if (titlesRef.current.length > 0) {
+      console.log("Restoring titles from ref:", titlesRef.current);
+      setGeneratedTitles(titlesRef.current);
+    }
     return () => {
       console.log("TitleGenerator unmounting");
     };
@@ -52,6 +60,7 @@ export default function TitleGenerator() {
     e.preventDefault();
     setError(null);
     setGeneratedTitles([]);
+    titlesRef.current = []; // Clear ref as well
 
     if (!topic.trim()) {
       setError('Please enter a topic');
@@ -99,14 +108,17 @@ export default function TitleGenerator() {
         throw new Error('Invalid response format');
       }
 
-      console.log("Raw titles received:", responseData.titles); // Debugging log: Raw titles
+      console.log("Raw titles received:", responseData.titles);
 
-      // Clean the titles by removing extra quotes
       const cleanedTitles = responseData.titles.map((title: string) => 
         title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
       );
 
       console.log("Before setGeneratedTitles call:", cleanedTitles.length);
+
+      // Store titles in ref first
+      titlesRef.current = cleanedTitles;
+      console.log("Titles stored in ref:", titlesRef.current);
 
       // First update profile
       await updateProfile({
@@ -115,12 +127,12 @@ export default function TitleGenerator() {
 
       // Then update state with cleaned titles
       setGeneratedTitles(cleanedTitles);
-      console.log("Immediately after setGeneratedTitles call"); // This will run before state actually updates
-      console.log("Generated titles state updated:", cleanedTitles); // Debugging log: State update
+      console.log("State updated with titles");
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
       setGeneratedTitles([]);
+      titlesRef.current = []; // Clear ref on error
     } finally {
       setLoading(false);
     }
