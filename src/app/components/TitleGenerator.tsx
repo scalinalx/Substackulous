@@ -23,6 +23,10 @@ export default function TitleGenerator() {
   useEffect(() => {
     if (generatedTitles.length > 0) {
       console.log("generatedTitles for render:", generatedTitles);
+      console.log("generatedTitles.length before render condition:", generatedTitles.length);
+    }
+    else {
+      console.log("generatedTitles.length before render condition:", generatedTitles.length);
     }
   }, [generatedTitles]);
 
@@ -153,6 +157,38 @@ export default function TitleGenerator() {
     );
   };
 
+  // Debug component to track render attempts
+  const DebugRender = ({ titles }: { titles: string[] }) => {
+    useEffect(() => {
+      console.log("Render attempt with titles:", titles);
+      console.log("Titles length in render:", titles.length);
+    }, [titles]);
+    return null;
+  };
+
+  // Create a wrapper component for titles rendering
+  const TitlesRenderer = ({ titles, loading }: { titles: string[], loading: boolean }) => {
+    // This will log every time this component tries to render
+    console.log("About to render titles, length is:", titles.length);
+    
+    return (
+      <div className="mt-8">
+        {titles.length > 0 ? (
+          <>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles</h2>
+            <div className="space-y-3">
+              {titles.map((title, index) => (
+                <TitleItem key={`title-${index}`} title={title} index={index} />
+              ))}
+            </div>
+          </>
+        ) : loading ? (
+          <div className="text-center text-gray-500">Generating titles...</div>
+        ) : null}
+      </div>
+    );
+  };
+
   // Don't render until after mount to prevent hydration mismatch
   if (!mounted) {
     return null;
@@ -160,6 +196,7 @@ export default function TitleGenerator() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      <DebugRender titles={generatedTitles} />
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
         <span className="text-amber-700">Credits required: {creditCost}</span>
         <span className="font-medium text-amber-700">Your balance: {profile?.credits ?? 0}</span>
@@ -215,20 +252,7 @@ export default function TitleGenerator() {
         </button>
       </form>
 
-      <div className="mt-8">
-        {generatedTitles.length > 0 ? (
-          <>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles</h2>
-            <div className="space-y-3">
-              {generatedTitles.map((title, index) => (
-                <TitleItem key={`title-${index}`} title={title} index={index} />
-              ))}
-            </div>
-          </>
-        ) : loading ? (
-          <div className="text-center text-gray-500">Generating titles...</div>
-        ) : null}
-      </div>
+      <TitlesRenderer titles={generatedTitles} loading={loading} />
     </div>
   );
 } 
