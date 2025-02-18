@@ -6,192 +6,176 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link'; // Import Link
 
 export default function TitleGenerator() {
-  const router = useRouter();
-  const { user, profile, updateCredits, session } = useAuth(); // Use updateCredits
-  const [loading, setLoading] = useState(false);
-  const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
-  const [topic, setTopic] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const creditCost = 1;
+    const router = useRouter();
+    const { user, profile, updateCredits, session } = useAuth(); // Use updateCredits
+    const [loading, setLoading] = useState(false);
+    const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
+    const [topic, setTopic] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+    const [mounted, setMounted] = useState(false);
+    const creditCost = 1;
+    const [titlesGenerated, setTitlesGenerated] = useState(false); // Flag for credit update
 
-  const isMounted = useRef(true);
 
-  useEffect(() => {
-    console.log("TitleGenerator mounted");
-    isMounted.current = true;
-    return () => {
-      console.log("TitleGenerator unmounting");
-      isMounted.current = false;
-    };
-  }, []);
+    const isMounted = useRef(true);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-    // useEffect for logging profile changes
     useEffect(() => {
-        console.log("Rendering with profile:", profile);
-    }, [profile]);
+        console.log("TitleGenerator mounted");
+        isMounted.current = true;
+        return () => {
+            console.log("TitleGenerator unmounting");
+            isMounted.current = false;
+        };
+    }, []);
 
-    // useEffect for logging when generatedTitles changes
     useEffect(() => {
-      if (generatedTitles.length > 0) {
-          console.log("Generated titles:", generatedTitles);
-      }
-  }, [generatedTitles]);
+        setMounted(true);
+    }, []);
 
-  const copyToClipboard = async (text: string, index: number) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedIndex(index);
-      setTimeout(() => setCopiedIndex(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
-
-  const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setGeneratedTitles([]);
-
-    if (!topic.trim()) {
-      setError('Please enter a topic');
-      return;
-    }
-
-    if (!session?.access_token) {
-      setError('No valid session. Please sign in again.');
-      return;
-    }
-
-    if (!user || !profile) {
-      setError('Please sign in to continue');
-      return;
-    }
-
-    if (profile.credits < creditCost) {
-      setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const response = await fetch('/api/deepseek/generate-titles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          theme: topic,
-          userId: user.id
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to generate titles: ${response.status}`);
-      }
-
-      const responseData = await response.json();
-
-      if (!responseData.titles || !Array.isArray(responseData.titles)) {
-        throw new Error('Invalid response format');
-      }
-
-      console.log("Raw titles received:", responseData.titles);
-
-      const cleanedTitles = responseData.titles.map((title: string) =>
-        title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
-      );
-
-      setGeneratedTitles(cleanedTitles);
-      console.log("State updated with titles");
-      console.log("generatedTitles.length IMMEDIATELY after setState:", generatedTitles.length);
-
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
-      setGeneratedTitles([]);
-      return;
-    } finally {
-      setLoading(false);
-        if (generatedTitles.length > 0 && profile) { // Ensure profile and generatedTitles are valid
-            console.log("Titles generated, updating credits...");
-            try {
-                await updateCredits(profile.credits - creditCost);
-                console.log("Credits updated AFTER titles rendered");
-            } catch (updateError) {
-                console.error("Error updating credits in useEffect:", updateError);
-                setError("Failed to update credits. Please refresh the page.");
-            }
+    const copyToClipboard = async (text: string, index: number) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            setCopiedIndex(index);
+            setTimeout(() => setCopiedIndex(null), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
         }
-    }
-  }, [topic, session, user, profile, creditCost, updateCredits]); // Removed generatedTitles.length
+    };
+
+    const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setGeneratedTitles([]);
+        setTitlesGenerated(false); // Reset the flag
+
+        if (!topic.trim()) {
+            setError('Please enter a topic');
+            return;
+        }
+
+        if (!session?.access_token) {
+            setError('No valid session. Please sign in again.');
+            return;
+        }
+
+        if (!user || !profile) {
+            setError('Please sign in to continue');
+            return;
+        }
+
+        if (profile.credits < creditCost) {
+            setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const response = await fetch('/api/deepseek/generate-titles', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    theme: topic,
+                    userId: user.id
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Failed to generate titles: ${response.status}`);
+            }
+
+            const responseData = await response.json();
+
+            if (!responseData.titles || !Array.isArray(responseData.titles)) {
+                throw new Error('Invalid response format');
+            }
+
+            console.log("Raw titles received:", responseData.titles);
+
+            const cleanedTitles = responseData.titles.map((title: string) =>
+                title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
+            );
+
+            setGeneratedTitles(cleanedTitles);
+            console.log("State updated with titles");
+            console.log("generatedTitles.length IMMEDIATELY after setState:", generatedTitles.length);
+            setTitlesGenerated(true); // Set flag to true after successful generation
+
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
+            setGeneratedTitles([]);
+            return;
+        } finally {
+            setLoading(false);
+        }
+    }, [topic, session, user, profile, creditCost]); // Removed generatedTitles
 
     useEffect(() => {
-        // Call updateCredits AFTER titles are generated and NOT during loading, AND only once
-        if (!loading && profile) { // This is the key change.
-            console.log("Calling update credits from useEffect, deducting from " + profile.credits)
+        // Only call updateCredits if titlesGenerated is true, loading is false,
+        // and the profile is available.
+        if (titlesGenerated && !loading && profile) {
+            console.log("Titles generated, updating credits...");
             const updateCreditsAsync = async () => {
                 try {
                     await updateCredits(profile.credits - creditCost);
                     console.log("Credits updated AFTER titles rendered");
-
                 } catch (updateError) {
                     console.error("Error updating credits in useEffect:", updateError);
                     setError("Failed to update credits. Please refresh the page.");
+                } finally {
+                    setTitlesGenerated(false); // Reset flag after updating credits
                 }
-            }
+            };
             updateCreditsAsync();
         }
-    }, [loading, profile, updateCredits, creditCost]);
+    }, [titlesGenerated, loading, profile, updateCredits, creditCost]);
 
 
-  const TitleItem = ({ title, index }: { title: string; index: number }) => {
-    useEffect(() => {
-      console.log("Rendering title:", title, index);
-    }, [title, index]);
+    const TitleItem = ({ title, index }: { title: string; index: number }) => {
+        useEffect(() => {
+            console.log("Rendering title:", title, index);
+        }, [title, index]);
 
-    return (
-      <div
-        key={`title-${index}`}
-        className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
-      >
-        <span className="flex-none w-8 text-gray-400 text-sm">
-          {index + 1}.
-        </span>
-        <div className="flex-1 text-gray-900">
-          {title}
-        </div>
-        <button
-          type="button"
-          onClick={() => copyToClipboard(title, index)}
-          className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
+        return (
+        <div
+            key={`title-${index}`}
+            className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
         >
-          {copiedIndex === index ? (
-            <span className="flex items-center">
-              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Copied!
+            <span className="flex-none w-8 text-gray-400 text-sm">
+            {index + 1}.
             </span>
-          ) : (
-            <span className="flex items-center">
-              <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-              </svg>
-              Copy
-            </span>
-          )}
-        </button>
-      </div>
-    );
-  };
+            <div className="flex-1 text-gray-900">
+            {title}
+            </div>
+            <button
+            type="button"
+            onClick={() => copyToClipboard(title, index)}
+            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
+            >
+            {copiedIndex === index ? (
+                <span className="flex items-center">
+                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Copied!
+                </span>
+            ) : (
+                <span className="flex items-center">
+                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+                Copy
+                </span>
+            )}
+            </button>
+        </div>
+        );
+    };
 
 
 
@@ -201,23 +185,23 @@ export default function TitleGenerator() {
 
     return (
         <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
-            <div>
-            <Link
-                href="/dashboard"
-                className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
-            >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Dashboard
-            </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">Clickworthy Title Generator</h1>
-            <p className="mt-2 text-gray-600">
-                Generate attention-grabbing titles that drive clicks and engagement.
-            </p>
+            <div className="mb-8 flex items-center justify-between">
+                <div>
+                <Link
+                    href="/dashboard"
+                    className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Dashboard
+                </Link>
+                <h1 className="mt-4 text-3xl font-bold text-gray-900">Clickworthy Title Generator</h1>
+                <p className="mt-2 text-gray-600">
+                    Generate attention-grabbing titles that drive clicks and engagement.
+                </p>
+                </div>
             </div>
-        </div>
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
             <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
             <span className="text-amber-700">Credits required: {creditCost}</span>
@@ -273,12 +257,10 @@ export default function TitleGenerator() {
             <div className="mt-8">
             {generatedTitles.length > 0 ? (
             <>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles (TEST)</h2>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles</h2>
                 <div className="space-y-3">
                 {generatedTitles.map((title, index) => (
-                    <div key={`title-${index}`}>
-                        <p>{title}</p> {}
-                    </div>
+                    <TitleItem key={`title-${index}`} title={title} index={index} />
                 ))}
                 </div>
             </>
