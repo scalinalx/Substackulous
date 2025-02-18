@@ -107,16 +107,17 @@ export default function TitleGenerator() {
       );
 
       console.log("Before setGeneratedTitles call:", cleanedTitles.length);
-      // Update state with cleaned titles
+
+      // First update profile
+      await updateProfile({
+        credits: profile.credits - creditCost,
+      });
+
+      // Then update state with cleaned titles
       setGeneratedTitles(cleanedTitles);
       console.log("Immediately after setGeneratedTitles call"); // This will run before state actually updates
       console.log("Generated titles state updated:", cleanedTitles); // Debugging log: State update
 
-      // Then update profile
-      await updateProfile({
-        credits: profile.credits - creditCost,
-      });
-      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
       setGeneratedTitles([]);
