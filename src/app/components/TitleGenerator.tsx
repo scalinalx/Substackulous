@@ -81,6 +81,8 @@ export default function TitleGenerator() {
         throw new Error('Invalid response format');
       }
 
+      console.log("Raw titles received:", responseData.titles); // Debugging log: Raw titles
+
       // Clean the titles by removing extra quotes
       const cleanedTitles = responseData.titles.map((title: string) => 
         title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
@@ -88,7 +90,8 @@ export default function TitleGenerator() {
 
       // Update state with cleaned titles
       setGeneratedTitles(cleanedTitles);
-      
+      console.log("Generated titles state updated:", cleanedTitles); // Debugging log: State update
+
       // Then update profile
       await updateProfile({
         credits: profile.credits - creditCost,
