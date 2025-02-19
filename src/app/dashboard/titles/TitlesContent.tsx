@@ -22,17 +22,16 @@ export default function TitleGenerator() {
 
     useEffect(() => {
         console.log("TitleGenerator mounted");
-        isMounted.current = true;  // Update the ref
+        isMounted.current = true;
         return () => {
             console.log("TitleGenerator unmounting");
-            isMounted.current = false; // Update the ref
+            isMounted.current = false;
         };
     }, []);
 
     useEffect(() => {
         setMounted(true);
     }, []);
-
 
 
     const copyToClipboard = async (text: string, index: number) => {
@@ -48,8 +47,8 @@ export default function TitleGenerator() {
   const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        setGeneratedTitles([]);
-        titlesRef.current = null; // Clear the ref
+        setGeneratedTitles([]); //Clear existing titles on a new generation request.
+        // setTitlesGenerated(false); // Remove this line
 
         if (!topic.trim()) {
             setError('Please enter a topic');
@@ -66,7 +65,6 @@ export default function TitleGenerator() {
             return;
         }
 
-        // Use the separate 'credits' value from the context
         if (credits === null || credits < creditCost) {
             setError(`Not enough credits. You need ${creditCost} credits to generate titles.`);
             return;
@@ -108,9 +106,6 @@ export default function TitleGenerator() {
             titlesRef.current = cleanedTitles;
             console.log("Titles stored in ref:", titlesRef.current);
 
-            // We do *NOT* call setGeneratedTitles here
-
-            // Update credits (this will likely trigger the remount)
             if (profile) { // Check for profile
                 console.log("Titles generated, updating credits...");
                 try {
@@ -125,22 +120,21 @@ export default function TitleGenerator() {
 
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
-            setGeneratedTitles([]);
+            setGeneratedTitles([]); //Clear existing titles on error.
             return;
         } finally {
             setLoading(false);
             console.log("Titles generation complete")
+             // *After* fetching and storing titles, *and* after updating credits,
+            // *then* update the displayed titles. This ensures titles are shown
+            // even if the component remounts due to the AuthContext update.
+            if (titlesRef.current && isMounted.current) {
+                console.log("Setting generatedTitles from ref:", titlesRef.current);
+                setGeneratedTitles(titlesRef.current);
+                titlesRef.current = null; // Clear ref after setting titles
+            }
         }
-    }, [topic, session, user, profile, creditCost, updateCredits, credits]); // Added credits to useCallback
-
-    // useEffect to update the displayed titles *after* mounting/remounting
-    useEffect(() => {
-        if (titlesRef.current && isMounted.current) {
-            console.log("Setting generatedTitles from ref:", titlesRef.current);
-            setGeneratedTitles(titlesRef.current);
-            titlesRef.current = null; // Clear the ref
-        }
-    }, [isMounted.current]); // Correct dependency
+    }, [topic, session, user, profile, creditCost, updateCredits, credits]); // Add updateCredits
 
 
   const TitleItem = ({ title, index }: { title: string; index: number }) => {
