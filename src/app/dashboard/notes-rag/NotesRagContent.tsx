@@ -3,12 +3,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Import Link
+
 
 export default function NotesRagContent() {
   const router = useRouter();
   const { user, profile, updateCredits, session, credits } = useAuth();
   const [loading, setLoading] = useState(false);
-  // Store both results as an object.
+  // Store both model responses as strings.
   const [generatedNotes, setGeneratedNotes] = useState<{ notesTurbo: string; notesLlama: string }>({
     notesTurbo: "",
     notesLlama: ""
@@ -26,6 +28,29 @@ export default function NotesRagContent() {
       isMounted.current = false;
     };
   }, []);
+
+  // Helper function to format a note in Markdown.
+  const formatNoteText = (note: string): string => {
+    // Remove any curly braces, square brackets, or quotes.
+    let cleaned = note.replace(/[\{\}\[\]"]+/g, "").trim();
+    // Replace multiple spaces with one space.
+    cleaned = cleaned.replace(/\s+/g, " ");
+    // Split into sentences at a period that is followed by whitespace.
+    const sentences = cleaned.split(/(?<=\.)\s+/);
+    // Join sentences with a newline.
+    return sentences.join("\n");
+  };
+
+  // Handler to copy a note to clipboard.
+  const copyNote = async (note: string) => {
+    try {
+      const formatted = formatNoteText(note);
+      await navigator.clipboard.writeText(formatted);
+      // Optionally, you can add a small feedback here (e.g., toast notification).
+    } catch (err) {
+      console.error("Failed to copy note:", err);
+    }
+  };
 
   const handleGenerateNotes = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +106,7 @@ export default function NotesRagContent() {
 
       console.log("Raw notes received:", responseData);
 
-      // Deduct credits exactly as in TitlesContent.tsx.
+      // Deduct credits (frontend approach as in TitlesContent.tsx).
       try {
         await updateCredits(credits - creditCost);
         console.log("Credits updated");
@@ -107,9 +132,30 @@ export default function NotesRagContent() {
     }
   }, [topic, session, user, profile, creditCost, updateCredits, credits]);
 
+  // Helper to split notes based on delimiter.
+  const splitNotes = (notes: string): string[] => {
+    return notes.split("###---###").map(note => note.trim()).filter(note => note);
+  };
+
+  const turboNotes = splitNotes(generatedNotes.notesTurbo);
+  const llamaNotes = splitNotes(generatedNotes.notesLlama);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header showing credit cost and balance */}
+      {/* Header: show cost and balance */}
+      <div className="mb-8 flex items-center justify-between">
+            <div>
+            <Link
+                href="/dashboard"
+                className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
+            >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Back to Dashboard
+            </Link>
+            </div>
+        </div>
       <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
         <span className="text-amber-700">Credits required: {creditCost}</span>
         <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
@@ -152,16 +198,46 @@ export default function NotesRagContent() {
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
-      {(generatedNotes.notesTurbo || generatedNotes.notesLlama) && (
+      {(turboNotes.length > 0 || llamaNotes.length > 0) && (
         <div className="mt-8 space-y-8">
-          <div>
-            <h2 className="text-xl font-semibold mb-2">Notes from Model Turbo</h2>
-            <pre className="whitespace-pre-wrap border p-4 rounded bg-gray-50">{generatedNotes.notesTurbo}</pre>
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold mb-2">Notes from Model Llama</h2>
-            <pre className="whitespace-pre-wrap border p-4 rounded bg-gray-50">{generatedNotes.notesLlama}</pre>
-          </div>
+          {/* Model Turbo Results */}
+          {turboNotes.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Notes from Model Turbo</h2>
+              <div className="space-y-4">
+                {turboNotes.map((note, index) => (
+                  <div key={`turbo-${index}`} className="border p-4 rounded bg-gray-50 relative">
+                    <pre className="whitespace-pre-wrap">{note}</pre>
+                    <button
+                      onClick={() => copyNote(note)}
+                      className="absolute top-2 right-2 text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Model Llama Results */}
+          {llamaNotes.length > 0 && (
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Notes from Model Llama</h2>
+              <div className="space-y-4">
+                {llamaNotes.map((note, index) => (
+                  <div key={`llama-${index}`} className="border p-4 rounded bg-gray-50 relative">
+                    <pre className="whitespace-pre-wrap">{note}</pre>
+                    <button
+                      onClick={() => copyNote(note)}
+                      className="absolute top-2 right-2 text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
