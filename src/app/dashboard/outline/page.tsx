@@ -23,7 +23,7 @@ interface OutlineRequest {
 
 export default function OutlineGenerator() {
   const [mounted, setMounted] = useState(false);
-  const { user, credits, updateCredits } = useAuth();
+  const { user, credits, updateCredits, session } = useAuth();
   const router = useRouter();
   const supabase = createClientComponentClient();
   const [formData, setFormData] = useState<OutlineRequest>({
@@ -71,7 +71,7 @@ export default function OutlineGenerator() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Starting outline generation...');
-    console.log('Profile:', { id: user?.id, credits: credits });
+    console.log('Profile:', { id: user?.id, credits });
     
     if (!formData.topic.trim()) {
       setError('Topic is required');
@@ -93,29 +93,16 @@ export default function OutlineGenerator() {
     setOutline(null);
 
     try {
-      console.log('Getting session...');
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session result:', { 
-        session: {
-          ...session,
-          access_token: session?.access_token ? '[PRESENT]' : '[MISSING]'
-        }, 
-        error: sessionError 
-      });
-      
-      if (sessionError) {
-        console.error('Session error:', sessionError);
-        setError(`Authentication error: ${sessionError.message}`);
-        return;
-      }
-      
       if (!session) {
-        console.log('No session found, redirecting to login...');
+        console.log('No session found in AuthContext, redirecting to login...');
         router.replace('/');
         return;
       }
 
-      console.log('Making API request...');
+      console.log('Using session from AuthContext:', {
+        access_token: session.access_token ? '[PRESENT]' : '[MISSING]',
+      });
+
       const response = await fetch('/api/outline', {
         method: 'POST',
         headers: {
@@ -165,23 +152,19 @@ Format the outline with clear hierarchical structure using markdown.`
         throw new Error('No outline was generated.');
       }
 
-      // Extract everything between <think> tags and remove it
       const cleanedContent = data.content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       console.log('Content after removing think tags:', cleanedContent);
       
-      // Format the content to ensure proper markdown
       const formattedContent = cleanedContent
-        .replace(/^\s*\n/gm, '\n') // Remove empty lines with whitespace
-        .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newlines
+        .replace(/^\s*\n/gm, '\n')
+        .replace(/\n{3,}/g, '\n\n')
         .trim();
       
       console.log('Final formatted content:', formattedContent);
       
-      // Set outline
       setOutline(formattedContent);
       console.log('Outline state updated with cleaned and formatted content');
 
-      // Update credits after successful generation
       if (credits !== null) {
         await updateCredits(credits - creditCost);
       }

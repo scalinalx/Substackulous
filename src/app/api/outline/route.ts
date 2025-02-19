@@ -109,7 +109,7 @@ export async function POST(req: Request) {
         content: prompt
       }],
       model: "deepseek-r1-distill-llama-70b",
-      temperature: 0.69,
+      temperature: 0.95,
       max_tokens: 4096,
       top_p: 0.95,
       stream: false, // We'll handle streaming in a future update
