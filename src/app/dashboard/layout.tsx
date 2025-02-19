@@ -12,37 +12,27 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [mounted, setMounted] = useState(false);
-  const { user, isLoading, isAuthenticated, isInitialized } = useAuth();
-  const router = useRouter();
+  const { isInitialized, isLoading } = useAuth();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!mounted || !isInitialized) return;
-    
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [mounted, isInitialized, isLoading, isAuthenticated, router]);
-
-  // Show loading state until mounted and auth is initialized
-  if (!mounted || !isInitialized || isLoading) {
+  // Wait for mounting and initial auth, but do not condition on isLoading.
+  if (!mounted || !isInitialized) {
     return <LoadingSpinner />;
   }
 
-  // If not authenticated, render nothing (redirect will happen)
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  // Show dashboard layout if authenticated
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
       <DashboardNav />
       <main className="pt-16">
         {children}
+        {isLoading && (
+          <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+            <LoadingSpinner />
+          </div>
+        )}
       </main>
     </div>
   );

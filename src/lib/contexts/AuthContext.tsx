@@ -399,9 +399,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!user) throw new Error('No user logged in');
 
         try {
-            setIsLoading(true);
             console.log("updateCredits: STARTING, newCredits:", newCredits);
-
             const { error: updateError } = await supabase
                 .from('profiles')
                 .update({ credits: newCredits })
@@ -411,17 +409,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (updateError) throw updateError;
 
-            // Update the local credits state *directly*.
-            setCredits(newCredits); // Update the separate credits state
+            // Only update the local credits state; do not toggle global isLoading.
+            setCredits(newCredits);
             console.log("updateCredits: COMPLETED");
-
-        } catch(error) {
+        } catch (error) {
             console.error('Error updating credits', error);
             throw error;
-        } finally {
-            setIsLoading(false);
         }
-    }, [user, supabase]); // Correct dependencies
+    }, [user, supabase]);
 
 
     const contextValue = useMemo(() => ({

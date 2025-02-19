@@ -47,8 +47,7 @@ export default function TitleGenerator() {
   const handleGenerateTitles = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        setGeneratedTitles([]); //Clear existing titles on a new generation request.
-        // setTitlesGenerated(false); // Remove this line
+        setGeneratedTitles([]);
 
         if (!topic.trim()) {
             setError('Please enter a topic');
@@ -91,7 +90,6 @@ export default function TitleGenerator() {
             }
 
             const responseData = await response.json();
-
             if (!responseData.titles || !Array.isArray(responseData.titles)) {
                 throw new Error('Invalid response format');
             }
@@ -102,39 +100,32 @@ export default function TitleGenerator() {
                 title.replace(/^"|"$/g, '').replace(/\\"/g, '"')
             );
 
-            // Store titles in the ref *immediately*
             titlesRef.current = cleanedTitles;
             console.log("Titles stored in ref:", titlesRef.current);
 
-            if (profile) { // Check for profile
-                console.log("Titles generated, updating credits...");
-                try {
-                    await updateCredits(credits - creditCost);  // Use separate credits value
-                    console.log("Credits updated");
-                } catch (updateError) {
-                    console.error("Error updating credits:", updateError);
-                    setError("Failed to update credits. Please refresh the page.");
-                    return; // Exit early if credit update fails
-                }
+            // Update credits without affecting the global loading state
+            try {
+                await updateCredits(credits - creditCost);
+                console.log("Credits updated");
+            } catch (updateError) {
+                console.error("Error updating credits:", updateError);
+                setError("Failed to update credits. Please refresh the page.");
+                return;
             }
-
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to generate titles. Please try again.');
-            setGeneratedTitles([]); //Clear existing titles on error.
+            setGeneratedTitles([]);
             return;
         } finally {
             setLoading(false);
-            console.log("Titles generation complete")
-             // *After* fetching and storing titles, *and* after updating credits,
-            // *then* update the displayed titles. This ensures titles are shown
-            // even if the component remounts due to the AuthContext update.
+            console.log("Titles generation complete");
             if (titlesRef.current && isMounted.current) {
                 console.log("Setting generatedTitles from ref:", titlesRef.current);
                 setGeneratedTitles(titlesRef.current);
-                titlesRef.current = null; // Clear ref after setting titles
+                titlesRef.current = null;
             }
         }
-    }, [topic, session, user, profile, creditCost, updateCredits, credits]); // Add updateCredits
+    }, [topic, session, user, profile, creditCost, updateCredits, credits]);
 
 
   const TitleItem = ({ title, index }: { title: string; index: number }) => {
