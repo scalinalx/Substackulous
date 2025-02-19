@@ -109,6 +109,12 @@ export default function NotesRagContent() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Header showing credit cost and balance */}
+      <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
+        <span className="text-amber-700">Credits required: {creditCost}</span>
+        <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
+      </div>
+
       <h1 className="text-3xl font-bold mb-4">Viral Notes Generator</h1>
       <form onSubmit={handleGenerateNotes} className="space-y-6">
         <div>
@@ -128,7 +134,7 @@ export default function NotesRagContent() {
         <button
           type="submit"
           disabled={loading || !mounted}
-          className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-md hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {loading ? (
             <span className="flex items-center justify-center">

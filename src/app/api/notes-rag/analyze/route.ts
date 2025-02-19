@@ -79,7 +79,7 @@ Think through this step by step.
       ],
       model: "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
       max_tokens: 4096,
-      temperature: 0.42,
+      temperature: 0.7,
       top_p: 0.7,
       top_k: 50,
       repetition_penalty: 1,
