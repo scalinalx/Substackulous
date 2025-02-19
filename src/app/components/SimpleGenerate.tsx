@@ -3,44 +3,42 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Image from 'next/image';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+// Remove createClientComponentClient if it's only used for getSession
+// import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface SimpleGenerateProps {
   creditCost?: number;
+  session: any; // Use the appropriate type for your session (or import the type from Supabase)
 }
 
-export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps) {
-  const supabase = createClientComponentClient();
+export default function SimpleGenerate({ creditCost = 25, session }: SimpleGenerateProps) {
+  // We still want to use AuthContext for credits and updateCredits.
   const { credits, updateCredits } = useAuth();
   const [mainIdea, setMainIdea] = useState('');
   const [theme, setTheme] = useState('');
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [aspectRatio, setAspectRatio] = useState('3:2');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!mainIdea.trim()) {
       setError('Main idea is required');
       return;
     }
-
     if (!theme.trim()) {
       setError('Theme is required');
       return;
     }
-
     if (!credits) {
       setError('User credits not found');
       return;
     }
-
     if (credits < creditCost) {
       setError(`Not enough credits. You need ${creditCost} credits to generate illustrations.`);
       return;
@@ -52,16 +50,8 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
     setLoading(true);
 
     try {
-      console.log('Getting session...');
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      console.log('Session result:', { sessionData, error: sessionError });
-      
-      if (sessionError) {
-        setError(`Authentication error: ${sessionError.message}`);
-        return;
-      }
-      
-      if (!sessionData?.session) {
+      // Instead of calling getSession, we use the session passed as a prop.
+      if (!session || !session.access_token) {
         setError('Not authenticated - no session found');
         return;
       }
@@ -72,20 +62,19 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           prompt,
           model: 'flux',
           aspectRatio,
-          userId: sessionData.session.user.id
+          userId: session.user.id
         }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to generate images');
       }
-
       if (!response.body) {
         throw new Error('No response body received');
       }
@@ -98,15 +87,12 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value);
         const lines = chunk.split('\n');
-
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(5));
-              
               switch (data.status) {
                 case 'generating':
                   setStatus(data.message);
@@ -137,7 +123,6 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
           }
         }
       }
-
       if (!completionReceived) {
         throw new Error('Generation did not complete successfully');
       }
@@ -266,13 +251,14 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
               alt={`Generated image ${selectedImageIndex + 1}`}
               width={1200}
               height={800}
+              unoptimized
               className="rounded-lg shadow-xl"
             />
             <button
               onClick={() => handleDownload(generatedImages[selectedImageIndex])}
               className="absolute bottom-4 right-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-6 py-3 rounded-lg shadow-lg hover:from-amber-600 hover:to-amber-700 transition-colors flex items-center space-x-2"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
               <span>Download Image</span>
@@ -294,6 +280,7 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
                   alt={`Thumbnail ${index + 1}`}
                   width={200}
                   height={150}
+                  unoptimized
                   className="rounded-lg"
                 />
               </button>
@@ -303,4 +290,4 @@ export default function SimpleGenerate({ creditCost = 25 }: SimpleGenerateProps)
       )}
     </div>
   );
-} 
+}

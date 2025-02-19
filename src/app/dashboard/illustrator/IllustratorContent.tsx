@@ -1,3 +1,4 @@
+// IllustratorContent.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,7 +9,7 @@ import SimpleGenerate from '@/app/components/SimpleGenerate';
 
 export default function IllustratorContent() {
   const [mounted, setMounted] = useState(false);
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, session } = useAuth(); // Include session here
   const router = useRouter();
 
   useEffect(() => {
@@ -55,9 +56,10 @@ export default function IllustratorContent() {
         </div>
 
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
-          <SimpleGenerate creditCost={25} />
+          {/* Pass session as a prop */}
+          <SimpleGenerate creditCost={25} session={session} />
         </div>
       </div>
     </div>
   );
-} 
+}
