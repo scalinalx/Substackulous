@@ -88,31 +88,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Insufficient credits' }, { status: 400 });
     }
 
-    const prompt = `Act as a viral content expert with 10+ years experience in crafting high-performing headlines. Generate 10 viral titles for a post about "${theme}" using these proven frameworks:
+    const prompt = `Act as a viral content expert with 10+ years experience in crafting high-performing headlines. Generate 10 viral titles for a post about "${theme}" using these proven frameworks as inspiration:
 
-1. Numbers + Specific Value: "5 Proven Ways to [Benefit] That [Target] Can Start Today"
-2. Curiosity Gap: "The Surprising Truth About [Topic] That [Target] Never Knew"
-3. How-to: "How to [Achieve Goal] Without [Common Pain Point]"
-4. Ultimate Guide: "The Ultimate Guide to [Topic] for [Target] in [Current Year]"
-5. Problem-Solution: "Struggling with [Problem]? Here's How to [Solution]"
-6. Listicle: "[X] Essential [Topic] Tips That Will [Benefit]"
-7. Question: "Are You Making These [Topic] Mistakes?"
-8. Secret Reveal: "The Hidden [Topic] Strategy That [Target] Uses"
-9. Time-Based: "How I [Achievement] in [Timeframe] Using This [Topic] Method"
-10. Controversy: "Why Everything You Know About [Topic] Is Wrong"
+1. Numbers + Specific Value
+2. Curiosity Gap
+3. How-to
+4. Ultimate Guide
+5. Problem-Solution
+6. Listicle
+7. Question
+8. Secret Reveal
+9. Time-Based
+10. Controversy
 
 Follow these rules:
 1. Make titles specific and actionable
 2. Include numbers where relevant
 3. Use power words strategically
 4. Create curiosity without clickbait
-5. Keep length under 60 characters when possible
+5. Keep length under 80 characters when possible
 6. Target the right emotional triggers
 7. Make value proposition clear
 8. Use current year where relevant
 9. Use strategic clickbait whenever possible
 
-Output ONLY the titles, one per line. No explanations or frameworks needed.`;
+Don't limit yourself to the frameworks. Use them only as inspiration. 
+Output ONLY the titles, one per line. 
+No explanations or frameworks needed. 
+DO NOT OUTPUT ANYTHING ELSE BUT THE TITLES. 
+Be aware that current year is 2025!`;
 
 
     const completion = await groq.chat.completions.create({
