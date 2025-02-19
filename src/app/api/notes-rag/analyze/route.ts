@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import Together from 'together-ai';
 
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
+
+
 // Helper function to accumulate tokens from the stream.
 async function accumulateStream(stream: AsyncIterable<any>): Promise<string> {
   let message = "";
