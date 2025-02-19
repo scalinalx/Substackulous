@@ -1,179 +1,60 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
-import { Button } from '@/app/components/ui/button';
-import { toast } from 'sonner';
-
-type GeneratedResult = {
-  llama: {
-    shortNotes: string[];
-    longFormNote: string;
-  };
-  openai: {
-    shortNotes: string[];
-    longFormNote: string;
-  };
-};
 
 export default function NotesRagContent() {
-  const router = useRouter();
-  const { user, credits, updateCredits, isLoading, isAuthenticated } = useAuth();
-  
-  // All state hooks at the top
+  const [topic, setTopic] = useState("");
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [generatedContent, setGeneratedContent] = useState<GeneratedResult | null>(null);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const creditCost = 1;
-
-  // Refs
-  const generatedContentRef = useRef<GeneratedResult | null>(null);
-  const profileUpdatePendingRef = useRef(false);
-  const lastProfileUpdateRef = useRef<number>(0);
+  const { user, session } = useAuth();
+  const router = useRouter();
   
-  // All useEffects together
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [isLoading, isAuthenticated, router]);
-
-  useEffect(() => {
-    const updateProfileCredits = async () => {
-      if (profileUpdatePendingRef.current && user && credits !== null) {
-        const now = Date.now();
-        // Prevent updates more frequent than every 2 seconds
-        if (now - lastProfileUpdateRef.current < 2000) {
-          return;
-        }
-
-        try {
-          await updateCredits(credits - creditCost);
-          profileUpdatePendingRef.current = false;
-          lastProfileUpdateRef.current = now;
-        } catch (error) {
-          console.error('Failed to update profile credits:', error);
-        }
-      }
-    };
-
-    updateProfileCredits();
-  }, [credits, updateCredits, creditCost, user]);
-
-  useEffect(() => {
-    if (generatedContentRef.current) {
-      setGeneratedContent(generatedContentRef.current);
-    }
-  }, [user]);
-
-  // Loading state check
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
-        <p className="text-gray-600">Securing your session...</p>
-      </div>
-    );
-  }
-
-  // Auth check
-  if (!user) {
-    return null;
-  }
-
-  const copyToClipboard = async (text: string, index: number) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedIndex(index);
-      toast.success('Note copied to clipboard!');
-      setTimeout(() => setCopiedIndex(null), 2000);
-    } catch (err) {
-      toast.error('Failed to copy to clipboard');
-    }
-  };
-
-  const handleGenerate = async (e: React.FormEvent) => {
+  const handleGenerateNotes = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Starting generation...');
+    setError("");
+    setNotes("");
     
-    // Clear states at the start
-    setError(null);
-    setGeneratedContent(null);
-    generatedContentRef.current = null;
-    profileUpdatePendingRef.current = false;
-
-    if (!notes.trim()) {
-      setError('Please enter some notes to generate from');
+    if (!topic.trim()) {
+      setError("Please enter a topic.");
       return;
     }
 
-    if (!user) {
-      setError('User not found');
+    if (!session) {
+      console.log('No session found in AuthContext, redirecting to login...');
+      router.replace('/');
       return;
     }
-
-    if ((credits ?? 0) < creditCost) {
-      setError(`Not enough credits. You need ${creditCost} credits to generate content.`);
-      return;
-    }
-
+    
     setLoading(true);
-    console.log('Set loading state, starting API call...');
-
     try {
-      const response = await fetch('/api/notes-rag/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch("/api/notes-rag/analyze", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({
-          userTopic: notes,
-          userId: user?.id,
-          model: 'deepseek'
-        })
+        body: JSON.stringify({ topic }),
       });
-
-      console.log('API call completed, checking response...');
-
+      
       if (!response.ok) {
-        throw new Error('Failed to generate content');
+        const data = await response.json();
+        throw new Error(data.error || "Error generating notes");
       }
-
+      
       const data = await response.json();
-      console.log('Received data from API:', data);
-      
-      if (!data.result) {
-        throw new Error('No content received from the API');
-      }
-
-      // Store in ref first
-      generatedContentRef.current = data.result;
-      
-      // Then update state
-      console.log('Setting generated content...');
-      setGeneratedContent(data.result);
-      
-      // Update credits after successful generation
-      if (credits !== null) {
-        await updateCredits(credits - creditCost);
-      }
-      
-      // Show success toast
-      toast.success('Notes generated successfully!');
+      setNotes(data.notes);
       
     } catch (err) {
-      console.error('Error generating content:', err);
-      setError(err instanceof Error ? err.message : 'Failed to generate content. Please try again.');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
-      console.log('Setting loading state to false...');
       setLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -188,21 +69,50 @@ export default function NotesRagContent() {
               </svg>
               Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">Notes with RAG</h1>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">Generate Viral Notes</h1>
             <p className="mt-2 text-gray-600">
-              Generate content from your notes using different AI models
+              Create engaging, viral-worthy notes for your content
             </p>
           </div>
         </div>
 
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
-          <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-            <span className="text-amber-700">Credits required: {creditCost}</span>
-            <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
-          </div>
+          <form onSubmit={handleGenerateNotes} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Topic <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="What would you like to write about?"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900"
+                rows={3}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md
+                      hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500
+                      focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating Notes...
+                </span>
+              ) : 'Generate Notes'}
+            </button>
+          </form>
 
           {error && (
-            <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="mt-6 bg-red-50 border-l-4 border-red-400 p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -216,121 +126,16 @@ export default function NotesRagContent() {
             </div>
           )}
 
-          <form onSubmit={handleGenerate} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Your Topic
-              </label>
-              <input
-                type="text"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Enter a topic to generate notes about..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-900 transform-gpu"
-                disabled={loading}
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={loading || !notes.trim() || (credits ?? 0) < creditCost}
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Generating...
-                </span>
-              ) : (
-                'Generate 5 Notes'
-              )}
-            </Button>
-          </form>
-
-          {generatedContent && (
+          {notes && (
             <div className="mt-8">
-              {/* Llama Notes */}
-              {generatedContent.llama.shortNotes.length > 0 && (
-                <div className="mt-8">
-                  <h3 className="text-lg font-semibold text-[#181819] mb-4">
-                    Generated Notes using Llama 3.3 70B for: {notes}
-                  </h3>
-                  <div className="grid gap-4">
-                    {generatedContent.llama.shortNotes.map((note, index) => (
-                      <div
-                        key={index}
-                        className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        <div 
-                          className="whitespace-pre-wrap font-sans text-[#181819] pr-12"
-                          dangerouslySetInnerHTML={{ __html: note }}
-                        />
-                        <button
-                          onClick={() => copyToClipboard(note, index)}
-                          className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
-                            copiedIndex === index
-                              ? 'text-green-600 bg-green-50'
-                              : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
-                          }`}
-                        >
-                          {copiedIndex === index ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                    ))}
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Notes</h2>
+              <div className="prose prose-amber prose-lg max-w-none">
+                {notes.split('###---###').map((note, index) => (
+                  <div key={index} className="mb-8 p-6 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="whitespace-pre-wrap">{note.trim()}</div>
                   </div>
-                </div>
-              )}
-
-              {/* OpenAI Notes */}
-              {generatedContent.openai.shortNotes.length > 0 && (
-                <div className="mt-12">
-                  <h3 className="text-lg font-semibold text-[#181819] mb-4">
-                    Generated Notes using GPT-4 for: {notes}
-                  </h3>
-                  <div className="grid gap-4">
-                    {generatedContent.openai.shortNotes.map((note, index) => (
-                      <div
-                        key={index}
-                        className="relative group rounded-lg border border-gray-200 p-4 bg-white shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        <div 
-                          className="whitespace-pre-wrap font-sans text-[#181819] pr-12"
-                          dangerouslySetInnerHTML={{ __html: note }}
-                        />
-                        <button
-                          onClick={() => copyToClipboard(note, index + 100)}
-                          className={`absolute top-4 right-4 p-2 rounded-md transition-all duration-200 ${
-                            copiedIndex === index + 100
-                              ? 'text-green-600 bg-green-50'
-                              : 'text-gray-400 hover:text-gray-600 bg-white opacity-0 group-hover:opacity-100'
-                          }`}
-                        >
-                          {copiedIndex === index + 100 ? (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                            </svg>
-                          )}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { promises as fs } from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import Together from 'together-ai';
 
 
 // Set the maximum duration for the route to 35 seconds
@@ -346,91 +347,90 @@ Think through this step by step, but only output the final selection.`;
  */
 export async function POST(req: Request) {
   try {
-    const { userTopic, userId, model = 'deepseek', isLongForm = false } = await req.json();
-
-    if (!userTopic) {
-      return NextResponse.json({ error: 'Topic is required' }, { status: 400 });
+    // Expecting a JSON body with a "topic" field from the frontend.
+    const { topic } = await req.json();
+    if (!topic) {
+      return NextResponse.json({ error: "Topic is required" }, { status: 400 });
     }
 
-    // Initialize if needed
-    if (!initialized) {
-      await init();
-    }
+    // Build the prompt using the provided instructions.
+    const prompt = `
+USER TOPIC = ${topic}
 
-    // Step 1: Use LLM to select the most appropriate examples
-    console.log("Step 1: Selecting examples with LLM");
-    const selectionPrompt = buildExampleSelectionPrompt(examples, userTopic);
-    console.log("Example selection prompt:", selectionPrompt);
+Write 5 highly engaging notes designed to go viral on the USER TOPIC above. Keep them engaging, punchy, and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
 
-    const selectionCompletion = await groq.chat.completions.create({
+The notes should challenge assumptions, reframe ideas, or create a sense of urgency. It should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
+
+Tailor the notes to the theme of USER TOPIC while maintaining a focus on progress, action, and cutting through distractions.
+
+If the topic is about Substack, highlight consistency, value, and playing the long game. Highlight Substack's advantages over other social media platforms, its organic nature.
+
+For engagement-driven notes, incorporate a strong prompt that encourages reflection or discussion. The goal is to make readers think and want to respond.
+
+Each note should start with a strong hook. What's a strong hook?
+
+It's creative. Outside the box. Eye-catching. It creates an emotion, a feeling. It makes people stop scrolling.
+
+A great hook has maximum 10 words, always contains a number, an intriguing question, or a surprising statistic. 
+Best if written from the perspective of the reader. 
+The hook is always followed by a re-hook in the first sentence of the note.
+
+It avoids jargon, fancy words, questions, emojis at all costs. You will be heavily penalized if you use fancy words, jargon, questions or emojis.
+
+Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
+Each sentence should be written on a new line. 
+Maximize readability through structure and formatting. 
+Use short & sweet sentences that pack a punch and are easily digestible.
+Separate each note with the markdown delimiter ###---###.
+Ensure a balanced mixture of short-form and long-form notes. 
+Short form notes are concise, punchy, and easy to read.
+Long-form notes are educational, personal, and share a story. Long-form notes have at least 400 words. 
+Output only the notes and nothing else—no explanations or additional content.
+DO NOT END YOUR NOTES WITH A QUESTION!
+Think through this step by step.
+    `.trim();
+
+    // Initialize Together AI.
+    const together = new Together();
+
+    // Call Together AI's chat completions endpoint.
+    const responseStream = await together.chat.completions.create({
       messages: [
         {
-          role: "user",
-          content: selectionPrompt,
+          role: "system",
+          content: "Act like a seasoned Substack creator who consistently goes viral with impactful notes."
         },
-      ],
-      model: "llama-3.3-70b-specdec",
-      temperature: 0.97,
-      max_tokens: 4000,
-      top_p: 0.95,
-      stream: false,
-    });
-
-    const selectedExamplesText = selectionCompletion.choices[0]?.message?.content || '';
-    console.log("Selected examples:", selectedExamplesText);
-
-    // Step 2: Generate new notes using the selected examples with both models
-    console.log("Step 2: Generating new notes using selected examples");
-    const generationPrompt = buildPrompt(selectedExamplesText, userTopic);
-    console.log("Final generation prompt:", generationPrompt);
-
-    // Generate with Groq (llama)
-    const llamaCompletion = await groq.chat.completions.create({
-      messages: [
         {
           role: "user",
-          content: generationPrompt,
-        },
-      ],
-      model: "llama-3.3-70b-specdec",
-      temperature: 1.37,
-      max_tokens: 3200,
-      top_p: 1,
-      stream: false,
-    });
-
-    // Generate with OpenAI
-    const openaiCompletion = await openai.chat.completions.create({
-      model: "o1-mini",
-      messages: [
-        {
-          role: "user",
-          content: generationPrompt
+          content: prompt
         }
       ],
-      temperature: 1,
-      max_completion_tokens: 2048,
-      top_p: 1
+      model: "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+      max_tokens: 4096,
+      temperature: 0.7,
+      top_p: 0.7,
+      top_k: 50,
+      repetition_penalty: 1,
+      stop: ["<|eot_id|>"],
+      stream: true
     });
 
-    const llamaResult = llamaCompletion.choices[0]?.message?.content || '';
-    const openaiResult = openaiCompletion.choices[0]?.message?.content || '';
+    // Accumulate tokens into a full message.
+    let fullMessage = "";
+    for await (const token of responseStream) {
+      const content = token.choices[0]?.delta?.content;
+      if (content) {
+        fullMessage += content;
+      }
+    }
 
-    const parsedLlamaNotes = parseGeneratedNotes(llamaResult);
-    const parsedOpenAINotes = parseGeneratedNotes(openaiResult);
-
-    return NextResponse.json({
-      result: {
-        llama: parsedLlamaNotes,
-        openai: parsedOpenAINotes
-      },
-      selectedExamples: selectedExamplesText
-    });
-
+    // Return the complete notes as JSON.
+    return NextResponse.json({ notes: fullMessage });
+    
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error in TogetherAI call:", error);
     return NextResponse.json(
-      { error: 'Failed to analyze content' },
+      { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
     );
   }

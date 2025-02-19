@@ -1,8 +1,8 @@
 import NotesRagContent from './NotesRagContent';
 
 export const metadata = {
-  title: 'Notes with RAG - Dashboard',
-  description: 'Analyze Substack notes with RAG (Retrieval Augmented Generation)',
+  title: 'Viral Notes - Dashboard',
+  description: 'Generate viral notes with our custom AI model',
 };
 
 export default function NotesRagPage() {
