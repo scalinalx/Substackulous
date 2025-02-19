@@ -107,10 +107,7 @@ export default function ThumbnailGenerator() {
                   }
                   setGeneratedImages({ urls: data.imageUrls });
                   completionReceived = true;
-                  // Update credits after successful generation
-                  if (credits !== null) {
-                    await updateCredits(credits - creditCost);
-                  }
+                  // Credit deduction is handled by TitlesContent; do not deduct here.
                   break;
               }
             } catch (e) {
@@ -227,13 +224,14 @@ export default function ThumbnailGenerator() {
               alt={`Generated image ${selectedImageIndex + 1}`}
               width={1200}
               height={800}
+              unoptimized
               className="rounded-lg shadow-xl"
             />
             <button
               onClick={() => handleDownload(generatedImages.urls[selectedImageIndex])}
               className="absolute bottom-4 right-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-6 py-3 rounded-lg shadow-lg hover:from-amber-600 hover:to-amber-700 transition-colors flex items-center space-x-2"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
               <span>Download Image</span>
@@ -255,6 +253,7 @@ export default function ThumbnailGenerator() {
                   alt={`Thumbnail ${index + 1}`}
                   width={200}
                   height={150}
+                  unoptimized
                   className="rounded-lg"
                 />
               </button>
@@ -264,4 +263,4 @@ export default function ThumbnailGenerator() {
       )}
     </div>
   );
-} 
+}
