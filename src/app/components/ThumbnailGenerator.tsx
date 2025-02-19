@@ -108,6 +108,9 @@ export default function ThumbnailGenerator() {
                   setGeneratedImages({ urls: data.imageUrls });
                   completionReceived = true;
                   // Credit deduction is handled by TitlesContent; do not deduct here.
+                  if (credits !== null) {
+                    await updateCredits(credits - creditCost);
+                  }
                   break;
               }
             } catch (e) {
