@@ -26,7 +26,7 @@ export default function HomeRunContent() {
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
   const creditCost = 3;
 
-  // Constructs a prompt string using the posts data.
+  // Constructs the analysis prompt using the posts data.
   const constructPrompt = (posts: Post[]) => {
     const postsSection = posts.map(post => (
       `${post.title}\n${post.excerpt}\n`
@@ -163,8 +163,11 @@ Output ONLY the 10 viral ideas. Do not output any additional explanation. Please
 
       setPosts(processedPosts);
 
-      // Construct prompt from posts and perform analysis
+      // Construct the analysis prompt from posts and log it to the console
       const prompt = constructPrompt(processedPosts);
+      console.log('Analysis Prompt:', prompt);
+
+      // Perform analysis and generate viral ideas
       const result = await analyzeWithGroq(prompt);
 
       // Update results state with analysis and full viral ideas response
