@@ -26,6 +26,7 @@ export default function HomeRunContent() {
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
   const creditCost = 3;
 
+  // Constructs a prompt string using the posts data.
   const constructPrompt = (posts: Post[]) => {
     const postsSection = posts.map(post => (
       `${post.title}\n${post.excerpt}\n`
@@ -67,6 +68,9 @@ Be as detailed as possible. Focus on highlighting what makes winners win.
 Think through this step by step.`;
   };
 
+  // This function performs two sequential API calls:
+  // 1. The first call analyzes the posts content.
+  // 2. The second call generates viral post ideas based on the analysis.
   const analyzeWithGroq = async (prompt: string): Promise<AnalysisResults> => {
     try {
       // First API call for content analysis
@@ -84,7 +88,7 @@ Think through this step by step.`;
       const analysisData = await analysisResponse.json();
       const cleanedAnalysis = analysisData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-      // Second API call for viral post ideas using the cleaned analysis
+      // Construct the viral ideas prompt using the cleaned analysis
       const viralIdeasPrompt = `Act as an expert viral content strategist and creative writer for Substack. You will work solely from the structured analysis provided below, which outlines a successful content creator's formatting, tone, voice, style, topics, themes, and recurring ideas. 
 
 Based on this analysis, please first determine:
@@ -106,6 +110,10 @@ ${cleanedAnalysis}
 
 Output ONLY the 10 viral ideas. Do not output any additional explanation. Please work through this task step-by-step, first identifying the FIELD/INDUSTRY and TARGET AUDIENCE from the analysis, and then provide your list of 10 viral post ideas.`;
 
+      // Log the viralIdeasPrompt to the browser console for testing
+      console.log('Viral Ideas Prompt:', viralIdeasPrompt);
+
+      // Second API call for viral post ideas
       const ideasResponse = await fetch('/api/groq/analyze-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
