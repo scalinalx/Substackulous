@@ -15,17 +15,16 @@ interface Post {
 interface AnalysisResults {
   analysis: string;
   ideas: string;
-  shortNotes: string[];
 }
 
 export default function HomeRunContent() {
-  const { user, profile, credits } = useAuth();
+  const { user, profile, credits, updateCredits } = useAuth();
   const [substackUrl, setSubstackUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [results, setResults] = useState<AnalysisResults>({ analysis: '', ideas: '', shortNotes: [] });
+  const [results, setResults] = useState<AnalysisResults>({ analysis: '', ideas: '' });
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
-  const creditCost = 3; // Maximum cost for home run analysis
+  const creditCost = 3;
 
   const constructPrompt = (posts: Post[]) => {
     const postsSection = posts.map(post => (
@@ -73,9 +72,7 @@ Think through this step by step.`;
       // First API call for content analysis
       const analysisResponse = await fetch('/api/groq/analyze-content', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
       });
 
@@ -87,7 +84,7 @@ Think through this step by step.`;
       const analysisData = await analysisResponse.json();
       const cleanedAnalysis = analysisData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
-      // Second API call for viral post ideas
+      // Second API call for viral post ideas using the cleaned analysis
       const viralIdeasPrompt = `Act as an expert viral content strategist and creative writer for Substack. You will work solely from the structured analysis provided below, which outlines a successful content creator's formatting, tone, voice, style, topics, themes, and recurring ideas. 
 
 Based on this analysis, please first determine:
@@ -107,13 +104,11 @@ Below is the structured analysis context:
 
 ${cleanedAnalysis}
 
-Output ONLY the 10 viral ideas. Do not output any addition explanation or exposition or clarifications. Please work through this task step-by-step, first identifying the FIELD/INDUSTRY and TARGET AUDIENCE from the analysis, and then provide your list of 10 viral post ideas.`;
+Output ONLY the 10 viral ideas. Do not output any additional explanation. Please work through this task step-by-step, first identifying the FIELD/INDUSTRY and TARGET AUDIENCE from the analysis, and then provide your list of 10 viral post ideas.`;
 
       const ideasResponse = await fetch('/api/groq/analyze-content', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: viralIdeasPrompt }),
       });
 
@@ -127,8 +122,7 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
       
       return {
         analysis: cleanedAnalysis,
-        ideas: cleanedIdeas,
-        shortNotes: cleanedIdeas.split('\n').slice(0, 5).map((note: string) => note.trim())
+        ideas: cleanedIdeas
       };
     } catch (error) {
       console.error('Error analyzing content:', error);
@@ -139,18 +133,11 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
   const fetchTopPosts = async () => {
     try {
       setIsLoading(true);
-      
-      // Don't reset results here, as it causes a flash of empty content
-      // setResults({ analysis: '', ideas: '', shortNotes: [] });
-      
+
       const response = await fetch('/api/substack-pro/analyze-posts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: substackUrl.trim()
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: substackUrl.trim() }),
       });
 
       if (!response.ok) {
@@ -160,35 +147,50 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
 
       const data = await response.json();
       
-      // Process the posts to get title and first 500 characters
+      // Process posts to extract title and snippet
       const processedPosts = data.posts.slice(0, 50).map((post: any) => ({
         title: post.title,
         excerpt: post.preview || '',
       }));
 
       setPosts(processedPosts);
-      
-      // Construct prompt and analyze with Groq
+
+      // Construct prompt from posts and perform analysis
       const prompt = constructPrompt(processedPosts);
       const result = await analyzeWithGroq(prompt);
-      
-      // Update results in a single state update
+
+      // Update results state with analysis and full viral ideas response
       setResults(prevResults => ({
         ...prevResults,
         ...result
       }));
-      
+
+      // Check if credits is null before updating
+      if (credits === null) {
+        toast.error("Credits information is missing. Please refresh the page.");
+        return;
+      }
+
+      // Deduct credits using the updateCredits function
+      try {
+        await updateCredits(credits - creditCost);
+        console.log("Credits updated");
+      } catch (updateError) {
+        console.error("Error updating credits:", updateError);
+        toast.error("Failed to update credits. Please refresh the page.");
+        return;
+      }
+
       toast.success('Content analysis completed successfully!');
     } catch (error) {
       console.error('Error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to analyze content');
-      throw error; // Re-throw to be handled by the calling function
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Separate handlers for each action to prevent state conflicts
   const handleBrainstorm = async () => {
     try {
       setActiveSection('brainstorm');
@@ -219,7 +221,6 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
     }
   };
 
-  // Add useEffect to persist substackUrl
   useEffect(() => {
     const savedUrl = localStorage.getItem('substackUrl');
     if (savedUrl) {
@@ -227,18 +228,16 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
     }
   }, []);
 
-  // Save substackUrl when it changes
   useEffect(() => {
     if (substackUrl) {
       localStorage.setItem('substackUrl', substackUrl);
     }
   }, [substackUrl]);
 
-  // Helper function to get the appropriate content based on active section
+  // Helper function: return full ideas response when 'brainstorm' is active
   const getDisplayContent = () => {
     if (activeSection === 'brainstorm') {
-      // Return the short notes joined with line breaks
-      return results.shortNotes.join('\n\n---\n\n');
+      return results.ideas;
     }
     return results.analysis;
   };
@@ -310,32 +309,14 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
               </Button>
             </div>
 
-            {/* Results Section */}
-            {(results.shortNotes?.length > 0 || results.analysis) && (
+            {(results.ideas || results.analysis) && (
               <div className="mt-8 space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {activeSection === 'brainstorm' ? '5 Viral Notes' : 'Content Analysis Results'}
+                  {activeSection === 'brainstorm' ? 'Viral Post Ideas' : 'Content Analysis Results'}
                 </h2>
                 <div className="bg-gray-50 p-6 rounded-lg">
-                  <div className="prose prose-sm max-w-none">
-                    {activeSection === 'brainstorm' ? (
-                      // Display each note in a separate div
-                      results.shortNotes.map((note, index) => (
-                        <div key={index} className="mb-8 last:mb-0">
-                          <div 
-                            className="whitespace-pre-wrap" 
-                            dangerouslySetInnerHTML={{ __html: note }}
-                          />
-                          {index < results.shortNotes.length - 1 && (
-                            <hr className="my-6 border-gray-200" />
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="whitespace-pre-wrap">
-                        {results.analysis}
-                      </div>
-                    )}
+                  <div className="whitespace-pre-wrap">
+                    {getDisplayContent()}
                   </div>
                 </div>
               </div>
@@ -345,4 +326,4 @@ Output ONLY the 10 viral ideas. Do not output any addition explanation or exposi
       </div>
     </div>
   );
-} 
+}
