@@ -24,13 +24,11 @@ export default function HomeRunContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [results, setResults] = useState<AnalysisResults>({ analysis: '', ideas: '', notes: '' });
-  // activeSection controls which additional API call to perform:
-  // 'brainstorm' => viral ideas; 'notes' => 3 notes; 'post' => fallback to analysis.
+  // activeSection controls what is displayed on the UI.
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
   const creditCost = 3;
 
-  // Constructs the analysis prompt using the posts data.
-  // Now the prompt references only the first 20 posts.
+  // Constructs the analysis prompt using only the first 20 posts.
   const constructPrompt = (posts: Post[]) => {
     const postsSection = posts.map(post => `${post.title}\n${post.excerpt}\n`).join('\n');
     const promptText = `You are an expert content analyst and Substack content coach. I will provide you with a collection of Substack posts, where each post includes a headline and a 500‑character snippet. Your task is to analyze this collection and extract detailed patterns across the following dimensions:
@@ -67,17 +65,16 @@ Provide your answer in a structured format with clear headings for each category
 
 Be as detailed as possible. Focus on highlighting what makes winners win. 
 Think through this step by step.`;
-
     console.log('Constructed Analysis Prompt:', promptText);
     return promptText;
   };
 
-  // This function performs the analysis API call and then conditionally calls a second API call
-  // based on the mode parameter: 'brainstorm' calls viral ideas API; 'notes' calls the 3 notes API.
+  // This function performs one API call that both analyzes the posts and generates the final output,
+  // based on the mode parameter.
   const analyzeWithGroq = async (prompt: string, mode: 'brainstorm' | 'notes' | 'post'): Promise<AnalysisResults> => {
     try {
       console.log('Starting analysis API call with prompt...');
-      // First API call: Get detailed content analysis.
+      // Single API call for detailed analysis.
       const analysisResponse = await fetch('/api/groq/analyze-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,37 +90,23 @@ Think through this step by step.`;
       const cleanedAnalysis = analysisData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       console.log('Cleaned Analysis:', cleanedAnalysis);
 
-      // Define variables for additional API responses.
+      // Variables for additional output.
       let ideasResult = '';
       let notesResult = '';
 
       if (mode === 'brainstorm') {
-        // Construct and log the viral ideas prompt.
-        const viralIdeasPrompt = `Act as an expert viral content strategist and creative writer for Substack. You will work solely from the structured analysis provided below, which outlines a successful content creator's formatting, tone, voice, style, topics, themes, and recurring ideas. 
+        // Build and log the combined prompt for viral ideas.
+        const combinedIdeasPrompt = `Based on the following analysis of Substack posts, identify key patterns and immediately generate 10 viral post ideas. Each idea should include a catchy headline (using emojis, numbers, or questions) and a brief 2-3 sentence description with actionable hooks.
 
-Based on this analysis, please first determine:
-1. The most appropriate FIELD/INDUSTRY that the content belongs to.
-2. The TARGET AUDIENCE that the content is meant to engage.
-
-Note: Use your best inference based on the analysis context if these details are not explicitly mentioned.
-
-The CONTENT STRATEGY GOAL is fixed: to establish your presence on Substack, grow your Substack audience, engage & connect with your community, and maximize your conversion rate from free subscribers to paid.
-
-Using the above context and your inferred FIELD/INDUSTRY and TARGET AUDIENCE, generate **10 viral post ideas** for Substack. For each idea, provide:
-
-1. **A catchy headline:** Use attention-grabbing elements such as emojis, numbers, or rhetorical questions, in line with the analysis.
-2. **A brief concept description (2–3 sentences):** Outline the post's content, structure, and key engagement hooks, explaining how it aligns with the style, tone, and themes from the analysis.
-
-Below is the structured analysis context:
-
+Analysis:
 ${cleanedAnalysis}
 
-Output ONLY the 10 viral ideas. Do not output any additional explanation. Please work through this task step-by-step, first identifying the FIELD/INDUSTRY and TARGET AUDIENCE from the analysis, and then provide your list of 10 viral post ideas.`;
-        console.log('Viral Ideas Prompt:', viralIdeasPrompt);
+Output ONLY the 10 viral post ideas in a numbered list.`;
+        console.log('Combined Viral Ideas Prompt:', combinedIdeasPrompt);
         const ideasResponse = await fetch('/api/groq/analyze-content', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: viralIdeasPrompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
+          body: JSON.stringify({ prompt: combinedIdeasPrompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
         });
         if (!ideasResponse.ok) {
           const error = await ideasResponse.json();
@@ -133,23 +116,18 @@ Output ONLY the 10 viral ideas. Do not output any additional explanation. Please
         ideasResult = ideasData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         console.log('Viral Ideas Result:', ideasResult);
       } else if (mode === 'notes') {
-        // Construct and log the 3 notes prompt.
-        const notes3Prompt = ` Act like a seasoned Substack creator who consistently goes viral with impactful notes.
-        
-        ${cleanedAnalysis}
-        
-Write 3 highly engaging notes designed to go viral based on the analysis above. Keep them punchy and impactful. Every sentence should stand on its own, creating rhythm and flow. No fluff, no wasted words.
+        // Build and log the combined prompt for 3 viral notes.
+        const combinedNotesPrompt = `${cleanedAnalysis}
 
-The notes should challenge assumptions, reframe ideas, or create a sense of urgency. They should feel like real talk—natural, conversational, and sharp, without being overly motivational. Focus on clarity and insight, avoiding jargon while still sounding intelligent.
+Based on the above analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
 
-Tailor the notes to the themes, topics, and target audience derived from the analysis above, while maintaining a focus on progress and action.
-
-Output ONLY the 3 notes. Do not output any additional explanation.`;
-        console.log('3 Notes Prompt:', notes3Prompt);
+Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
+`;
+        console.log('Combined 3 Notes Prompt:', combinedNotesPrompt);
         const notesResponse = await fetch('/api/groq/analyze-content', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: notes3Prompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
+          body: JSON.stringify({ prompt: combinedNotesPrompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
         });
         if (!notesResponse.ok) {
           const error = await notesResponse.json();
@@ -160,7 +138,7 @@ Output ONLY the 3 notes. Do not output any additional explanation.`;
         console.log('3 Notes Result:', notesResult);
       }
       
-      // For mode 'post' or other modes, simply use the analysis.
+      // For mode 'post' or any other case, we simply return the analysis.
       return {
         analysis: cleanedAnalysis,
         ideas: ideasResult,
@@ -172,7 +150,8 @@ Output ONLY the 3 notes. Do not output any additional explanation.`;
     }
   };
 
-  const fetchTopPosts = async () => {
+  // Modified fetchTopPosts now accepts a mode parameter.
+  const fetchTopPosts = async (mode: 'brainstorm' | 'notes' | 'post') => {
     try {
       setIsLoading(true);
       console.log('Starting to fetch posts from Substack...');
@@ -200,15 +179,15 @@ Output ONLY the 3 notes. Do not output any additional explanation.`;
       console.log('Processed Posts (20):', processedPosts);
       setPosts(processedPosts);
 
-      // Construct the analysis prompt from posts.
+      // Construct the analysis prompt using these posts.
       const prompt = constructPrompt(processedPosts);
       console.log('Analysis Prompt:', prompt);
 
-      // Call the analysis function, passing the activeSection as the mode.
-      console.log(`Starting analyzeWithGroq with mode: ${activeSection}`);
-      const result = await analyzeWithGroq(prompt, activeSection ?? 'post');
+      // Call analyzeWithGroq with the explicit mode parameter.
+      console.log(`Starting analyzeWithGroq with mode: ${mode}`);
+      const result = await analyzeWithGroq(prompt, mode);
 
-      // Update results state with analysis, viral ideas, and/or notes.
+      // Update state with the results.
       setResults(prevResults => ({
         ...prevResults,
         ...result
@@ -237,12 +216,12 @@ Output ONLY the 3 notes. Do not output any additional explanation.`;
     }
   };
 
-  // Button handlers set the activeSection (mode) and then call fetchTopPosts.
+  // Button handlers now call fetchTopPosts with an explicit mode.
   const handleBrainstorm = async () => {
     try {
       console.log('Brainstorm button clicked.');
       setActiveSection('brainstorm');
-      await fetchTopPosts();
+      await fetchTopPosts('brainstorm');
     } catch (error) {
       console.error('Brainstorm error:', error);
       setActiveSection(null);
@@ -253,7 +232,7 @@ Output ONLY the 3 notes. Do not output any additional explanation.`;
     try {
       console.log('3 Notes button clicked.');
       setActiveSection('notes');
-      await fetchTopPosts();
+      await fetchTopPosts('notes');
     } catch (error) {
       console.error('Generate notes error:', error);
       setActiveSection(null);
@@ -264,7 +243,7 @@ Output ONLY the 3 notes. Do not output any additional explanation.`;
     try {
       console.log('1 Post button clicked.');
       setActiveSection('post');
-      await fetchTopPosts();
+      await fetchTopPosts('post');
     } catch (error) {
       console.error('Generate post error:', error);
       setActiveSection(null);
@@ -284,7 +263,7 @@ Output ONLY the 3 notes. Do not output any additional explanation.`;
     }
   }, [substackUrl]);
 
-  // Helper function: return the correct output based on activeSection.
+  // Helper function: returns the correct content based on activeSection.
   const getDisplayContent = () => {
     if (activeSection === 'brainstorm') {
       return results.ideas;
