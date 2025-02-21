@@ -117,7 +117,7 @@ Output ONLY the 10 viral ideas. Do not output any additional explanation. Please
       const ideasResponse = await fetch('/api/groq/analyze-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: viralIdeasPrompt }),
+        body: JSON.stringify({ prompt: viralIdeasPrompt, model:'llama-3.3-70b-specdec', temperature: 0.62 }),
       });
 
       if (!ideasResponse.ok) {

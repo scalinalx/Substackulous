@@ -9,7 +9,13 @@ const groq = new Groq({
 
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json();
+    // Destructure the prompt, model, and temperature from the request.
+    // If model or temperature are not provided, default values are used.
+    const { 
+      prompt, 
+      model = "deepseek-r1-distill-llama-70b-specdec", 
+      temperature = 1.37 
+    } = await req.json();
 
     const completion = await groq.chat.completions.create({
       messages: [
@@ -18,8 +24,8 @@ export async function POST(req: Request) {
           content: prompt,
         },
       ],
-      model: "deepseek-r1-distill-llama-70b-specdec",
-      temperature: 1.37,
+      model: model,
+      temperature: temperature,
       max_tokens: 8192,
       top_p: 0.95,
       stream: false,
@@ -35,4 +41,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-} 
+}
