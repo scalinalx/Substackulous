@@ -118,10 +118,12 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
       } else if (mode === 'notes') {
         // Build and log the combined prompt for 3 viral notes.
         const combinedNotesPrompt = `Act like a seasoned Substack creator who consistently goes viral with impactful notes.
-        ${cleanedAnalysis}
+${cleanedAnalysis}
 
 Based on the above analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
-Each sentence must be output on a new line. Use short & sweet senteces that pack a punch. Start each note with a strong hook. A strong hook is a short sentence that grabs the reader's attention and makes them want to read the note by creating a sense of urgency or curiosity or scarcity or awe or other VERY STRONG emotions. 
+Write in the style of the Hemmingway using short & sweet sentences that trigger deep emotions. No sentence should exceed 15 words.
+Each sentence must be output on a new line. 
+Start each note with a strong hook that grabs attention. A strong hook is a sentence that is short,has max 10 words, is punchy and triggers deep emotions.
 
 Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
 `;
@@ -241,6 +243,8 @@ Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
     }
   };
 
+  // Removed the "1 Post" button and its handler.
+  /*
   const handleGeneratePost = async () => {
     try {
       console.log('1 Post button clicked.');
@@ -251,6 +255,7 @@ Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
       setActiveSection(null);
     }
   };
+  */
 
   useEffect(() => {
     const savedUrl = localStorage.getItem('substackUrl');
@@ -316,7 +321,7 @@ Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Button
                 onClick={handleBrainstorm}
                 disabled={isLoading || !substackUrl}
@@ -331,14 +336,6 @@ Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
                 className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
               >
                 {isLoading && activeSection === 'notes' ? 'Loading...' : '3 Notes'}
-              </Button>
-
-              <Button
-                onClick={handleGeneratePost}
-                disabled={isLoading || !substackUrl}
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700"
-              >
-                {isLoading && activeSection === 'post' ? 'Loading...' : '1 Post'}
               </Button>
             </div>
 
