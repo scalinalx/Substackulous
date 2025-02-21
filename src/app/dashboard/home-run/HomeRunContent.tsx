@@ -121,7 +121,7 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
 ${cleanedAnalysis}
 
 Based on the above analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
-Write in the style of the Hemmingway using short & sweet sentences that trigger deep emotions. No sentence should exceed 15 words.
+Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 15 words.
 Each sentence must be output on a new line. 
 Start each note with a strong hook that grabs attention. A strong hook is a sentence that is short,has max 10 words, is punchy and triggers deep emotions.
 
