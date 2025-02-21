@@ -106,7 +106,7 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
         const ideasResponse = await fetch('/api/groq/analyze-content', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: combinedIdeasPrompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
+          body: JSON.stringify({ prompt: combinedIdeasPrompt, model: 'deepseek-r1-distill-llama-70b-specdec', temperature: 0.45 }),
         });
         if (!ideasResponse.ok) {
           const error = await ideasResponse.json();
@@ -117,9 +117,11 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
         console.log('Viral Ideas Result:', ideasResult);
       } else if (mode === 'notes') {
         // Build and log the combined prompt for 3 viral notes.
-        const combinedNotesPrompt = `${cleanedAnalysis}
+        const combinedNotesPrompt = `Act like a seasoned Substack creator who consistently goes viral with impactful notes.
+        ${cleanedAnalysis}
 
 Based on the above analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
+Each sentence must be output on a new line. Use short & sweet senteces that pack a punch. Start each note with a strong hook. A strong hook is a short sentence that grabs the reader's attention and makes them want to read the note by creating a sense of urgency or curiosity or scarcity or awe or other VERY STRONG emotions. 
 
 Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
 `;
