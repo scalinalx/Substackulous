@@ -121,7 +121,8 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
 ${cleanedAnalysis}
 
 Based on the above analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
-Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 15 words.
+Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 15 words. 
+Vary sentence length to create rhythm and flow. Maximize mobile readability.
 Each sentence must be output on a new line. 
 Start each note with a strong hook that grabs attention. A strong hook is a sentence that is short,has max 10 words, is punchy and triggers deep emotions.
 
@@ -131,7 +132,7 @@ Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
         const notesResponse = await fetch('/api/groq/analyze-content', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: combinedNotesPrompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
+          body: JSON.stringify({ prompt: combinedNotesPrompt, model: 'llama-3.3-70b-specdec', temperature: 0.89 }),
         });
         if (!notesResponse.ok) {
           const error = await notesResponse.json();
