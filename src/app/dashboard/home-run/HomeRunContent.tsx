@@ -211,6 +211,7 @@ Think through this step by step.`;
     try {
       setIsLoading(true);
       console.log('Starting to fetch posts from Substack...');
+      console.log('Substack URL:', substackUrl);
 
       // Fetch posts from Substack – limit to 20 posts.
       const response = await fetch('/api/substack-pro/analyze-posts', {
