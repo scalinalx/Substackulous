@@ -24,7 +24,6 @@ export default function HomeRunContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [results, setResults] = useState<AnalysisResults>({ analysis: '', ideas: '', notes: '' });
-  // activeSection controls what is displayed on the UI.
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
   const creditCost = 3;
 
@@ -69,33 +68,30 @@ Think through this step by step.`;
     return promptText;
   };
 
-  // This function performs one API call that both analyzes the posts and generates the final output,
-  // based on the mode parameter.
+  // This function performs one API call that generates the final output based on the mode.
   const analyzeWithGroq = async (prompt: string, mode: 'brainstorm' | 'notes' | 'post'): Promise<AnalysisResults> => {
     try {
-      console.log('Starting analysis API call with prompt...');
-      // Single API call for detailed analysis.
-      const analysisResponse = await fetch('/api/groq/analyze-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
-      });
-      console.log('Analysis API call completed.');
-
-      if (!analysisResponse.ok) {
-        const error = await analysisResponse.json();
-        throw new Error(error.message || 'Failed to analyze content');
-      }
-      const analysisData = await analysisResponse.json();
-      const cleanedAnalysis = analysisData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-      console.log('Cleaned Analysis:', cleanedAnalysis);
-
-      // Variables for additional output.
       let ideasResult = '';
       let notesResult = '';
+      let cleanedAnalysis = '';
 
       if (mode === 'brainstorm') {
-        // Build and log the combined prompt for viral ideas.
+        console.log('Starting analysis API call with prompt for Brainstorm...');
+        const analysisResponse = await fetch('/api/groq/analyze-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
+        });
+        console.log('Analysis API call completed for Brainstorm.');
+        if (!analysisResponse.ok) {
+          const error = await analysisResponse.json();
+          throw new Error(error.message || 'Failed to analyze content');
+        }
+        const analysisData = await analysisResponse.json();
+        cleanedAnalysis = analysisData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+        console.log('Cleaned Analysis (Brainstorm):', cleanedAnalysis);
+
+        // Build combined prompt for viral ideas.
         const combinedIdeasPrompt = `Based on the following analysis of Substack posts, identify key patterns and immediately generate 10 viral post ideas. Each idea should include a catchy headline (using emojis, numbers, or questions) and a brief 2-3 sentence description with actionable hooks.
 
 Analysis:
@@ -116,20 +112,57 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
         ideasResult = ideasData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         console.log('Viral Ideas Result:', ideasResult);
       } else if (mode === 'notes') {
-        // Build and log the combined prompt for 3 viral notes.
-        const combinedNotesPrompt = `
-${cleanedAnalysis}
+        console.log('Starting workflow with prompt for Notes...');
+        // Build one combined prompt for both analysis and note generation.
+        // This prompt exactly matches your requirements.
+        const postsSection = posts.map(post => `${post.title}\n${post.excerpt}\n`).join('\n');
+        console.log('Posts Section:', postsSection);
+        const combinedNotesPrompt = `You are an expert content analyst and Substack content coach. I will provide you with a collection of Substack posts, where each post includes a headline and a 500‑character snippet. Your task is to analyze this collection and extract detailed patterns across the following dimensions:
 
-Based on the above analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
-Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 15 words. 
+Formatting:
+How are the headlines structured (capitalization, punctuation, use of symbols, etc.)?
+What is the layout of the snippets? (e.g., paragraph breaks, bullet points, emphasis on certain phrases)
+Please extract all formatting patterns that contribute to making the winners win. 
+
+Tone and Voice:
+What overall tone do the posts convey (e.g., energetic, authoritative, conversational, humorous)?
+What type of voice is used (first-person narrative, objective analysis, direct address to the reader)?
+
+Style:
+What are the common stylistic features? (e.g., use of rhetorical questions, metaphors, analogies, descriptive language, technical jargon)
+Are there consistent language choices or sentence structures?
+
+Topics and Themes:
+What recurring subjects or topics do the posts cover (e.g., Bitcoin, economic cycles, market trends)?
+Identify any common themes or ideas that appear across the posts.
+
+Ideas and Concepts:
+What innovative or recurring ideas are present? (e.g., predictions, strategies, risk management approaches, call-to-action elements)
+
+Input (sorted in descending order by Total Engagement):
+${postsSection}
+
+After you've finished the analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
+Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 20 words. 
 Vary sentence length to create rhythm and flow. Maximize mobile readability.
 Each sentence must be output on a new line. 
-Start each note with a strong hook that grabs attention. A strong hook is a sentence that is short, has a maximum of 10 words, is punchy and triggers deep emotions.
+Start each note with a strong hook that grabs attention. What's a strong hook? It's creative. Outside the box. Eye-catching. It creates an emotion, a feeling. It makes people stop scrolling.
 
-Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').`;
-        console.log('Combined 3 Notes Prompt (old togetherAI call):', combinedNotesPrompt);
-        // Now, instead of using our old Groq API for notes, use our new TogetherAI backend.
-        // We send the system prompt, user prompt, and temperature = 1.24.
+A great hook has maximum 10 words, always contains a number, an intriguing question, or a surprising statistic. 
+Best if written from the perspective of the reader. 
+The hook is always followed by a re-hook in the first sentence of the note.
+
+It avoids jargon, fancy words, questions, emojis at all costs. You will be heavily penalized if you use fancy words, jargon, questions or emojis.
+
+Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
+
+DO NOT OUTPUT THE ANALYSIS, PATTERNS, ETC
+
+Output ONLY the 3 notes, separated by a clear delimiter: ###---###. No other text, explanations or info.
+
+Think through this step by step.`;
+        console.log('Combined 3 Notes Prompt:', combinedNotesPrompt);
+        // Call the new TogetherAI backend endpoint with the combined prompt.
         const notesResponse = await fetch('/api/together/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -146,9 +179,22 @@ Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').`;
         const notesData = await notesResponse.json();
         notesResult = notesData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         console.log('3 Notes Result:', notesResult);
+      } else {
+        // For mode 'post' or any other case, we simply use the analysis.
+        console.log('Mode "post" selected, using only analysis.');
+        const analysisResponse = await fetch('/api/groq/analyze-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
+        });
+        if (!analysisResponse.ok) {
+          const error = await analysisResponse.json();
+          throw new Error(error.message || 'Failed to analyze content');
+        }
+        const analysisData = await analysisResponse.json();
+        cleanedAnalysis = analysisData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       }
       
-      // For mode 'post' or any other case, we simply return the analysis.
       return {
         analysis: cleanedAnalysis,
         ideas: ideasResult,
