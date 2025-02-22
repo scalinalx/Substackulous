@@ -113,6 +113,26 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
         console.log('Viral Ideas Result:', ideasResult);
       } else if (mode === 'notes') {
         console.log('Starting workflow with prompt for Notes...');
+        console.log('Prompt:', prompt);
+        console.log('Combined Promp V0: ', prompt+`After you've finished the analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
+Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 20 words. 
+Vary sentence length to create rhythm and flow. Maximize mobile readability.
+Each sentence must be output on a new line. 
+Start each note with a strong hook that grabs attention. What's a strong hook? It's creative. Outside the box. Eye-catching. It creates an emotion, a feeling. It makes people stop scrolling.
+
+A great hook has maximum 10 words, always contains a number, an intriguing question, or a surprising statistic. 
+Best if written from the perspective of the reader. 
+The hook is always followed by a re-hook in the first sentence of the note.
+
+It avoids jargon, fancy words, questions, emojis at all costs. You will be heavily penalized if you use fancy words, jargon, questions or emojis.
+
+Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
+
+DO NOT OUTPUT THE ANALYSIS, PATTERNS, ETC
+
+Output ONLY the 3 notes, separated by a clear delimiter: ###---###. No other text, explanations or info.
+
+Think through this step by step`);
         // Build one combined prompt for both analysis and note generation.
         // This prompt exactly matches your requirements.
         const postsSection = posts.map(post => `${post.title}\n${post.excerpt}\n`).join('\n');
