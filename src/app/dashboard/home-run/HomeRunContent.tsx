@@ -113,75 +113,42 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
         console.log('Viral Ideas Result:', ideasResult);
       } else if (mode === 'notes') {
         console.log('Starting workflow with prompt for Notes...');
-        console.log('Prompt:', prompt);
-        console.log('Combined Promp V0: ', prompt+`After you've finished the analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
-Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 20 words. 
-Vary sentence length to create rhythm and flow. Maximize mobile readability.
-Each sentence must be output on a new line. 
-Start each note with a strong hook that grabs attention. What's a strong hook? It's creative. Outside the box. Eye-catching. It creates an emotion, a feeling. It makes people stop scrolling.
-
-A great hook has maximum 10 words, always contains a number, an intriguing question, or a surprising statistic. 
-Best if written from the perspective of the reader. 
-The hook is always followed by a re-hook in the first sentence of the note.
-
-It avoids jargon, fancy words, questions, emojis at all costs. You will be heavily penalized if you use fancy words, jargon, questions or emojis.
-
-Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
-
-DO NOT OUTPUT THE ANALYSIS, PATTERNS, ETC
-
-Output ONLY the 3 notes, separated by a clear delimiter: ###---###. No other text, explanations or info.
-
-Think through this step by step`);
+        const cv0 = prompt+`After you've finished the analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
+        Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 20 words. 
+        Vary sentence length to create rhythm and flow. Maximize mobile readability.
+        Each sentence must be output on a new line. 
+        Start each note with a strong hook that grabs attention. What's a strong hook? It's creative. Outside the box. Eye-catching. It creates an emotion, a feeling. It makes people stop scrolling.
+        
+        A great hook has maximum 10 words, always contains a number, an intriguing question, or a surprising statistic. 
+        Best if written from the perspective of the reader. 
+        The hook is always followed by a re-hook in the first sentence of the note.
+        
+        It avoids jargon, fancy words, questions, emojis at all costs. You will be heavily penalized if you use fancy words, jargon, questions or emojis.
+        
+        Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
+        
+        DO NOT OUTPUT THE ANALYSIS, PATTERNS, ETC
+        
+        Output ONLY the 3 notes, separated by a clear delimiter: ###---###. No other text, explanations or info.
+        
+        Think through this step by step.`
+        const withoutFirst = cv0.replace(
+          /Provide your answer in a structured format with clear headings for each category \(Formatting, Tone and Voice, Style, Topics and Themes, Ideas\)\.\s*Be as detailed as possible\. Focus on highlighting what makes winners win\.\s*Think through this step by step\./,
+          ''
+        );
+        
+        // Remove the second unwanted phrase.
+        const cleanedCv0 = withoutFirst.replace(
+          /After you extract and list the patterns in each of these categories, please provide a detailed, comprehensive, insightful and nuanced structured summary that:\s*1\. Describes the overall style, tone, and voice of the content creator\.\s*2\. Highlights the key topics and themes\./,
+          ''
+        );
+        
+        // console.log(cleanedCv0);
         // Build one combined prompt for both analysis and note generation.
         // This prompt exactly matches your requirements.
         const postsSection = posts.map(post => `${post.title}\n${post.excerpt}\n`).join('\n');
-        console.log('Posts Section:', postsSection);
-        const combinedNotesPrompt = `You are an expert content analyst and Substack content coach. I will provide you with a collection of Substack posts, where each post includes a headline and a 500‑character snippet. Your task is to analyze this collection and extract detailed patterns across the following dimensions:
-
-Formatting:
-How are the headlines structured (capitalization, punctuation, use of symbols, etc.)?
-What is the layout of the snippets? (e.g., paragraph breaks, bullet points, emphasis on certain phrases)
-Please extract all formatting patterns that contribute to making the winners win. 
-
-Tone and Voice:
-What overall tone do the posts convey (e.g., energetic, authoritative, conversational, humorous)?
-What type of voice is used (first-person narrative, objective analysis, direct address to the reader)?
-
-Style:
-What are the common stylistic features? (e.g., use of rhetorical questions, metaphors, analogies, descriptive language, technical jargon)
-Are there consistent language choices or sentence structures?
-
-Topics and Themes:
-What recurring subjects or topics do the posts cover (e.g., Bitcoin, economic cycles, market trends)?
-Identify any common themes or ideas that appear across the posts.
-
-Ideas and Concepts:
-What innovative or recurring ideas are present? (e.g., predictions, strategies, risk management approaches, call-to-action elements)
-
-Input (sorted in descending order by Total Engagement):
-${postsSection}
-
-After you've finished the analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
-Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 20 words. 
-Vary sentence length to create rhythm and flow. Maximize mobile readability.
-Each sentence must be output on a new line. 
-Start each note with a strong hook that grabs attention. What's a strong hook? It's creative. Outside the box. Eye-catching. It creates an emotion, a feeling. It makes people stop scrolling.
-
-A great hook has maximum 10 words, always contains a number, an intriguing question, or a surprising statistic. 
-Best if written from the perspective of the reader. 
-The hook is always followed by a re-hook in the first sentence of the note.
-
-It avoids jargon, fancy words, questions, emojis at all costs. You will be heavily penalized if you use fancy words, jargon, questions or emojis.
-
-Ensure the tone is optimistic but grounded in reality—no empty inspiration, just real insights that resonate.
-
-DO NOT OUTPUT THE ANALYSIS, PATTERNS, ETC
-
-Output ONLY the 3 notes, separated by a clear delimiter: ###---###. No other text, explanations or info.
-
-Think through this step by step.`;
-        console.log('Combined 3 Notes Prompt:', combinedNotesPrompt);
+        const combinedNotesPrompt = cleanedCv0 ;
+        console.log('Combined & CLEANED 3 Notes Prompt:', combinedNotesPrompt);
         // Call the new TogetherAI backend endpoint with the combined prompt.
         const notesResponse = await fetch('/api/together/generate', {
           method: 'POST',
