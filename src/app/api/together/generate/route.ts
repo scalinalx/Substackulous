@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
     // Set default values if not provided.
     const chosenSystemPrompt = systemPrompt || "";
-    const chosenModel = model || "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo";
+    const chosenModel = model || "meta-llama/Llama-3-70b-chat-hf";
     const chosenTemperature = typeof temperature === "number" ? temperature : 0.7;
 
     // Initialize Together AI client.

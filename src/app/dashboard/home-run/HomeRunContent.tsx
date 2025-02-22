@@ -117,22 +117,27 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
         console.log('Viral Ideas Result:', ideasResult);
       } else if (mode === 'notes') {
         // Build and log the combined prompt for 3 viral notes.
-        const combinedNotesPrompt = `Act like a seasoned Substack creator who consistently goes viral with impactful notes.
+        const combinedNotesPrompt = `
 ${cleanedAnalysis}
 
 Based on the above analysis, generate 3 highly engaging viral notes that are punchy and impactful. Each note should have every sentence stand alone, creating rhythm and flow. No fluff—only actionable, real-talk style content that challenges assumptions.
 Write using short & sweet sentences that trigger deep emotions. No sentence should exceed 15 words. 
 Vary sentence length to create rhythm and flow. Maximize mobile readability.
 Each sentence must be output on a new line. 
-Start each note with a strong hook that grabs attention. A strong hook is a sentence that is short,has max 10 words, is punchy and triggers deep emotions.
+Start each note with a strong hook that grabs attention. A strong hook is a sentence that is short, has a maximum of 10 words, is punchy and triggers deep emotions.
 
-Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
-`;
-        console.log('Combined 3 Notes Prompt:', combinedNotesPrompt);
-        const notesResponse = await fetch('/api/groq/analyze-content', {
+Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').`;
+        console.log('Combined 3 Notes Prompt (old togetherAI call):', combinedNotesPrompt);
+        // Now, instead of using our old Groq API for notes, use our new TogetherAI backend.
+        // We send the system prompt, user prompt, and temperature = 1.24.
+        const notesResponse = await fetch('/api/together/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: combinedNotesPrompt, model: 'llama-3.3-70b-specdec', temperature: 0.89 }),
+          body: JSON.stringify({
+            systemPrompt: "Act like a seasoned Substack creator who consistently goes viral with impactful notes.",
+            userPrompt: combinedNotesPrompt,
+            temperature: 1.24
+          }),
         });
         if (!notesResponse.ok) {
           const error = await notesResponse.json();
@@ -243,20 +248,6 @@ Output ONLY the 3 notes, separated by a clear delimiter (for example, '---').
       setActiveSection(null);
     }
   };
-
-  // Removed the "1 Post" button and its handler.
-  /*
-  const handleGeneratePost = async () => {
-    try {
-      console.log('1 Post button clicked.');
-      setActiveSection('post');
-      await fetchTopPosts('post');
-    } catch (error) {
-      console.error('Generate post error:', error);
-      setActiveSection(null);
-    }
-  };
-  */
 
   useEffect(() => {
     const savedUrl = localStorage.getItem('substackUrl');
