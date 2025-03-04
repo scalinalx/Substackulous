@@ -184,7 +184,7 @@ Top 2 delivery methods:
           systemPrompt,
           userPrompt,
           model: "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
-          temperature: 0.7
+          temperature: 0.97
         }),
       });
 
