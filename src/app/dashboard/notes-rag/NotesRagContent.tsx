@@ -221,7 +221,7 @@ export default function NotesRagContent() {
           {/* Model Turbo Results */}
           {turboNotes.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Generated Notes</h2>
+              
               <div className="space-y-4">
                 {turboNotes.map((note, index) => (
                   <div key={`turbo-${index}`} className="border border-gray-200 dark:border-gray-700 p-4 rounded bg-gray-50 dark:bg-gray-800 relative">
@@ -240,7 +240,7 @@ export default function NotesRagContent() {
           {/* Model Llama Results */}
           {llamaNotes.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Additional Notes</h2>
+              
               <div className="space-y-4">
                 {llamaNotes.map((note, index) => (
                   <div key={`llama-${index}`} className="border border-gray-200 dark:border-gray-700 p-4 rounded bg-gray-50 dark:bg-gray-800 relative">

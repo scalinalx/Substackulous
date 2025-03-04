@@ -108,7 +108,7 @@ Now, generate 10 irresistible offers following these rules:
 5) Use simple language so a 10-year-old can understand.
 Provide 10 irresistible offers, each on a separate line.
 
-Then choose the best 3 offers that, in your opinion, are the most compelling and persuasive and stand the highest chance of reaching $50,000/month.
+Then choose the best 3 offers that, in your opinion, are the most compelling and persuasive and stand the highest chance of reaching six figures/month.
 
 For each of the 3 offers, continue the process like this:
 
@@ -183,7 +183,7 @@ Top 2 delivery methods:
         body: JSON.stringify({
           systemPrompt,
           userPrompt,
-          model: "meta-llama/Llama-3-70b-chat-hf",
+          model: "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
           temperature: 0.7
         }),
       });
