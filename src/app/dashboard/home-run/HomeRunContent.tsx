@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { toast } from 'sonner';
+import { Copy } from 'lucide-react';
 
 interface Post {
   title: string;
@@ -25,6 +26,8 @@ export default function HomeRunContent() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [results, setResults] = useState<AnalysisResults>({ analysis: '', ideas: '', notes: '' });
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
+  const [parsedNotes, setParsedNotes] = useState<string[]>([]);
+  const [parsedIdeas, setParsedIdeas] = useState<string[]>([]);
   const creditCost = 3;
 
   // Constructs the analysis prompt using only the first 20 posts.
@@ -193,10 +196,29 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
     }
   };
 
+  // Parse notes when they are received
+  useEffect(() => {
+    if (results.notes) {
+      // Split notes by the delimiter
+      const notes = results.notes.split('###---###').map(note => note.trim()).filter(note => note);
+      setParsedNotes(notes);
+    }
+  }, [results.notes]);
+
+  // Parse ideas when they are received
+  useEffect(() => {
+    if (results.ideas) {
+      // Split ideas by numbered list (1., 2., etc.)
+      const ideas = results.ideas.split(/\d+\./).map(idea => idea.trim()).filter(idea => idea);
+      setParsedIdeas(ideas);
+    }
+  }, [results.ideas]);
+
   // Modified fetchTopPosts now accepts a mode parameter.
   const fetchTopPosts = async (mode: 'brainstorm' | 'notes' | 'post') => {
     try {
       setIsLoading(true);
+      setActiveSection(mode);
       console.log('Starting to fetch posts from Substack...');
       console.log('Substack URL:', substackUrl);
 
@@ -260,11 +282,9 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
     }
   };
 
-  // Button handlers now call fetchTopPosts with an explicit mode.
   const handleBrainstorm = async () => {
     try {
       console.log('Brainstorm button clicked.');
-      setActiveSection('brainstorm');
       await fetchTopPosts('brainstorm');
     } catch (error) {
       console.error('Brainstorm error:', error);
@@ -275,12 +295,22 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
   const handleGenerateNotes = async () => {
     try {
       console.log('3 Notes button clicked.');
-      setActiveSection('notes');
       await fetchTopPosts('notes');
     } catch (error) {
       console.error('Generate notes error:', error);
       setActiveSection(null);
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        toast.success('Copied to clipboard!');
+      })
+      .catch((err) => {
+        console.error('Failed to copy: ', err);
+        toast.error('Failed to copy to clipboard');
+      });
   };
 
   useEffect(() => {
@@ -295,16 +325,6 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
       localStorage.setItem('substackUrl', substackUrl);
     }
   }, [substackUrl]);
-
-  // Helper function: returns the correct content based on activeSection.
-  const getDisplayContent = () => {
-    if (activeSection === 'brainstorm') {
-      return results.ideas;
-    } else if (activeSection === 'notes') {
-      return results.notes;
-    }
-    return results.analysis;
-  };
 
   if (!user) {
     return null;
@@ -345,14 +365,14 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
             </div>
             <div className="flex gap-2">
               <Button
-                onClick={() => fetchTopPosts('brainstorm')}
+                onClick={handleBrainstorm}
                 disabled={isLoading || !substackUrl || (credits ?? 0) < creditCost}
                 className="whitespace-nowrap"
               >
                 {isLoading && activeSection === 'brainstorm' ? 'Analyzing...' : 'Brainstorm Ideas'}
               </Button>
               <Button
-                onClick={() => fetchTopPosts('notes')}
+                onClick={handleGenerateNotes}
                 disabled={isLoading || !substackUrl || (credits ?? 0) < creditCost}
                 className="whitespace-nowrap"
               >
@@ -373,35 +393,65 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
             </div>
           ) : posts.length > 0 ? (
             <div>
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Analysis Results</h2>
-                <div className="flex space-x-4 mb-4">
-                  <button
-                    onClick={() => setActiveSection('brainstorm')}
-                    className={`px-4 py-2 rounded-md ${
-                      activeSection === 'brainstorm'
-                        ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    Viral Ideas
-                  </button>
-                  <button
-                    onClick={() => setActiveSection('notes')}
-                    className={`px-4 py-2 rounded-md ${
-                      activeSection === 'notes'
-                        ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    Viral Notes
-                  </button>
+              {activeSection === 'notes' && parsedNotes.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Generated Viral Notes</h2>
+                  <div className="space-y-8">
+                    {parsedNotes.map((note, index) => (
+                      <div key={index} className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg relative">
+                        <button 
+                          onClick={() => copyToClipboard(note)}
+                          className="absolute top-3 right-3 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                          aria-label="Copy to clipboard"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                        <div className="whitespace-pre-line">
+                          {note.split('\n').map((line, lineIndex) => (
+                            <p 
+                              key={lineIndex} 
+                              className={`mb-2 ${lineIndex === 0 ? 'text-lg font-bold' : ''}`}
+                            >
+                              {line}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="prose max-w-none dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-600 dark:prose-p:text-gray-300">
-                {getDisplayContent()}
-              </div>
+              {activeSection === 'brainstorm' && parsedIdeas.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Viral Post Ideas</h2>
+                  <div className="space-y-4">
+                    {parsedIdeas.map((idea, index) => (
+                      <div key={index} className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg relative">
+                        <button 
+                          onClick={() => copyToClipboard(idea)}
+                          className="absolute top-3 right-3 p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                          aria-label="Copy to clipboard"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                        <div className="whitespace-pre-line">
+                          <p className="font-bold mb-2">{index + 1}. {idea.split('\n')[0]}</p>
+                          <p>{idea.split('\n').slice(1).join('\n')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!parsedNotes.length && !parsedIdeas.length && (
+                <div className="text-center py-12">
+                  <p className="text-gray-600 dark:text-gray-300">
+                    Click "Brainstorm Ideas" or "Generate Notes" to get started.
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12">
