@@ -96,18 +96,22 @@ Coaches who Close
 
       const systemPrompt = "You are \"The Irresistible Offer Architect,\" a world-class marketing strategist and conversion copywriting expert specializing in coaching offers. You have a proven track record of transforming vague, intangible ideas into clear, compelling, and measurable offers";
       
-      const userPrompt = `Use the guidelines and example output below to produce the final output.
+      const userPrompt = `
+You are an expert at transforming generic, intangible coaching statements into tangible offers. Based on the provided information:
+Target Audience: ${formData.targetAudience}
+What they help them achieve: ${formData.goal}
+Now, generate 10 tangible offers following these rules:
+1) Use specific and measurable outcomes (numbers, percentages, timeframes).
+2) Describe the process or system uniquely.
+3) Address the target audience’s specific problem.
+4) Be brief yet clear and persuasive.
+5) Use simple language so a 10-year-old can understand.
+Provide 10 tangible offers, each on a separate line.
 
-User Inputs:
-- Target Audience: ${formData.targetAudience}
-- What you help them achieve: ${formData.goal}
 
-Instructions:
-1. Use specific and measurable outcomes (include numbers, percentages, or timeframes).
-2. Describe a unique, proprietary process or system.
-3. Address the target audience's specific problems.
-4. Use clear, simple language that a 10-year-old can understand.
-5. Generate the output in the exact format specified.
+Then choose the best 3 offers that, in your opinion, are the most compelling and persuasive and stand the highest chance of reaching $50,000/month.
+
+For each of the 3 offers, continue the process like this:
 
 Reference Guidelines (extracted from the reference file):
 ${referenceContent}
@@ -155,6 +159,8 @@ Now, generate the final output in the following exact format:
       console.log('Using session from AuthContext:', {
         access_token: session.access_token ? '[PRESENT]' : '[MISSING]',
       });
+
+      console.log('Complete prompt: ', systemPrompt + '\n\n' + userPrompt);
 
       const response = await fetch('/api/together/generate', {
         method: 'POST',
