@@ -87,10 +87,27 @@ Think through this step by step.`;
         });
         console.log('Analysis API call completed for Brainstorm.');
         if (!analysisResponse.ok) {
-          const error = await analysisResponse.json();
-          throw new Error(error.message || 'Failed to analyze content');
+          const errorText = await analysisResponse.text();
+          console.error('Analysis API error response:', errorText);
+          try {
+            const errorJson = JSON.parse(errorText);
+            throw new Error(errorJson.message || 'Failed to analyze content');
+          } catch (parseError) {
+            throw new Error(`Failed to analyze content: ${errorText.substring(0, 100)}`);
+          }
         }
-        const analysisData = await analysisResponse.json();
+        
+        // Safely parse the response
+        let analysisData;
+        try {
+          const responseText = await analysisResponse.text();
+          console.log('Raw analysis response:', responseText.substring(0, 100) + '...');
+          analysisData = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Error parsing analysis response:', parseError);
+          throw new Error('Failed to parse analysis response');
+        }
+        
         cleanedAnalysis = analysisData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         console.log('Cleaned Analysis (Brainstorm):', cleanedAnalysis);
 
@@ -102,16 +119,40 @@ ${cleanedAnalysis}
 
 Output ONLY the 10 viral post ideas in a numbered list.`;
         console.log('Combined Viral Ideas Prompt:', combinedIdeasPrompt);
-        const ideasResponse = await fetch('/api/groq/analyze-content', {
+        
+        // Use the same endpoint that works for notes
+        const ideasResponse = await fetch('/api/together/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: combinedIdeasPrompt, model: 'deepseek-r1-distill-llama-70b-specdec', temperature: 0.45 }),
+          body: JSON.stringify({
+            systemPrompt: "Act like a seasoned Substack creator who consistently goes viral with engaging post ideas.",
+            userPrompt: combinedIdeasPrompt,
+            temperature: 0.8
+          }),
         });
+        
         if (!ideasResponse.ok) {
-          const error = await ideasResponse.json();
-          throw new Error(error.message || 'Failed to generate viral ideas');
+          const errorText = await ideasResponse.text();
+          console.error('Ideas API error response:', errorText);
+          try {
+            const errorJson = JSON.parse(errorText);
+            throw new Error(errorJson.message || 'Failed to generate viral ideas');
+          } catch (parseError) {
+            throw new Error(`Failed to generate viral ideas: ${errorText.substring(0, 100)}`);
+          }
         }
-        const ideasData = await ideasResponse.json();
+        
+        // Safely parse the response
+        let ideasData;
+        try {
+          const responseText = await ideasResponse.text();
+          console.log('Raw ideas response:', responseText.substring(0, 100) + '...');
+          ideasData = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Error parsing ideas response:', parseError);
+          throw new Error('Failed to parse ideas response');
+        }
+        
         ideasResult = ideasData.result.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
         console.log('Viral Ideas Result:', ideasResult);
       } else if (mode === 'notes') {

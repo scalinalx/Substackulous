@@ -15,6 +15,12 @@
    - Replaced unescaped quotation marks with `&quot;` to fix React ESLint errors
    - Fixed error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`
 
+3. Fixed "Brainstorm Ideas" functionality
+   - Fixed JSON parsing error that was preventing ideas from being generated
+   - Switched from using `/api/groq/analyze-content` to `/api/together/generate` for the ideas generation
+   - Added robust error handling and debugging for API responses
+   - Maintained the working "Generate Notes" functionality
+
 ### Implementation Details:
 
 1. Added state management for parsed notes and ideas
@@ -62,9 +68,38 @@
    - Added a subtle copy button to each note and idea
    - Used whitespace-pre-line to preserve line breaks in the content
 
+5. Fixed "Brainstorm Ideas" API integration
+   ```typescript
+   // Use the same endpoint that works for notes
+   const ideasResponse = await fetch('/api/together/generate', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json' },
+     body: JSON.stringify({
+       systemPrompt: "Act like a seasoned Substack creator who consistently goes viral with engaging post ideas.",
+       userPrompt: combinedIdeasPrompt,
+       temperature: 0.8
+     }),
+   });
+   ```
+
+6. Added robust error handling for API responses
+   ```typescript
+   // Safely parse the response
+   let ideasData;
+   try {
+     const responseText = await ideasResponse.text();
+     console.log('Raw ideas response:', responseText.substring(0, 100) + '...');
+     ideasData = JSON.parse(responseText);
+   } catch (parseError) {
+     console.error('Error parsing ideas response:', parseError);
+     throw new Error('Failed to parse ideas response');
+   }
+   ```
+
 ### Technical Implementation Details:
 - Used Lucide icons for the copy button
 - Implemented responsive design for all screen sizes
 - Added proper dark mode support
 - Used toast notifications for copy feedback
-- Fixed ESLint errors by properly escaping quotation marks 
+- Fixed ESLint errors by properly escaping quotation marks
+- Added detailed error logging to help diagnose API issues 
