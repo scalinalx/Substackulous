@@ -322,7 +322,7 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
             </Link>
             <h1 className="mt-4 text-3xl font-bold text-gray-900">The Home Run</h1>
             <p className="mt-2 text-gray-600">
-              Generate viral content for your Substack with AI-powered brainstorming, notes, and posts.
+              Analyze any Substack, and get in seconds viral post titles, and high-engagement viral notes.
             </p>
           </div>
         </div>
@@ -353,7 +353,7 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
                 disabled={isLoading || !substackUrl}
                 className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
               >
-                {isLoading && activeSection === 'brainstorm' ? 'Loading...' : 'Brainstorm'}
+                {isLoading && activeSection === 'brainstorm' ? 'Loading...' : 'Generate Viral Headlines'}
               </Button>
 
               <Button
@@ -361,7 +361,7 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
                 disabled={isLoading || !substackUrl}
                 className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
               >
-                {isLoading && activeSection === 'notes' ? 'Loading...' : '3 Notes'}
+                {isLoading && activeSection === 'notes' ? 'Loading...' : 'Generate 3 Viral Notes'}
               </Button>
             </div>
 

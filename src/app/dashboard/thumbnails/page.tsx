@@ -2,8 +2,8 @@ import { Metadata } from 'next';
 import ThumbnailsContent from './ThumbnailsContent';
 
 export const metadata: Metadata = {
-  title: 'Advanced Post Thumbnail Generator',
-  description: 'Create eye-catching thumbnails with AI-powered text overlay',
+  title: '📸 Instant Post Image Generator',
+  description: 'Instantly create 3 eye-catching images for your post.',
 };
 
 export default function ThumbnailsPage() {

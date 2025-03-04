@@ -50,7 +50,7 @@ export default function IllustratorContent() {
             </Link>
             <h1 className="mt-4 text-3xl font-bold text-gray-900">Idea Illustrator</h1>
             <p className="mt-2 text-gray-600">
-              Generate unique illustrations for your Substack posts using AI.
+              Transform your ideas into stunning visuals. No design skills needed.
             </p>
           </div>
         </div>

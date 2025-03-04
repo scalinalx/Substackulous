@@ -162,6 +162,7 @@ export default function NotesRagContent() {
       </div>
 
       <h1 className="text-3xl font-bold mb-4">Viral Notes Generator</h1>
+      <p className="text-gray-600 mb-6">Input an idea, get multiple high-potential Notes designed to boost visibility, engagement and growth.</p>
       <form onSubmit={handleGenerateNotes} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -203,7 +204,7 @@ export default function NotesRagContent() {
           {/* Model Turbo Results */}
           {turboNotes.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold mb-2">Notes from Custom Model 1</h2>
+              <h2 className="text-xl font-semibold mb-2"></h2>
               <div className="space-y-4">
                 {turboNotes.map((note, index) => (
                   <div key={`turbo-${index}`} className="border p-4 rounded bg-gray-50 relative">
@@ -222,7 +223,7 @@ export default function NotesRagContent() {
           {/* Model Llama Results */}
           {llamaNotes.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold mb-2">Notes from Custom Model 2</h2>
+              <h2 className="text-xl font-semibold mb-2"></h2>
               <div className="space-y-4">
                 {llamaNotes.map((note, index) => (
                   <div key={`llama-${index}`} className="border p-4 rounded bg-gray-50 relative">

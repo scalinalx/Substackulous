@@ -47,9 +47,12 @@ export default function ThumbnailsContent() {
               </svg>
               Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">Thumbnail Generator</h1>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">📸 Instant Post Image Generator</h1>
             <p className="mt-2 text-gray-600">
               Create eye-catching thumbnails with AI-powered text overlay. Perfect for viral posts.
+            </p>
+            <p className="mt-2 text-gray-600">
+            Your post deserves to stand out. Here you can automatically create 3 eye-catching, high-quality images for your Substack post in seconds—no design skills needed. Just enter your post details, and boom—you get scroll-stopping visuals that make your content look pro and increase engagement.
             </p>
           </div>
         </div>

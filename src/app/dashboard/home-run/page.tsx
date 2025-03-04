@@ -3,7 +3,7 @@ import HomeRunContent from './HomeRunContent';
 
 export const metadata: Metadata = {
   title: 'The Home Run | Substackulous',
-  description: 'Generate viral content for your Substack with AI-powered brainstorming, notes, and posts.',
+  description: 'Analyze any Substack, and get in seconds viral post titles, and high-engagement viral notes.',
 };
 
 export default function HomeRunPage() {

@@ -10,6 +10,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Components } from 'react-markdown';
 
+export const metadata = {
+  title: '📝 Effortless Post Outline Builder',
+  description: 'Drop in an idea, get a ready-to-use post structure—just fill in the blanks and hit publish.',
+};
+
 interface OutlineRequest {
   topic: string;
   keyPoints: string;
@@ -191,9 +196,9 @@ Format the outline with clear hierarchical structure using markdown.`
               </svg>
               Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">Generate Outline</h1>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">📝 Effortless Post Outline Builder</h1>
             <p className="mt-2 text-gray-600">
-              Create a structured outline for your next viral post
+              Drop in an idea, get a ready-to-use post structure—just fill in the blanks and hit publish.
             </p>
           </div>
         </div>

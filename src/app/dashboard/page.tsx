@@ -7,15 +7,15 @@ import Link from 'next/link';
 
 const features = [
   {
-    title: "Advanced Post Thumbnail Generator",
-    description: "Create eye-catching thumbnails with AI-powered text overlay. Perfect for viral posts.",
+    title: "📸 Instant Post Image Generator",
+    description: "Instantly create 3 eye-catching images for your post.",
     icon: "🎨",
     href: "/dashboard/thumbnails",
     color: "from-pink-500 to-rose-500"
   },
   {
     title: "The Home Run",
-    description: "Generate viral content for your Substack with AI-powered brainstorming, notes, and posts.",
+    description: "Analyze any Substack, and get in seconds viral post titles, and high-engagement viral notes.",
     icon: "🚀",
     href: "/dashboard/home-run",
     color: "from-indigo-500 to-blue-500"
@@ -28,15 +28,15 @@ const features = [
     color: "from-purple-500 to-indigo-500"
   },
   {
-    title: "Clickworthy Title Generator",
-    description: "Craft irresistible titles that drive clicks and engagement.",
+    title: "🔥 Click-Worthy Title Maker",
+    description: "Turn any idea into a scroll-stopping, must-click headlines that grab attention.",
     icon: "✍️",
     href: "/dashboard/titles",
     color: "from-green-500 to-emerald-500"
   },
   {
-    title: "Post Outline Generator",
-    description: "Create structured outlines for high-performing posts.",
+    title: "📝 Effortless Post Outline Builder",
+    description: "Drop in an idea, get a ready-to-use post structure—just fill in the blanks and hit publish.",
     icon: "📝",
     href: "/dashboard/outline",
     color: "from-amber-500 to-orange-500"
@@ -49,15 +49,15 @@ const features = [
   //   color: "from-red-500 to-pink-500"
   // },
   {
-    title: "Substack PRO",
-    description: "Analyze and optimize your Substack newsletter for maximum growth and engagement.",
+    title: "🚀 The Substack Growth Engine",
+    description: "Analyze any Substack and get data-driven growth tips, find patterns behind the winners and single out the trends you need to double down on — just paste a link.",
     icon: "📈",
     href: "/dashboard/substack-pro",
     color: "from-emerald-500 to-teal-500"
   },
   {
     title: "Viral Notes Generator",
-    description: "Generate viral notes with our custom-built AI engine.",
+    description: "Input an idea, get multiple high-potential Notes designed to boost visibility, engagement and growth.",
     icon: "🤖",
     href: "/dashboard/notes-rag",
     color: "from-cyan-500 to-blue-500"

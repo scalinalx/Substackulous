@@ -191,9 +191,9 @@ export default function TitleGenerator() {
                 </svg>
                 Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">Clickworthy Title Generator</h1>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">🔥 Click-Worthy Title Maker</h1>
             <p className="mt-2 text-gray-600">
-                Generate attention-grabbing titles that drive clicks and engagement.
+                Turn any idea into a scroll-stopping, must-click headlines that grab attention.
             </p>
             </div>
         </div>

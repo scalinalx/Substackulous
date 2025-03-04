@@ -137,9 +137,9 @@ export default function SubstackProContent() {
               </svg>
               Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-black">Substack PRO</h1>
+            <h1 className="mt-4 text-3xl font-bold text-black">🚀 The Substack Growth Engine</h1>
             <p className="mt-2 text-black">
-              Analyze your Substack newsletter for insights and optimization opportunities
+              Analyze any Substack and get data-driven growth tips, find patterns behind the winners and single out the trends you need to double down on — just paste a link.
             </p>
           </div>
         </div>

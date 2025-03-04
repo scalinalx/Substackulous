@@ -12,7 +12,7 @@ const IllustratorContent = dynamic(() => import('./IllustratorContent'), {
 
 export const metadata: Metadata = {
   title: 'Idea Illustrator',
-  description: 'Generate unique illustrations for your Substack posts using AI.',
+  description: 'Transform your ideas into stunning visuals. No design skills needed.',
 };
 
 export default function IllustratorPage() {
