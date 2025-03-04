@@ -65,12 +65,12 @@ export default function OfferBuilderPage() {
       const referenceContent = `
 $12K Offer Block Formula
 
-Tangible End State:
+Irrestible End State:
 $20K/Month Coaching Enterprise
 
 Problem 1 – Broad Offer:
 Coaches create broad offers to avoid missing sales, but it confuses their target buyers.
-Tangible Offer Example: 20 leads per week, Target Niche, Conversion Content
+Irresitible Offer Example: 20 leads per week, Target Niche, Conversion Content
 
 Problem 2 – Big Brand:
 Coaches overfocus on gaining popularity and underfocus on selling.
@@ -96,18 +96,16 @@ Coaches who Close
 
       const systemPrompt = "You are \"The Irresistible Offer Architect,\" a world-class marketing strategist and conversion copywriting expert specializing in coaching offers. You have a proven track record of transforming vague, intangible ideas into clear, compelling, and measurable offers";
       
-      const userPrompt = `
-You are an expert at transforming generic, intangible coaching statements into tangible offers. Based on the provided information:
+      const userPrompt = ` Based on the provided information:
 Target Audience: ${formData.targetAudience}
 What they help them achieve: ${formData.goal}
-Now, generate 10 tangible offers following these rules:
+Now, generate 10 irresistible offers following these rules:
 1) Use specific and measurable outcomes (numbers, percentages, timeframes).
 2) Describe the process or system uniquely.
 3) Address the target audience’s specific problem.
 4) Be brief yet clear and persuasive.
 5) Use simple language so a 10-year-old can understand.
-Provide 10 tangible offers, each on a separate line.
-
+Provide 10 irresistible offers, each on a separate line.
 
 Then choose the best 3 offers that, in your opinion, are the most compelling and persuasive and stand the highest chance of reaching $50,000/month.
 
@@ -118,8 +116,10 @@ ${referenceContent}
 
 Now, generate the final output in the following exact format:
 
-### Tangible End State
-[Your tangible end state here]
+### Irresistible End State
+[Your irresistible end state here]
+[Offer Name]
+[Offer Description]
 
 ### Problem 1
 [Problem statement: 1-3 words]
@@ -130,7 +130,7 @@ Now, generate the final output in the following exact format:
 - Outcome B (3 words max)
 - Outcome C (3 words max)
 ### Measurable Checkpoint 1
-[Tangible checkpoint with numbers/percent/timeframe]
+[Irresistible checkpoint with numbers/percent/timeframe]
 
 ---
 ### Problem 2
@@ -142,7 +142,7 @@ Now, generate the final output in the following exact format:
 - Outcome B (3 words max)
 - Outcome C (3 words max)
 ### Measurable Checkpoint 2
-[Tangible checkpoint with numbers/percent/timeframe]
+[Irresistible checkpoint with numbers/percent/timeframe]
 
 ---
 ### Problem 3
@@ -154,7 +154,18 @@ Now, generate the final output in the following exact format:
 - Outcome B (3 words max)
 - Outcome C (3 words max)
 ### Measurable Checkpoint 3
-[Tangible checkpoint with numbers/percent/timeframe]`;
+[Irresistible checkpoint with numbers/percent/timeframe]
+
+Top 5 delivery vehicles:
+[Delivery vehicle 1]
+[Delivery vehicle 2]
+[Delivery vehicle 3]
+[Delivery vehicle 4]
+[Delivery vehicle 5]
+
+Top 2 delivery methods:
+[Delivery method 1]
+[Delivery method 2]`;
 
       console.log('Using session from AuthContext:', {
         access_token: session.access_token ? '[PRESENT]' : '[MISSING]',
@@ -226,9 +237,9 @@ Now, generate the final output in the following exact format:
               </svg>
               Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">💰 $50,000 Offer Builder</h1>
+            <h1 className="mt-4 text-3xl font-bold text-gray-900">💰 Create Your 6-Figure Offer</h1>
             <p className="mt-2 text-gray-600">
-              Craft an irresistible high-ticket offer that converts subscribers into paying customers—engineered to hit $50K/month.
+              Make an irresistible high-ticket offer that converts subscribers into paying customers—engineered to hit $50K/month.
             </p>
           </div>
         </div>

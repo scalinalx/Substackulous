@@ -20,13 +20,22 @@ const features = [
     href: "/dashboard/home-run",
     color: "from-indigo-500 to-blue-500"
   },
+
   {
-    title: "Idea Illustrator",
-    description: "Transform your ideas into stunning visuals. No design skills needed.",
-    icon: "✨",
-    href: "/dashboard/illustrator",
-    color: "from-purple-500 to-indigo-500"
+    title: "Viral Notes Generator",
+    description: "Input an idea, get multiple high-potential Notes designed to boost visibility, engagement and growth.",
+    icon: "🤖",
+    href: "/dashboard/notes-rag",
+    color: "from-cyan-500 to-blue-500"
   },
+
+  // {
+  //   title: "Idea Illustrator",
+  //   description: "Transform your ideas into stunning visuals. No design skills needed.",
+  //   icon: "✨",
+  //   href: "/dashboard/illustrator",
+  //   color: "from-purple-500 to-indigo-500"
+  // },
   {
     title: "🔥 Click-Worthy Title Maker",
     description: "Turn any idea into a scroll-stopping, must-click headlines that grab attention.",
@@ -55,16 +64,10 @@ const features = [
     href: "/dashboard/substack-pro",
     color: "from-emerald-500 to-teal-500"
   },
+ 
   {
-    title: "Viral Notes Generator",
-    description: "Input an idea, get multiple high-potential Notes designed to boost visibility, engagement and growth.",
-    icon: "🤖",
-    href: "/dashboard/notes-rag",
-    color: "from-cyan-500 to-blue-500"
-  },
-  {
-    title: "$50,000 Offer Builder",
-    description: "Craft an irresistible high-ticket offer that converts subscribers into paying customers—engineered to hit $50K/month.",
+    title: "Create Your 6-Figure Offer",
+    description: "Make an irresistible high-ticket offer that converts subscribers into paying customers—engineered to hit $50K/month.",
     icon: "💰",
     href: "/dashboard/offer-builder",
     color: "from-yellow-500 to-amber-500"
