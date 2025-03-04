@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
 export default function DashboardNav() {
-  const { user, credits, signOut } = useAuth();
+  const { user, credits } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
@@ -41,24 +41,11 @@ export default function DashboardNav() {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      setIsSigningOut(true);
-      await signOut();
-      window.location.href = 'https://substackulous.vercel.app/';
-    } catch (error) {
-      console.error('Error signing out:', error);
-      alert('Failed to sign out. Please try again.');
-    } finally {
-      setIsSigningOut(false);
-    }
-  };
-
   if (!user) return null;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-900 shadow-sm z-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-900 shadow-sm z-30">
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link href="/dashboard" className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -92,17 +79,6 @@ export default function DashboardNav() {
               ) : (
                 <Moon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               )}
-            </button>
-            <button
-              onClick={handleSignOut}
-              disabled={isSigningOut}
-              className={`text-sm ${
-                isSigningOut 
-                  ? 'text-gray-400 cursor-not-allowed'
-                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
-              {isSigningOut ? 'Signing Out...' : 'Sign Out'}
             </button>
           </div>
         </div>

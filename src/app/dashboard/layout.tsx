@@ -1,6 +1,7 @@
 'use client';
 
 import DashboardNav from '@/app/components/DashboardNav';
+import Sidebar from '@/app/components/Sidebar';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -26,7 +27,8 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 relative">
       <DashboardNav />
-      <main className="pt-16">
+      <Sidebar />
+      <main className="pt-16 pl-16 md:pl-64 transition-all duration-300">
         {children}
         {isLoading && (
           <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
