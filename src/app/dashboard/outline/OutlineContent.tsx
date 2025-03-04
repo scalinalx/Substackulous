@@ -10,6 +10,14 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Components } from 'react-markdown';
 
+// Define a custom interface for code component props
+interface CustomCodeProps {
+  node?: any;
+  inline?: boolean;
+  className?: string;
+  children?: React.ReactNode;
+}
+
 interface OutlineRequest {
   topic: string;
   keyPoints: string;
@@ -379,7 +387,7 @@ Format the outline with clear hierarchical structure using markdown.`
                     blockquote: ({ node, ...props }) => (
                       <blockquote className="border-l-4 border-amber-300 pl-4 italic my-4" {...props} />
                     ),
-                    code: ({ node, inline, ...props }) =>
+                    code: ({ node, inline, ...props }: CustomCodeProps) =>
                       inline ? (
                         <code className="bg-gray-100 px-1 py-0.5 rounded text-sm" {...props} />
                       ) : (
