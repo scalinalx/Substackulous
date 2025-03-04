@@ -17,6 +17,12 @@ async function accumulateStream(stream: AsyncIterable<any>): Promise<string> {
   return message;
 }
 
+// Helper function to normalize note delimiters
+function normalizeDelimiters(text: string): string {
+  // Replace "###---" that isn't followed by "###" with "###---###"
+  return text.replace(/###---(?!###)/g, "###---###");
+}
+
 export async function POST(req: Request) {
   try {
     // Parse the topic from the request body.
@@ -110,10 +116,14 @@ Think through this step by step.
     });
 
     // Accumulate both streams concurrently.
-    const [notesTurbo, notesLlama] = await Promise.all([
+    const [notesTurboRaw, notesLlamaRaw] = await Promise.all([
       accumulateStream(streamTurbo),
       accumulateStream(streamLlama)
     ]);
+
+    // Normalize the delimiters in both responses
+    const notesTurbo = normalizeDelimiters(notesTurboRaw);
+    const notesLlama = normalizeDelimiters(notesLlamaRaw);
 
     // Return both results.
     return NextResponse.json({ notesTurbo, notesLlama });

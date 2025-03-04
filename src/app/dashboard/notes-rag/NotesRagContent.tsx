@@ -145,7 +145,10 @@ export default function NotesRagContent() {
 
   // Helper to split notes based on delimiter.
   const splitNotes = (notes: string): string[] => {
-    return notes
+    // First normalize any "###---" that isn't followed by "###" to "###---###"
+    const normalizedNotes = notes.replace(/###---(?!###)/g, "###---###");
+    
+    return normalizedNotes
       .split("###---###")
       .map(note => cleanIntroductoryPhrases(note.trim()))
       .filter(note => note);
