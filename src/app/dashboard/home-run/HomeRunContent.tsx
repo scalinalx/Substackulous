@@ -448,7 +448,7 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
               {!parsedNotes.length && !parsedIdeas.length && (
                 <div className="text-center py-12">
                   <p className="text-gray-600 dark:text-gray-300">
-                    Click "Brainstorm Ideas" or "Generate Notes" to get started.
+                    Click &quot;Brainstorm Ideas&quot; or &quot;Generate Notes&quot; to get started.
                   </p>
                 </div>
               )}

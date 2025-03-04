@@ -11,6 +11,10 @@
    - Added proper formatting for notes with each note displayed separately
    - Added copy to clipboard functionality for each note and idea
 
+2. Fixed build errors
+   - Replaced unescaped quotation marks with `&quot;` to fix React ESLint errors
+   - Fixed error: `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`
+
 ### Implementation Details:
 
 1. Added state management for parsed notes and ideas
@@ -62,4 +66,5 @@
 - Used Lucide icons for the copy button
 - Implemented responsive design for all screen sizes
 - Added proper dark mode support
-- Used toast notifications for copy feedback 
+- Used toast notifications for copy feedback
+- Fixed ESLint errors by properly escaping quotation marks 
