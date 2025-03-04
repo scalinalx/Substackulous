@@ -57,7 +57,7 @@ export default function ThumbnailsContent() {
           </div>
         </div>
         
-        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl">
+        <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 dark:ring-gray-700/50 sm:rounded-xl">
           <ThumbnailGenerator />
         </div>
       </div>
