@@ -1,11 +1,14 @@
 'use client';
 
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 import Link from 'next/link';
 import { useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
 
 export default function DashboardNav() {
   const { user, credits, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const handlePurchaseCredits = async () => {
@@ -54,19 +57,19 @@ export default function DashboardNav() {
   if (!user) return null;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-white shadow-sm z-10">
+    <nav className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-900 shadow-sm z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link href="/dashboard" className="text-2xl font-bold text-gray-900">
+            <Link href="/dashboard" className="text-2xl font-bold text-gray-900 dark:text-white">
               SUBSTACKULOUS
             </Link>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               <span className="font-medium">Welcome {user.email}</span>
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 dark:text-gray-300">
               <span className="font-medium">Available credits: {credits ?? 0}</span>
             </div>
             <div className="relative">
@@ -80,12 +83,23 @@ export default function DashboardNav() {
               </button>
             </div>
             <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none"
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              ) : (
+                <Moon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              )}
+            </button>
+            <button
               onClick={handleSignOut}
               disabled={isSigningOut}
               className={`text-sm ${
                 isSigningOut 
                   ? 'text-gray-400 cursor-not-allowed'
-                  : 'text-gray-600 hover:text-gray-900'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               {isSigningOut ? 'Signing Out...' : 'Sign Out'}

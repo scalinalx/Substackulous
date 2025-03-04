@@ -5,9 +5,19 @@ import { redirect } from 'next/navigation';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Link from 'next/link';
 
-const features = [
+// Add a type definition for the features
+interface Feature {
+  title: string;
+  description: string;
+  icon: string;
+  href: string;
+  color: string;
+  comingSoon?: boolean;
+}
+
+const features: Feature[] = [
   {
-    title: "📸 Instant Post Image Generator",
+    title: "Instant Post Image Generator",
     description: "Instantly create 3 eye-catching images for your post.",
     icon: "🎨",
     href: "/dashboard/thumbnails",
@@ -37,14 +47,14 @@ const features = [
   //   color: "from-purple-500 to-indigo-500"
   // },
   {
-    title: "🔥 Click-Worthy Title Maker",
+    title: "Click-Worthy Title Maker",
     description: "Turn any idea into a scroll-stopping, must-click headlines that grab attention.",
     icon: "✍️",
     href: "/dashboard/titles",
     color: "from-green-500 to-emerald-500"
   },
   {
-    title: "📝 Effortless Post Outline Builder",
+    title: "Effortless Post Outline Builder",
     description: "Drop in an idea, get a ready-to-use post structure—just fill in the blanks and hit publish.",
     icon: "📝",
     href: "/dashboard/outline",
@@ -58,7 +68,7 @@ const features = [
   //   color: "from-red-500 to-pink-500"
   // },
   {
-    title: "🚀 The Substack Growth Engine",
+    title: "The Substack Growth Engine",
     description: "Analyze any Substack and get data-driven growth tips, find patterns behind the winners and single out the trends you need to double down on — just paste a link.",
     icon: "📈",
     href: "/dashboard/substack-pro",
@@ -67,7 +77,7 @@ const features = [
  
   {
     title: "Create Your 6-Figure Offer",
-    description: "Make an irresistible high-ticket offer that converts subscribers into paying customers—engineered to hit $50K/month.",
+    description: "Make an irresistible high-ticket offer that converts subscribers into paying customers—engineered to hit 6 figures/month.",
     icon: "💰",
     href: "/dashboard/offer-builder",
     color: "from-yellow-500 to-amber-500"
@@ -102,25 +112,30 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Features Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h2 className="text-3xl font-bold text-gray-900 mb-8">Welcome to Your Dashboard</h2>
+        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Welcome to Your Dashboard</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature) => (
             <Link 
               key={feature.title} 
               href={feature.href}
-              className={`group relative bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden `}
+              className={`group relative bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden `}
               onClick={undefined}
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity`} />
               <div className="p-6">
                 <div className="text-4xl mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                   {feature.title}
+                  {feature.comingSoon && (
+                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      Coming Soon
+                    </span>
+                  )}
                 </h3>
-                <p className="text-gray-600">{feature.description}</p>
+                <p className="text-gray-500 dark:text-gray-400">{feature.description}</p>
               </div>
             </Link>
           ))}

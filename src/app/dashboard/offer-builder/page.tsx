@@ -239,7 +239,7 @@ Top 2 delivery methods:
             </Link>
             <h1 className="mt-4 text-3xl font-bold text-gray-900">💰 Create Your 6-Figure Offer</h1>
             <p className="mt-2 text-gray-600">
-              Make an irresistible high-ticket offer that converts subscribers into paying customers—engineered to hit $50K/month.
+              Make an irresistible high-ticket offer that converts subscribers into paying customers—engineered to hit 6 figures/month.
             </p>
           </div>
         </div>
