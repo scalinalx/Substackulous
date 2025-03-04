@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { toast } from 'sonner';
+import { darkModeClasses } from '@/lib/utils/darkModeClasses';
 
 type PrimaryIntent = 'Growth' | 'Educational' | 'Entertain' | 'Personal Story';
 
@@ -194,16 +195,16 @@ export default function ViralNoteGenerator() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 p-4 bg-white">
-      <div className="grid gap-6">
-        <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-          <span className="text-amber-700">Credits required: 2</span>
-          <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
+    <div className="space-y-8">
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6">
+        <div className="mb-6 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+          <span className="text-amber-700 dark:text-amber-400">Credits required: 2</span>
+          <span className="font-medium text-amber-700 dark:text-amber-400">Your balance: {credits ?? 0}</span>
         </div>
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="theme" className="flex items-center gap-1 text-[#181819] font-medium">
+            <Label htmlFor="theme" className="flex items-center gap-1 text-[#181819] dark:text-gray-200 font-medium">
               Theme <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -211,39 +212,39 @@ export default function ViralNoteGenerator() {
               value={theme}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTheme(e.target.value)}
               placeholder="e.g., Personal Finance for Millennials"
-              className="mt-1 bg-white/5 text-[#181819] border-gray-200 focus:bg-white/10"
+              className="mt-1 bg-white dark:bg-gray-700 text-[#181819] dark:text-white border-gray-200 dark:border-gray-600 focus:bg-white dark:focus:bg-gray-600"
             />
           </div>
           <div>
-            <Label htmlFor="coreTopics" className="text-[#181819] font-medium">Core Topics (optional)</Label>
+            <Label htmlFor="coreTopics" className="text-[#181819] dark:text-gray-200 font-medium">Core Topics (optional)</Label>
             <Input
               id="coreTopics"
               value={coreTopics}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCoreTopics(e.target.value)}
               placeholder="e.g., INVESTING, BUDGETING, SIDE HUSTLES"
-              className="mt-1 bg-white/5 text-[#181819] border-gray-200 focus:bg-white/10"
+              className="mt-1 bg-white dark:bg-gray-700 text-[#181819] dark:text-white border-gray-200 dark:border-gray-600 focus:bg-white dark:focus:bg-gray-600"
             />
           </div>
           <div>
-            <Label htmlFor="targetAudience" className="text-[#181819] font-medium">Target Audience (optional)</Label>
+            <Label htmlFor="targetAudience" className="text-[#181819] dark:text-gray-200 font-medium">Target Audience (optional)</Label>
             <Input
               id="targetAudience"
               value={targetAudience}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTargetAudience(e.target.value)}
               placeholder="e.g., Tech-savvy Millennials interested in financial independence"
-              className="mt-1 bg-white/5 text-[#181819] border-gray-200 focus:bg-white/10"
+              className="mt-1 bg-white dark:bg-gray-700 text-[#181819] dark:text-white border-gray-200 dark:border-gray-600 focus:bg-white dark:focus:bg-gray-600"
             />
           </div>
           <div>
-            <Label htmlFor="primaryIntent" className="flex items-center gap-1 text-[#181819] font-medium">
+            <Label htmlFor="primaryIntent" className="flex items-center gap-1 text-[#181819] dark:text-gray-200 font-medium">
               Primary Intent <span className="text-red-500">*</span>
             </Label>
             <select
               id="primaryIntent"
               value={primaryIntent}
               onChange={(e) => setPrimaryIntent(e.target.value as PrimaryIntent)}
-              className="mt-1 block w-full rounded-md border border-gray-200 bg-white/5 px-3 py-2 text-sm 
-                       text-[#181819] focus:bg-white/10
+              className="mt-1 block w-full rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm 
+                       text-[#181819] dark:text-white focus:bg-white dark:focus:bg-gray-600
                        focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             >
               <option value="Growth">Growth (2 credits)</option>
@@ -262,9 +263,9 @@ export default function ViralNoteGenerator() {
           </Button>
         </div>
 
-        <div className="mt-8 border-t border-gray-200 pt-6 space-y-4">
+        <div className="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4">
           <div>
-            <Label htmlFor="subject" className="flex items-center gap-1 text-[#181819] font-medium">
+            <Label htmlFor="subject" className="flex items-center gap-1 text-[#181819] dark:text-gray-200 font-medium">
               Subject (for single note generation) <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -272,7 +273,7 @@ export default function ViralNoteGenerator() {
               value={subject}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubject(e.target.value)}
               placeholder="Enter a subject for a viral note"
-              className="mt-1 bg-white/5 text-[#181819] border-gray-200 focus:bg-white/10"
+              className="mt-1 bg-white dark:bg-gray-700 text-[#181819] dark:text-white border-gray-200 dark:border-gray-600 focus:bg-white dark:focus:bg-gray-600"
             />
           </div>
           <Button 
@@ -289,7 +290,7 @@ export default function ViralNoteGenerator() {
       {/* Results Section */}
       <div className="mt-8 space-y-8">
         {/* Debug Info */}
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-gray-500 dark:text-gray-400">
           Status: {isGenerating ? 'Generating...' : showResults ? 'Results Ready' : 'Waiting'}
           {notes.length > 0 && ` (${notes.length} notes)`}
         </div>
@@ -297,11 +298,11 @@ export default function ViralNoteGenerator() {
         {/* Raw Response */}
         {showResults && rawResponse && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-[#181819]">Raw API Response:</h3>
+            <h3 className="text-lg font-semibold text-[#181819] dark:text-white">Raw API Response:</h3>
             <textarea
               readOnly
               value={rawResponse}
-              className="w-full h-48 p-4 rounded-lg border border-gray-200 bg-gray-50 font-mono text-xs text-[#181819]"
+              className="w-full h-48 p-4 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 font-mono text-xs text-[#181819] dark:text-gray-200"
               style={{ resize: 'vertical' }}
             />
           </div>
@@ -310,11 +311,11 @@ export default function ViralNoteGenerator() {
         {/* Processed Notes */}
         {showResults && notes.length > 0 && (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-[#181819]">Generated Notes ({notes.length}):</h3>
+            <h3 className="text-lg font-semibold text-[#181819] dark:text-white">Generated Notes ({notes.length}):</h3>
             <textarea
               readOnly
               value={notes.join('\n\n---\n\n')}
-              className="w-full h-96 p-4 rounded-lg border border-gray-200 bg-white font-mono text-sm text-[#181819]"
+              className="w-full h-96 p-4 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 font-mono text-sm text-[#181819] dark:text-gray-200"
               style={{ resize: 'vertical' }}
             />
           </div>

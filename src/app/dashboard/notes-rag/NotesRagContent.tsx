@@ -3,8 +3,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'; // Import Link
-
+import Link from 'next/link';
+import { darkModeClasses } from '@/lib/utils/darkModeClasses';
 
 export default function NotesRagContent() {
   const router = useRouter();
@@ -161,35 +161,35 @@ export default function NotesRagContent() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header: show cost and balance */}
       <div className="mb-8 flex items-center justify-between">
-            <div>
-            <Link
-                href="/dashboard"
-                className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
-            >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Dashboard
-            </Link>
-            </div>
+        <div>
+          <Link
+            href="/dashboard"
+            className={darkModeClasses.backLink}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Dashboard
+          </Link>
         </div>
-      <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-        <span className="text-amber-700">Credits required: {creditCost}</span>
-        <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
+      </div>
+      <div className="mb-6 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+        <span className="text-amber-700 dark:text-amber-400">Credits required: {creditCost}</span>
+        <span className="font-medium text-amber-700 dark:text-amber-400">Your balance: {credits ?? 0}</span>
       </div>
 
-      <h1 className="text-3xl font-bold mb-4">Viral Notes Generator</h1>
-      <p className="text-gray-600 mb-6">Input an idea, get multiple high-potential Notes designed to boost visibility, engagement and growth.</p>
+      <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Viral Notes Generator</h1>
+      <p className="text-gray-600 dark:text-gray-300 mb-6">Input an idea, get multiple high-potential Notes designed to boost visibility, engagement and growth.</p>
       <form onSubmit={handleGenerateNotes} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Topic <span className="text-red-500">*</span>
           </label>
           <textarea
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             placeholder="Enter a topic for your notes..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white bg-white dark:bg-gray-800"
             rows={2}
             required
             disabled={loading}
@@ -212,8 +212,8 @@ export default function NotesRagContent() {
         </button>
       </form>
       {error && (
-        <div className="mt-4 p-4 bg-red-50 border-l-4 border-red-400">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 dark:border-red-600">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
         </div>
       )}
       {(turboNotes.length > 0 || llamaNotes.length > 0) && (
@@ -221,14 +221,14 @@ export default function NotesRagContent() {
           {/* Model Turbo Results */}
           {turboNotes.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold mb-2"></h2>
+              <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Generated Notes</h2>
               <div className="space-y-4">
                 {turboNotes.map((note, index) => (
-                  <div key={`turbo-${index}`} className="border p-4 rounded bg-gray-50 relative">
-                    <pre className="whitespace-pre-wrap">{note}</pre>
+                  <div key={`turbo-${index}`} className="border border-gray-200 dark:border-gray-700 p-4 rounded bg-gray-50 dark:bg-gray-800 relative">
+                    <pre className="whitespace-pre-wrap text-gray-800 dark:text-gray-200">{note}</pre>
                     <button
                       onClick={() => copyNote(note)}
-                      className="absolute top-2 right-2 text-sm text-gray-500 hover:text-gray-700"
+                      className="absolute top-2 right-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                     >
                       Copy
                     </button>
@@ -240,14 +240,14 @@ export default function NotesRagContent() {
           {/* Model Llama Results */}
           {llamaNotes.length > 0 && (
             <div>
-              <h2 className="text-xl font-semibold mb-2"></h2>
+              <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Additional Notes</h2>
               <div className="space-y-4">
                 {llamaNotes.map((note, index) => (
-                  <div key={`llama-${index}`} className="border p-4 rounded bg-gray-50 relative">
-                    <pre className="whitespace-pre-wrap">{note}</pre>
+                  <div key={`llama-${index}`} className="border border-gray-200 dark:border-gray-700 p-4 rounded bg-gray-50 dark:bg-gray-800 relative">
+                    <pre className="whitespace-pre-wrap text-gray-800 dark:text-gray-200">{note}</pre>
                     <button
                       onClick={() => copyNote(note)}
-                      className="absolute top-2 right-2 text-sm text-gray-500 hover:text-gray-700"
+                      className="absolute top-2 right-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                     >
                       Copy
                     </button>

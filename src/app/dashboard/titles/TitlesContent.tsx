@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link'; // Import Link
+import { darkModeClasses } from '@/lib/utils/darkModeClasses';
 
 export default function TitleGenerator() {
     const router = useRouter();
@@ -141,18 +142,18 @@ export default function TitleGenerator() {
     return (
       <div
         key={`title-${index}`}
-        className="group flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-200 transition-colors"
+        className="group flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-amber-200 dark:hover:border-amber-700 transition-colors"
       >
-        <span className="flex-none w-8 text-gray-400 text-sm">
+        <span className="flex-none w-8 text-gray-400 dark:text-gray-500 text-sm">
           {index + 1}.
         </span>
-        <div className="flex-1 text-gray-900">
+        <div className="flex-1 text-gray-900 dark:text-white">
           {title}
         </div>
         <button
           type="button"
           onClick={() => copyToClipboard(title, index)}
-          className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-amber-600 focus:outline-none focus:text-amber-600 transition-colors opacity-0 group-hover:opacity-100"
+          className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-500 focus:outline-none focus:text-amber-600 dark:focus:text-amber-500 transition-colors opacity-0 group-hover:opacity-100"
         >
           {copiedIndex === index ? (
             <span className="flex items-center">
@@ -184,48 +185,48 @@ export default function TitleGenerator() {
             <div>
             <Link
                 href="/dashboard"
-                className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
+                className={darkModeClasses.backLink}
             >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
                 Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">🔥 Click-Worthy Title Maker</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="mt-4 text-3xl font-bold text-gray-900 dark:text-white">🔥 Click-Worthy Title Maker</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">
                 Turn any idea into a scroll-stopping, must-click headlines that grab attention.
             </p>
             </div>
         </div>
-        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
-            <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-            <span className="text-amber-700">Credits required: {creditCost}</span>
-            <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
+        <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 dark:ring-gray-700/50 sm:rounded-xl p-8">
+            <div className="mb-6 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+            <span className="text-amber-700 dark:text-amber-400">Credits required: {creditCost}</span>
+            <span className="font-medium text-amber-700 dark:text-amber-400">Your balance: {credits ?? 0}</span>
             </div>
             {error && (
-            <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 dark:border-red-600 p-4">
                 <div className="flex">
                 <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <svg className="h-5 w-5 text-red-400 dark:text-red-500" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
                 </div>
                 <div className="ml-3">
-                    <p className="text-sm text-red-700">{error}</p>
+                    <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                 </div>
                 </div>
             </div>
             )}
             <form onSubmit={handleGenerateTitles} className="space-y-6">
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Topic <span className="text-red-500">*</span>
                 </label>
                 <textarea
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="Brief description of your post's topic..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 rows={2}
                 required
                 disabled={loading}
@@ -233,10 +234,8 @@ export default function TitleGenerator() {
             </div>
             <button
                 type="submit"
-                disabled={loading || !mounted}
-                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md
-                        hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500
-                        focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-md hover:from-amber-600 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
                 {loading ? (
                 <span className="flex items-center justify-center">
@@ -246,24 +245,21 @@ export default function TitleGenerator() {
                     </svg>
                     Generating...
                 </span>
-                ) : 'Generate Titles'}
+                ) : "Generate Titles"}
             </button>
             </form>
-            <div className="mt-8">
-            {generatedTitles.length > 0 ? (
-            <>
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Generated Titles</h2>
-                <div className="space-y-3">
+
+            {generatedTitles.length > 0 && (
+            <div className="mt-8 space-y-4">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Generated Titles</h2>
+                <div className="space-y-2">
                 {generatedTitles.map((title, index) => (
-                    <TitleItem key={`title-${index}`} title={title} index={index} />
+                    <TitleItem key={index} title={title} index={index} />
                 ))}
                 </div>
-            </>
-            ) : loading ? (
-            <div className="text-center text-gray-500">Generating titles...</div>
-            ) : null}
             </div>
+            )}
         </div>
-    </div>
+        </div>
     );
-    }
+}
