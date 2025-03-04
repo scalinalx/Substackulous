@@ -62,6 +62,13 @@ const features = [
     href: "/dashboard/notes-rag",
     color: "from-cyan-500 to-blue-500"
   },
+  {
+    title: "$50,000 Offer Builder",
+    description: "Craft an irresistible high-ticket offer that converts subscribers into paying customers—engineered to hit $50K/month.",
+    icon: "💰",
+    href: "/dashboard/offer-builder",
+    color: "from-yellow-500 to-amber-500"
+  },
   // {
   //   title: "Topic/Niche Research",
   //   description: "Coming Soon - Discover trending topics and untapped niches for your Substack.",
