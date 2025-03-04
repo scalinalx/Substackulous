@@ -41,6 +41,17 @@ export default function NotesRagContent() {
     return sentences.join("\n");
   };
 
+  // Function to clean introductory phrases from LLM responses
+  const cleanIntroductoryPhrases = (text: string): string => {
+    // Remove phrases like "Here are five highly engaging notes on the topic of {topic}:"
+    return text
+      .replace(/^Here are (five|[0-9]+) (highly engaging|engaging|compelling|interesting|useful|helpful) notes on the topic of ["']?[^:"']*["']?:?\s*/i, '')
+      .replace(/^Here are (five|[0-9]+) notes (about|on|for|regarding) ["']?[^:"']*["']?:?\s*/i, '')
+      .replace(/^Here are some (notes|thoughts) (about|on|for|regarding) ["']?[^:"']*["']?:?\s*/i, '')
+      .replace(/^(Below are|Following are) (five|[0-9]+) (notes|points) (about|on|for|regarding) ["']?[^:"']*["']?:?\s*/i, '')
+      .trim();
+  };
+
   // Handler to copy a note to clipboard.
   const copyNote = async (note: string) => {
     try {
@@ -134,7 +145,10 @@ export default function NotesRagContent() {
 
   // Helper to split notes based on delimiter.
   const splitNotes = (notes: string): string[] => {
-    return notes.split("###---###").map(note => note.trim()).filter(note => note);
+    return notes
+      .split("###---###")
+      .map(note => cleanIntroductoryPhrases(note.trim()))
+      .filter(note => note);
   };
 
   const turboNotes = splitNotes(generatedNotes.notesTurbo);
