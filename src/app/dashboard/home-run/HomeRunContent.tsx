@@ -306,82 +306,110 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
     return results.analysis;
   };
 
+  if (!user) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center justify-between mb-8">
           <div>
             <Link
               href="/dashboard"
-              className="text-amber-600 hover:text-amber-500 flex items-center gap-1"
+              className="text-amber-600 hover:text-amber-500 dark:text-amber-500 dark:hover:text-amber-400 flex items-center gap-1"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               Back to Dashboard
             </Link>
-            <h1 className="mt-4 text-3xl font-bold text-gray-900">The Home Run</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="mt-4 text-3xl font-bold text-gray-900 dark:text-white">The Home Run</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">
               Analyze any Substack, and get in seconds viral post titles, and high-engagement viral notes.
             </p>
           </div>
         </div>
 
-        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-8">
-          <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-            <span className="text-amber-700">Credits required: {creditCost}</span>
-            <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
-          </div>
-
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Your Substack URL
-              </label>
+        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Analyze a Substack</h2>
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-grow">
               <Input
-                type="url"
+                type="text"
+                placeholder="Enter Substack URL (e.g., https://example.substack.com)"
                 value={substackUrl}
                 onChange={(e) => setSubstackUrl(e.target.value)}
-                placeholder="https://yourURL.substack.com"
-                className="w-full"
+                className="w-full dark:bg-gray-700 dark:text-white dark:border-gray-600"
               />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex gap-2">
               <Button
-                onClick={handleBrainstorm}
-                disabled={isLoading || !substackUrl}
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                onClick={() => fetchTopPosts('brainstorm')}
+                disabled={isLoading || !substackUrl || (credits ?? 0) < creditCost}
+                className="whitespace-nowrap"
               >
-                {isLoading && activeSection === 'brainstorm' ? 'Loading...' : 'Generate Viral Headlines'}
+                {isLoading && activeSection === 'brainstorm' ? 'Analyzing...' : 'Brainstorm Ideas'}
               </Button>
-
               <Button
-                onClick={handleGenerateNotes}
-                disabled={isLoading || !substackUrl}
-                className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700"
+                onClick={() => fetchTopPosts('notes')}
+                disabled={isLoading || !substackUrl || (credits ?? 0) < creditCost}
+                className="whitespace-nowrap"
               >
-                {isLoading && activeSection === 'notes' ? 'Loading...' : 'Generate 3 Viral Notes'}
+                {isLoading && activeSection === 'notes' ? 'Analyzing...' : 'Generate Notes'}
               </Button>
             </div>
+          </div>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Cost: {creditCost} credits. You have {credits ?? 0} credits remaining.
+          </p>
+        </div>
 
-            {(results.ideas || results.analysis || results.notes) && (
-              <div className="mt-8 space-y-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {activeSection === 'brainstorm'
-                    ? 'Viral Post Ideas'
-                    : activeSection === 'notes'
-                    ? '3 Viral Notes'
-                    : 'Content Analysis Results'}
-                </h2>
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  <div className="whitespace-pre-wrap">
-                    {getDisplayContent()}
-                  </div>
+        <div className="bg-white dark:bg-gray-800 shadow-sm ring-1 ring-gray-900/5 dark:ring-gray-700/50 sm:rounded-xl p-8">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+              <p className="mt-4 text-gray-600 dark:text-gray-300">Analyzing Substack content...</p>
+            </div>
+          ) : posts.length > 0 ? (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Analysis Results</h2>
+                <div className="flex space-x-4 mb-4">
+                  <button
+                    onClick={() => setActiveSection('brainstorm')}
+                    className={`px-4 py-2 rounded-md ${
+                      activeSection === 'brainstorm'
+                        ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Viral Ideas
+                  </button>
+                  <button
+                    onClick={() => setActiveSection('notes')}
+                    className={`px-4 py-2 rounded-md ${
+                      activeSection === 'notes'
+                        ? 'bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    Viral Notes
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
+
+              <div className="prose max-w-none dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-p:text-gray-600 dark:prose-p:text-gray-300">
+                {getDisplayContent()}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600 dark:text-gray-300">
+                Enter a Substack URL above to analyze content and generate ideas.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
