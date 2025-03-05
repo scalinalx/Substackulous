@@ -2,12 +2,15 @@
 'use client';
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useTheme } from 'next-themes';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const { signIn, signInWithGoogle, isLoading } = useAuth();
+  const { theme } = useTheme();
+  const isDarkTheme = theme === 'dark';
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,21 +42,21 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="max-w-md w-full space-y-6 p-8 bg-white rounded-lg shadow-md">
+    <div className={`max-w-md w-full space-y-6 p-8 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md`}>
       <div className="text-center">
-        <h1 className="text-2xl font-bold">Welcome Back</h1>
-        <p className="text-gray-600 mt-2">Sign in to your account</p>
+        <h1 className={`text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>Welcome Back</h1>
+        <p className={`mt-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>Sign in to your account</p>
       </div>
 
       <form onSubmit={handleEmailSignIn} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className={`block text-sm font-medium ${isDarkTheme ? 'text-gray-200' : 'text-gray-700'}`}>
             Email
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className={`mt-1 block w-full px-3 py-2 border ${isDarkTheme ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
               required
               disabled={isLoading}
             />
@@ -61,13 +64,13 @@ export default function LoginForm() {
         </div>
         
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className={`block text-sm font-medium ${isDarkTheme ? 'text-gray-200' : 'text-gray-700'}`}>
             Password
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              className={`mt-1 block w-full px-3 py-2 border ${isDarkTheme ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
               required
               disabled={isLoading}
             />
@@ -75,7 +78,7 @@ export default function LoginForm() {
         </div>
 
         {error && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
+          <div className={`text-sm text-red-600 ${isDarkTheme ? 'bg-red-900/30 border-red-800' : 'bg-red-50 border-red-200'} border rounded-md p-3`}>
             {error}
           </div>
         )}
@@ -90,10 +93,10 @@ export default function LoginForm() {
 
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300" />
+            <div className={`w-full border-t ${isDarkTheme ? 'border-gray-600' : 'border-gray-300'}`} />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            <span className={`px-2 ${isDarkTheme ? 'bg-gray-800 text-gray-300' : 'bg-white text-gray-500'}`}>Or continue with</span>
           </div>
         </div>
 
@@ -101,7 +104,7 @@ export default function LoginForm() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={isLoading}
-          className="w-full flex items-center justify-center gap-3 py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`w-full flex items-center justify-center gap-3 py-2 px-4 border ${isDarkTheme ? 'border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'} rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path
