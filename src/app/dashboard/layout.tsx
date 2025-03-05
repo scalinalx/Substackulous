@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import './config';
 
 export default function DashboardLayout({
   children,
