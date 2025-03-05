@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
 
 interface GenerationOptions {
   title: string;
@@ -14,6 +15,8 @@ interface GenerationOptions {
 export default function ThumbnailGenerator() {
   const router = useRouter();
   const { user, credits, updateCredits, session } = useAuth();
+  const { theme } = useTheme();
+  const isDarkTheme = theme === 'dark';
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<{ urls: string[] } | null>(null);
   const [options, setOptions] = useState<GenerationOptions>({
@@ -153,43 +156,43 @@ export default function ThumbnailGenerator() {
   return (
     <div className="container mx-auto p-4">
       {/* Advanced Generation Section */}
-      <div className="p-6 bg-white rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold mb-2">Advanced Post Thumbnail Generator</h2>
-        <p className="text-gray-600 mb-4">Generates 3 unique thumbnails with text overlay</p>
+      <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+        <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Advanced Post Thumbnail Generator</h2>
+        <p className="text-gray-600 dark:text-gray-300 mb-4">Generates 3 unique thumbnails with text overlay</p>
         
         {/* Credit Cost Display */}
-        <div className="mb-6 flex items-center justify-between bg-amber-50 p-4 rounded-lg">
-          <span className="text-amber-700">Credits required: {creditCost}</span>
-          <span className="font-medium text-amber-700">Your balance: {credits ?? 0}</span>
+        <div className="mb-6 flex items-center justify-between bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+          <span className="text-amber-700 dark:text-amber-400">Credits required: {creditCost}</span>
+          <span className="font-medium text-amber-700 dark:text-amber-400">Your balance: {credits ?? 0}</span>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Title</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
             <input
               type="text"
               value={options.title}
               onChange={(e) => setOptions({ ...options, title: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
               placeholder="Enter your title"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Theme</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Theme</label>
             <input
               type="text"
               value={options.theme}
               onChange={(e) => setOptions({ ...options, theme: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
               placeholder="e.g., dark, modern, vibrant"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Aspect Ratio</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Aspect Ratio</label>
             <select
               value={options.aspectRatio}
               onChange={(e) => setOptions({ ...options, aspectRatio: e.target.value })}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="3:2">Landscape (3:2)</option>
               <option value="1:1">Square (1:1)</option>
@@ -218,7 +221,7 @@ export default function ThumbnailGenerator() {
       {/* Generated Images Display */}
       {generatedImages && (
         <div className="mt-8 space-y-6">
-          <h3 className="text-xl font-semibold mb-4">Generated Images</h3>
+          <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Generated Images</h3>
           
           {/* Large Preview */}
           <div className="relative w-[85%] mx-auto">
@@ -262,6 +265,20 @@ export default function ThumbnailGenerator() {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* Status Display */}
+      {status && (
+        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-lg">
+          {status}
         </div>
       )}
     </div>

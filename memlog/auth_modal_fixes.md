@@ -24,6 +24,14 @@
 - Ensured theme consistency between the main app and dashboard
 - Maintained the existing theme toggle functionality
 
+### 4. Dark Mode Support for Instant Post Image Generator
+- Added dark mode support to the ThumbnailGenerator component
+- Imported and used the useTheme hook to detect the current theme
+- Updated background colors, text colors, and border colors for dark mode
+- Enhanced form inputs, labels, and containers with dark mode styling
+- Added dark mode styling for status and error messages
+- Improved the visual consistency between light and dark themes
+
 ## Benefits
 - Improved user experience with proper dark mode support
 - Fixed accessibility issues for better compliance
