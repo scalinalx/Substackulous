@@ -17,15 +17,18 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import { VideoModal } from "@/components/video-modal";
+import { AuthModal } from "@/components/auth-modal";
 import { ComparisonSection } from "@/components/comparison-section";
 
 export default function Home() {
   const { theme, setTheme } = useTheme();
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between">
       <VideoModal isOpen={isVideoModalOpen} onClose={() => setIsVideoModalOpen(false)} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       {/* Announcement Bar */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm dark:bg-[#1b002a] border-0">
         <div className="container mx-auto h-12 flex items-center justify-between relative">
@@ -52,9 +55,7 @@ export default function Home() {
             <Button
               size="sm"
               className="bg-orange-500 hover:bg-orange-600 text-white whitespace-nowrap text-[13px] h-8 px-4 rounded-[4px]"
-              onClick={() => {
-                document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => setIsAuthModalOpen(true)}
             >
               GET STARTED
             </Button>
@@ -130,9 +131,7 @@ export default function Home() {
                   <Button 
                     size="lg" 
                     className="group shadow-glow"
-                    onClick={() => {
-                      document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() => setIsAuthModalOpen(true)}
                   >
                     Start Free Trial
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
