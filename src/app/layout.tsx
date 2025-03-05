@@ -1,38 +1,31 @@
-import './globals.css';
-import { Noto_Sans } from 'next/font/google';
-import { AuthProvider } from '@/lib/contexts/AuthContext';
-import { ThemeProvider } from '@/lib/contexts/ThemeContext';
-import { Metadata } from 'next';
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 
-const notoSans = Noto_Sans({
-  subsets: ['latin'],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
-  style: ['normal', 'italic'],
-  variable: '--font-noto-sans',
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: {
-    template: '%s | Substackulous',
-    default: 'Substackulous - AI-Powered Tools for Substack Writers'
-  },
-  description: 'Enhance your Substack newsletter with AI-powered tools for content creation, analysis, and optimization.',
-  keywords: ['Substack', 'Newsletter', 'AI', 'Content Creation', 'Writing Tools'],
+  title: "Substackulous - AI-Powered Newsletter Platform",
+  description: "Transform your newsletter with AI-powered content suggestions, advanced analytics, and seamless monetization tools.",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className={notoSans.variable}>
-      <body className={notoSans.className}>
-        <AuthProvider>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
