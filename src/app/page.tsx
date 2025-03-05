@@ -31,8 +31,20 @@ export default function Home() {
         <div className="container mx-auto h-12 flex items-center justify-between relative">
           <div className="flex items-center gap-4 px-4">
             <div className="flex items-center -ml-10">
-              <img src="/logow.png" alt="Substackulous" className="h-14 block dark:hidden" />
-              <img src="/logo2.png" alt="Substackulous" className="h-14 hidden dark:block" />
+              <Image 
+                src="/logow.png" 
+                alt="Substackulous" 
+                width={56} 
+                height={56} 
+                className="h-14 block dark:hidden" 
+              />
+              <Image 
+                src="/logo2.png" 
+                alt="Substackulous" 
+                width={56} 
+                height={56} 
+                className="h-14 hidden dark:block" 
+              />
             </div>
             <p className="text-[10px] md:text-xs text-gray-800 dark:text-gray-200">
               Supercharge your Substack! Boost your subscriber growth by up to 500% and double your conversion rate in less than 30 DAYS.

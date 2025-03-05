@@ -85,7 +85,7 @@ export function Testimonials() {
           Loved by <span className="text-primary">creators</span> worldwide
         </h2>
         <p className="text-muted-foreground text-lg">
-          Join thousands of successful writers who've transformed their newsletters with Substackulous
+          Join thousands of successful writers who&apos;ve transformed their newsletters with Substackulous
         </p>
       </motion.div>
 

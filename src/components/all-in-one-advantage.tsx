@@ -1,6 +1,7 @@
 "use client"
 
 import { Layers, DollarSign, Clock, CheckCircle, Star } from "lucide-react";
+import Image from "next/image";
 
 export function AllInOneAdvantage() {
   return (
@@ -61,11 +62,17 @@ export function AllInOneAdvantage() {
           </div>
         </div>
       </div>
-      <img src="/tag1.png" alt="All-in-One Advantage" className="w-full rounded-xl" />
+      <Image 
+        src="/tag1.png" 
+        alt="All-in-One Advantage" 
+        className="w-full rounded-xl"
+        width={1200}
+        height={600} 
+      />
       <div className="text-center p-6 bg-black-50 rounded-xl">
         <h3 className="text-2xl font-bold text-gray-300 mb-3">Simplified Workflow. Reduced Costs. Better Results.</h3>
         <p className="text-lg text-gray-300 max-w-3xl mx-auto">
-          We're constantly adding new features and functionality to make Substackulous so good you don't need anything else. One subscription. Unlimited value.
+          We&apos;re constantly adding new features and functionality to make Substackulous so good you don&apos;t need anything else. One subscription. Unlimited value.
         </p>
       </div>
     </div>

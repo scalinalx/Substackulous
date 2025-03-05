@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setCredits(null); // Also reset credits
             }
         }
-    }, [profile, credits, supabase]); // Add credits to dependencies
+    }, [profile, credits]); // Remove supabase from dependencies
 
 
     const startSessionCheck = useCallback(() => {
@@ -392,7 +392,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsLoading(false);
             console.log("updateProfile: COMPLETED");
         }
-    }, [user, supabase]);
+    }, [user]); // Remove supabase from dependencies
 
 
     const updateCredits = useCallback(async (newCredits: number) => {
@@ -416,7 +416,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('Error updating credits', error);
             throw error;
         }
-    }, [user, supabase]);
+    }, [user]); // Remove supabase from dependencies
 
 
     const contextValue = useMemo(() => ({
