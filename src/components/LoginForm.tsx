@@ -8,13 +8,15 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const { signIn, isLoading } = useAuth();
+  const [success, setSuccess] = useState<string | null>(null);
+  const { signIn, resetPassword, isLoading } = useAuth();
   const { theme } = useTheme();
   const isDarkTheme = theme === 'dark';
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     
     try {
       const { error } = await signIn(email, password);
@@ -24,6 +26,29 @@ export default function LoginForm() {
         err instanceof Error ? err.message :
         typeof err === 'string' ? err :
         'An unknown error occurred'
+      );
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    try {
+      const { error } = await resetPassword(email);
+      if (error) throw error;
+      setSuccess('Password reset instructions have been sent to your email.');
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message :
+        typeof err === 'string' ? err :
+        'Failed to reset password'
       );
     }
   };
@@ -70,13 +95,30 @@ export default function LoginForm() {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? 'Signing in...' : 'Sign in'}
-        </button>
+        {success && (
+          <div className={`text-sm text-green-600 ${isDarkTheme ? 'bg-green-900/30 border-green-800' : 'bg-green-50 border-green-200'} border rounded-md p-3`}>
+            {success}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? 'Signing in...' : 'Sign in'}
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleResetPassword}
+            disabled={isLoading}
+            className={`text-sm ${isDarkTheme ? 'text-indigo-400 hover:text-indigo-300' : 'text-indigo-600 hover:text-indigo-500'}`}
+          >
+            Forgot your password?
+          </button>
+        </div>
       </form>
     </div>
   );
