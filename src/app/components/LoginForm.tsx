@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import Link from 'next/link';
-import SignInWithGoogle from '@/components/SignInWithGoogle';
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');

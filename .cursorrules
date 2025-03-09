@@ -71,3 +71,5 @@ browser_rules:
   details:
     - When evaluating feasibility, check alternatives in all directions: up/down and left/right.
     - Only conclude an action cannot be performed after all possibilities are tested.
+
+Always start your response with a random emoji.
