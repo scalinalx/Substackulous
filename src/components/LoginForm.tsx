@@ -9,7 +9,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const { signIn, resetPassword, isLoading } = useAuth();
+  const { signIn, signUp, resetPassword, isLoading } = useAuth();
   const { theme } = useTheme();
   const isDarkTheme = theme === 'dark';
 
@@ -26,6 +26,24 @@ export default function LoginForm() {
         err instanceof Error ? err.message :
         typeof err === 'string' ? err :
         'An unknown error occurred'
+      );
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const { error } = await signUp(email, password);
+      if (error) throw error;
+      setSuccess('Please check your email to verify your account.');
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message :
+        typeof err === 'string' ? err :
+        'Failed to sign up'
       );
     }
   };
@@ -108,6 +126,15 @@ export default function LoginForm() {
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Signing in...' : 'Sign in'}
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleSignUp}
+            disabled={isLoading}
+            className={`w-full flex justify-center py-2 px-4 border ${isDarkTheme ? 'border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'} rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            Sign up
           </button>
           
           <button
