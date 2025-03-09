@@ -89,6 +89,7 @@ export default function LoginForm() {
               className={`mt-1 block w-full px-3 py-2 border ${isDarkTheme ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
               required
               disabled={isLoading}
+              autoComplete="email"
             />
           </label>
         </div>
@@ -103,6 +104,7 @@ export default function LoginForm() {
               className={`mt-1 block w-full px-3 py-2 border ${isDarkTheme ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
               required
               disabled={isLoading}
+              autoComplete="current-password"
             />
           </label>
         </div>

@@ -18,8 +18,8 @@ const supabaseClient = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: false,
-      flowType: 'pkce',
+      detectSessionInUrl: true,
+      flowType: 'implicit',
       debug: process.env.NODE_ENV === 'development',
     },
     db: {

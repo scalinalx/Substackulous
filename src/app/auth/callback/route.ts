@@ -7,28 +7,26 @@ export const revalidate = 0;
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  
-  // Extract all possible parameters
   const code = requestUrl.searchParams.get('code');
-  const type = requestUrl.searchParams.get('type');
-  const token = requestUrl.searchParams.get('token');
   
   // Log the request for debugging
-  console.log('Auth callback received:', { url: request.url, code, type, token });
+  console.log('Auth callback received:', { url: request.url, code });
   
-  // For all verification flows, redirect to login with the code
-  // Let the client-side handle the actual verification
-  if (code || type === 'signup' || type === 'recovery' || type === 'invite') {
-    const loginUrl = new URL('/login', requestUrl.origin);
-    
-    // If we have a code, add it to the URL
-    if (code) {
-      loginUrl.searchParams.set('code', code);
+  // Create a Supabase client for the server
+  const cookieStore = cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  
+  // If we have a code, exchange it for a session
+  if (code) {
+    try {
+      await supabase.auth.exchangeCodeForSession(code);
+    } catch (error) {
+      console.error('Error exchanging code for session:', error);
+      // Continue anyway, as we'll redirect to login
     }
-    
-    return NextResponse.redirect(loginUrl);
   }
   
-  // Default fallback - redirect to login
+  // Always redirect to login - if the exchange was successful,
+  // the user will be automatically redirected to the dashboard
   return NextResponse.redirect(new URL('/login', requestUrl.origin));
 } 

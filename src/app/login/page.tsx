@@ -1,42 +1,28 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import LoginForm from '@/components/LoginForm';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import VerifySession from '@/components/VerifySession';
 import { Suspense } from 'react';
 
-// Wrapper component to handle search params
+// Wrapper component to handle auth state
 function LoginPageContent() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [code, setCode] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get the code from the URL
-    const urlCode = searchParams?.get('code');
-    if (urlCode) {
-      setCode(urlCode);
-    }
-
-    // If user is already logged in and there's no code, redirect to dashboard
-    if (user && !urlCode && !isLoading) {
+    // If user is already logged in, redirect to dashboard
+    if (user && !isLoading) {
       router.push('/dashboard');
     }
-  }, [user, router, searchParams, isLoading]);
+  }, [user, router, isLoading]);
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
-  return (
-    <>
-      <LoginForm />
-      {code && <VerifySession code={code} />}
-    </>
-  );
+  return <LoginForm />;
 }
 
 export default function LoginPage() {

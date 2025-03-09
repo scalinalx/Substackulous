@@ -86,7 +86,7 @@ export async function signUp(email: string, password: string): Promise<{ error: 
     // Get the current origin for the redirect URL
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     
-    // Use the login page with a special flag to indicate verification
+    // Use the direct login URL for redirection
     const redirectTo = `${origin}/login`;
     
     console.log('Signing up with redirect to:', redirectTo);
@@ -96,6 +96,7 @@ export async function signUp(email: string, password: string): Promise<{ error: 
       password,
       options: {
         emailRedirectTo: redirectTo,
+        // Don't include any PKCE-specific options
       }
     });
     
