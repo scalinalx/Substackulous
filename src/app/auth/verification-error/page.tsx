@@ -25,7 +25,7 @@ export default function VerificationErrorPage() {
           </div>
           <h2 className="text-2xl font-bold dark:text-white">Verification Failed</h2>
           <p className="mt-2 text-gray-600 dark:text-gray-300">
-            We couldn't verify your email. The verification link may have expired or is invalid.
+            We couldn&apos;t verify your email. The verification link may have expired or is invalid.
           </p>
         </div>
         <div className="flex flex-col space-y-4">
