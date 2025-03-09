@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 export default function VerificationSuccessPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
+  const [countdown, setCountdown] = useState(5);
 
   // Redirect to dashboard if already authenticated
   useEffect(() => {
@@ -15,6 +16,16 @@ export default function VerificationSuccessPage() {
       router.replace('/dashboard');
     }
   }, [isAuthenticated, isLoading, router]);
+
+  // Countdown for automatic redirect
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (countdown === 0) {
+      router.push('/login');
+    }
+  }, [countdown, router]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
@@ -40,13 +51,16 @@ export default function VerificationSuccessPage() {
           <p className="mt-2 text-gray-600 dark:text-gray-300">
             Your email has been successfully verified. You can now sign in to your account.
           </p>
+          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+            Redirecting to login page in {countdown} seconds...
+          </p>
         </div>
         <div className="flex flex-col space-y-4">
           <Link
             href="/login"
             className="w-full rounded-md bg-indigo-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
-            Sign In
+            Sign In Now
           </Link>
         </div>
       </div>

@@ -83,11 +83,17 @@ export async function updatePassword(password: string): Promise<{ error: AuthErr
 
 export async function signUp(email: string, password: string): Promise<{ error: AuthError | null }> {
   try {
+    // Get the current origin for the redirect URL
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const redirectTo = `${origin}/auth/callback`;
+    
+    console.log('Signing up with redirect to:', redirectTo);
+    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: redirectTo,
       }
     });
     
