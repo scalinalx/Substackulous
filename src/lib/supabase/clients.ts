@@ -20,6 +20,7 @@ const supabaseClient = createClient(
       autoRefreshToken: true,
       detectSessionInUrl: false,
       flowType: 'pkce',
+      debug: process.env.NODE_ENV === 'development',
     },
     db: {
       schema: 'public'
@@ -34,6 +35,8 @@ const supabaseClient = createClient(
 
 // Add error event listener
 supabaseClient.auth.onAuthStateChange((event, session) => {
+  console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
+  
   if (event === 'SIGNED_OUT') {
     // Delete all supabase cache
     for (const key of Object.keys(localStorage)) {
