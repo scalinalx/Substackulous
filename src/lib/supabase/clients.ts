@@ -20,7 +20,7 @@ const supabaseClient = createClient(
       autoRefreshToken: true,
       detectSessionInUrl: true,
       flowType: 'implicit',
-      debug: process.env.NODE_ENV === 'development',
+      debug: true,
     },
     db: {
       schema: 'public'
@@ -33,9 +33,18 @@ const supabaseClient = createClient(
   }
 );
 
+// Track session initialization attempts to prevent infinite loops
+let sessionInitAttempts = 0;
+const MAX_SESSION_INIT_ATTEMPTS = 3;
+
 // Add error event listener
 supabaseClient.auth.onAuthStateChange((event, session) => {
   console.log('Auth state changed:', event, session ? 'Session exists' : 'No session');
+  
+  // Reset counter on successful auth events
+  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    sessionInitAttempts = 0;
+  }
   
   if (event === 'SIGNED_OUT') {
     // Delete all supabase cache
@@ -89,3 +98,9 @@ export const getSupabaseClient = () => supabaseClient;
 
 // Export the client directly for backward compatibility
 export const supabase = supabaseClient;
+
+// Helper function to check if we should attempt to fetch profile
+export const shouldFetchProfile = () => {
+  sessionInitAttempts++;
+  return sessionInitAttempts <= MAX_SESSION_INIT_ATTEMPTS;
+};

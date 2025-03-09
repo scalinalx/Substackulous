@@ -11,7 +11,7 @@ import {
 } from "react";
 import { User, Session, AuthError } from "@supabase/supabase-js";
 import { useRouter, usePathname } from "next/navigation";
-import { supabase, withRetry } from "@/lib/supabase/clients";
+import { supabase, withRetry, shouldFetchProfile } from "@/lib/supabase/clients";
 import {
   logoutUser,
   signInWithGoogle,
@@ -66,6 +66,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const fetchProfile = useCallback(async (userId: string) => {
         try {
+            // Check if we should attempt to fetch the profile
+            if (!shouldFetchProfile()) {
+                console.warn('Maximum profile fetch attempts reached, aborting to prevent infinite loop');
+                return;
+            }
+
             const { data: { session } } = await supabase.auth.getSession();
             if (!session) {
                 console.error('No active session when fetching profile');
@@ -187,7 +193,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (initialSession) {
                     setSession(initialSession);
                     setUser(initialSession.user);
-                    await fetchProfile(initialSession.user.id);
+                    
+                    // Only fetch profile if we have a user and we haven't exceeded the maximum attempts
+                    if (initialSession.user) {
+                        await fetchProfile(initialSession.user.id);
+                    }
                 }
                 cleanup = startSessionCheck();
             } catch (error) {
@@ -214,6 +224,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 try {
                     setIsLoading(true);
                     lastActivity.current = Date.now();
+
+                    console.log('Auth state change event:', event);
 
                     if (JSON.stringify(currentSession) !== JSON.stringify(session)) {
                         setSession(currentSession);

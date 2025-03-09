@@ -83,27 +83,17 @@ export async function updatePassword(password: string): Promise<{ error: AuthErr
 
 export async function signUp(email: string, password: string): Promise<{ error: AuthError | null }> {
   try {
-    // Get the current origin for the redirect URL
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    
-    // Use the direct login URL for redirection
-    const redirectTo = `${origin}/login`;
-    
-    console.log('Signing up with redirect to:', redirectTo);
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectTo,
-        // Don't include any PKCE-specific options
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       }
     });
     
-    if (error) throw error;
-    return { error: null };
+    return { error };
   } catch (error) {
-    console.error('Error signing up:', error);
+    console.error('Error during sign up:', error);
     return { error: error as AuthError };
   }
 }
