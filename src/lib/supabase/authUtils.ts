@@ -80,3 +80,21 @@ export async function updatePassword(password: string): Promise<{ error: AuthErr
     return { error: error as AuthError };
   }
 }
+
+export async function signUp(email: string, password: string): Promise<{ error: AuthError | null }> {
+  try {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      }
+    });
+    
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('Error signing up:', error);
+    return { error: error as AuthError };
+  }
+}

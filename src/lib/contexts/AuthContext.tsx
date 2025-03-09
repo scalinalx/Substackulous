@@ -16,6 +16,7 @@ import {
   logoutUser,
   signInWithGoogle,
   resetPassword as resetPasswordUtil,
+  signUp as signUpUtil,
 } from "../supabase/authUtils";
 
 interface UserProfile {
@@ -287,16 +288,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const signUp = useCallback(async (email: string, password: string) => {
         try {
             setIsLoading(true);
-            const { error } = await supabase.auth.signUp({ email, password });
-
-            if (error) throw error;
-            return { error: null };
+            const { error } = await signUpUtil(email, password);
+            return { error };
         } catch (error) {
-            return {
-                error: error instanceof Error
-                    ? error
-                    : new Error('Failed to sign up. Please try again.')
-            };
+            console.error('Sign up error:', error);
+            return { error: error as Error };
         } finally {
             setIsLoading(false);
         }
