@@ -86,8 +86,7 @@ export async function signUp(email: string, password: string): Promise<{ error: 
     // Get the current origin for the redirect URL
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     
-    // Use the direct login URL instead of the callback
-    // This will skip the verification success page and go straight to login
+    // Use the login page with a special flag to indicate verification
     const redirectTo = `${origin}/login`;
     
     console.log('Signing up with redirect to:', redirectTo);
