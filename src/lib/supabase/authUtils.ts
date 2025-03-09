@@ -89,6 +89,7 @@ export async function signUp(email: string, password: string): Promise<{ error: 
     
     console.log('Signing up with redirect to:', redirectTo);
     
+    // User doesn't exist, proceed with sign up
     const { error } = await supabase.auth.signUp({
       email,
       password,
