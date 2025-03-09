@@ -1,17 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-export default function VerificationErrorPage() {
+// Create a client component that safely uses useSearchParams
+function VerificationErrorContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [isRetrying, setIsRetrying] = useState(false);
   const [countdown, setCountdown] = useState(10);
+  const [originalUrl, setOriginalUrl] = useState<string | null>(null);
   
-  // Get the original URL from query params
-  const originalUrl = searchParams?.get('originalUrl');
+  // Get the original URL from query params safely
+  useEffect(() => {
+    // This is safe to use in useEffect
+    const searchParams = new URLSearchParams(window.location.search);
+    setOriginalUrl(searchParams.get('originalUrl'));
+  }, []);
   
   // Auto-redirect after countdown
   useEffect(() => {
@@ -93,5 +98,22 @@ export default function VerificationErrorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function VerificationErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md dark:bg-gray-800">
+          <div className="text-center">
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <VerificationErrorContent />
+    </Suspense>
   );
 } 

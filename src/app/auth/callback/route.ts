@@ -56,35 +56,4 @@ export async function GET(request: Request) {
     errorUrl.searchParams.set('originalUrl', request.url);
     return NextResponse.redirect(errorUrl);
   }
-}
-
-// Helper function to extract token from URL
-// Sometimes the token might be in a different part of the URL
-function extractTokenFromUrl(url: string): string | null {
-  try {
-    const urlObj = new URL(url);
-    
-    // Check if token is in the query parameters
-    const token = urlObj.searchParams.get('token');
-    if (token) return token;
-    
-    // Check if token is in the path
-    const pathParts = urlObj.pathname.split('/');
-    for (let i = 0; i < pathParts.length; i++) {
-      if (pathParts[i] === 'verify' && i + 1 < pathParts.length) {
-        return pathParts[i + 1];
-      }
-    }
-    
-    // Check if token is in the hash
-    if (urlObj.hash && urlObj.hash.includes('token=')) {
-      const hashParams = new URLSearchParams(urlObj.hash.substring(1));
-      return hashParams.get('token');
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error extracting token from URL:', error);
-    return null;
-  }
 } 
