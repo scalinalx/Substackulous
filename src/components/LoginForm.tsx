@@ -134,7 +134,7 @@ export default function LoginForm() {
             type="button"
             onClick={handleSignUp}
             disabled={isLoading}
-            className={`w-full flex justify-center py-2 px-4 border ${isDarkTheme ? 'border-gray-600 bg-green-200 text-gray-200 hover:bg-gray-600' : 'border-gray-300 bg-green text-gray-700 hover:bg-gray-50'} rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`w-full flex justify-center py-2 px-4 border ${isDarkTheme ? 'border-gray-600 bg-green-700 text-gray-200 hover:bg-gray-600' : 'border-gray-300 bg-green-700 text-gray-700 hover:bg-gray-50'} rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             Sign up
           </button>
