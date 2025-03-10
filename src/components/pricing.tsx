@@ -13,7 +13,7 @@ const plans = [
     price: 0,
     features: [
       "One-time only",
-      "Receive 250 credits",
+      "Receive 100 credits",
       "All tools unlocked",
       "Experience the Substackulous magic",
     ],
@@ -23,7 +23,7 @@ const plans = [
     description: "For growing newsletters with advanced features",
     price: 47,
     features: [
-      "Up to 10,000 subscribers",
+      "2500 credits/month",
       "Advanced AI content optimization",
       "Premium analytics & insights",
       "Priority support",
@@ -51,7 +51,11 @@ const plans = [
   },
 ]
 
-export function Pricing() {
+interface PricingProps {
+  onAuthModalOpen?: () => void;
+}
+
+export function Pricing({ onAuthModalOpen }: PricingProps = {}) {
   return (
     <section id="pricing" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 sm:pb-32 pt-0 mt-0">
       <motion.div
@@ -118,7 +122,11 @@ export function Pricing() {
               </CardContent>
 
               <CardFooter className="p-6 pt-0">
-                <Button className="w-full" variant={plan.popular ? "default" : "outline"}>
+                <Button 
+                  className="w-full" 
+                  variant={plan.popular ? "default" : "outline"}
+                  onClick={plan.name === 'Starter' && onAuthModalOpen ? onAuthModalOpen : undefined}
+                >
                   {plan.name === 'Starter' ? 'START Today' : 
                    plan.name === 'Pro' ? 'Become a PRO' : 
                    'You Go, LEGEND'}

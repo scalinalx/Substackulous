@@ -18,7 +18,7 @@ export function VideoModal({ isOpen, onClose }: VideoModalProps) {
           <iframe
             width="100%"
             height="100%"
-            src="https://www.youtube-nocookie.com/embed/c8qrwON1-zE?si=hBqyQ3a9CwYDfsQ5&autoplay=1"
+            src="https://www.youtube-nocookie.com/embed/fspz75a8aSg?si=lD5wOrh0uCok5Fz3&autoplay=1"
             title="YouTube video player"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

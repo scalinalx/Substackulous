@@ -258,7 +258,7 @@ export default function Home() {
 
         {/* Pricing Section */}
         <div className="w-full">
-          <Pricing />
+          <Pricing onAuthModalOpen={() => setIsAuthModalOpen(true)} />
         </div>
 
         {/* FAQ Section */}
