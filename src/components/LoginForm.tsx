@@ -75,7 +75,7 @@ export default function LoginForm() {
     <div className={`max-w-md w-full space-y-6 p-8 ${isDarkTheme ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md`}>
       <div className="text-center">
         <h1 className={`text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>Welcome Back</h1>
-        <p className={`mt-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>Sign in to your account</p>
+        <p className={`mt-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>Sign in to your account or sign up to create an account</p>
       </div>
 
       <form onSubmit={handleEmailSignIn} className="space-y-4">
