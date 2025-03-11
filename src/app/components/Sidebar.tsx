@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { ChevronLeft, ChevronRight, Home, LogOut, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, LogOut, User, Crown } from 'lucide-react';
 
 // Define the feature interface
 interface SidebarFeature {
@@ -144,21 +144,32 @@ export default function Sidebar() {
           {!isCollapsed && <h3 className="text-xs uppercase text-gray-500 dark:text-gray-400 font-semibold mb-2">Account</h3>}
           <div className="space-y-1">
             <Link
+              href="/dashboard/upgrade"
+              className={`flex items-center justify-left px-2 py-2 rounded-md ${
+                pathname === '/dashboard/upgrade'
+                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
+                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+              }`}
+            >
+              <Crown className={`${isCollapsed ? 'h-8 w-8' : 'h-5 w-5'} ${isCollapsed ? '' : 'mr-3'} transition-all duration-200`} />
+              {!isCollapsed && <span className="font-medium">Upgrade Plan</span>}
+            </Link>
+            <Link
               href="/dashboard/account"
-              className={`flex items-center px-2 py-2 rounded-md ${
+              className={`flex items-center justify-left px-2 py-2 rounded-md ${
                 pathname === '/dashboard/account'
                   ? 'bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400'
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              <User className="h-5 w-5 mr-3" />
+              <User className={`${isCollapsed ? 'h-8 w-8' : 'h-5 w-5'} ${isCollapsed ? '' : 'mr-3'} transition-all duration-200`} />
               {!isCollapsed && <span>My Account</span>}
             </Link>
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center px-2 py-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full flex items-center justify-left px-2 py-2 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
             >
-              <LogOut className="h-5 w-5 mr-3" />
+              <LogOut className={`${isCollapsed ? 'h-8 w-8' : 'h-5 w-5'} ${isCollapsed ? '' : 'mr-3'} transition-all duration-200`} />
               {!isCollapsed && <span>Sign Out</span>}
             </button>
           </div>

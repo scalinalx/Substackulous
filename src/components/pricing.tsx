@@ -51,7 +51,7 @@ const plans = [
 ]
 
 interface PricingProps {
-  onAuthModalOpen?: () => void;
+  onAuthModalOpen?: (type?: 'default' | 'upgrade') => void;
 }
 
 export function Pricing({ onAuthModalOpen }: PricingProps = {}) {
@@ -124,7 +124,11 @@ export function Pricing({ onAuthModalOpen }: PricingProps = {}) {
                 <Button 
                   className="w-full" 
                   variant={plan.popular ? "default" : "outline"}
-                  onClick={plan.name === 'Starter' && onAuthModalOpen ? onAuthModalOpen : undefined}
+                  onClick={() => {
+                    if (onAuthModalOpen) {
+                      onAuthModalOpen(plan.name === 'Starter' ? 'default' : 'upgrade');
+                    }
+                  }}
                 >
                   {plan.name === 'Starter' ? 'START Today' : 
                    plan.name === 'Pro' ? 'Become a PRO' : 
