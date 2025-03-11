@@ -38,12 +38,14 @@ const plans = [
     billingPeriod: "year",
     features: [
       "Everything in Pro plan +",
-      "Get 2 Months FREE",
+      "Save $94 with annual billing",
       "Basically UNLIMITED usage of all advanced features",
       "Priority support",
-      "State of the art AI engine that generates Viral Notes, Catchy Headlines, eye-catching Thumbnails",
+      "State of the art AI engine that generates Viral Substack content",
+      "Bbrainstorm ideas in seconds and find viral insipiration for your posts/notes",
+      "Iterate on winners with ease",
       "Understand your audience better than ever before",
-      "Get 10x more replies, likes, and comments on your posts",
+      "Get 10x more replies, likes, and comments on your posts & notes",
     ],
   },
 ]
@@ -101,8 +103,8 @@ export function Pricing({ onAuthModalOpen }: PricingProps = {}) {
                   )}
                 </div>
                 {plan.name === 'Legend' && (
-                  <div className="text-sm text-primary-foreground bg-primary/80 rounded-full px-3 py-1 w-fit">
-                    Save $94 with annual billing
+                  <div className="text-sm text-white bg-purple-700 rounded-full px-3 py-1 w-fit">
+                    GET 2 MONTHS FREE
                   </div>
                 )}
               </CardHeader>
