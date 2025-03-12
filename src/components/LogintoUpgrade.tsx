@@ -135,7 +135,7 @@ export default function LogintoUpgrade() {
             type="button"
             onClick={handleSignUp}
             disabled={isLoading}
-            className={`w-full flex justify-center py-2 px-4 border ${isDarkTheme ? 'border-gray-600 bg-amber-700 text-white hover:bg-amber-800' : 'border-gray-300 bg-amber-700 text-white hover:bg-amber-800'} rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+            className={`w-full flex justify-center py-2 px-4 border ${isDarkTheme ? 'border-gray-600 bg-green-700 text-white hover:bg-green-800' : 'border-gray-300 bg-green-700 text-white hover:bg-green-800'} rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             Create Account & Upgrade
           </button>

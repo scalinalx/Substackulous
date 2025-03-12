@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Check, Crown, Zap, Star } from 'lucide-react';
+import { toast } from 'sonner';
 
 const plans = [
   {
@@ -55,8 +56,35 @@ export default function UpgradePage() {
   }, [user, isLoading, router]);
 
   const handleUpgrade = async (planName: string) => {
-    // TODO: Implement Stripe checkout
-    console.log(`Upgrading to ${planName} plan`);
+    try {
+      if (!user?.email) {
+        toast.error("Please sign in to upgrade your plan.");
+        return;
+      }
+
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+          planType: planName.toLowerCase()
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout session');
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      toast.error("Failed to create checkout session. Please try again.");
+    }
   };
 
   if (isLoading) {
