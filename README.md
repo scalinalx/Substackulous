@@ -50,4 +50,4 @@ REPLICATE_API_TOKEN=your_replicate_api_token
 
 ## Deployment
 
-The app is deployed on Vercel. Push to the main branch to trigger automatic deployment.
+The app is deployed on Vercel. Push to the main branch to trigger automatic deployment.# Trigger redeploy
