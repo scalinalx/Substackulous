@@ -27,7 +27,7 @@ export async function POST(req: Request) {
               name: '250 Credits',
               description: 'Credits for generating content',
             },
-            unit_amount: 700, // $7
+            unit_amount: 51, // $0.51
           },
           quantity: 1,
         },
