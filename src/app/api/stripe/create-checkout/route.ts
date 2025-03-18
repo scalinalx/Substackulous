@@ -24,7 +24,7 @@ export async function POST(req: Request) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: '250 Credits',
+              name: '1000 Credits',
               description: 'Credits for generating content',
             },
             unit_amount: 51, // $0.51
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?canceled=true`,
       customer_email: email,
       metadata: {
-        credits: '250',
+        credits: '1000',
       },
     });
 
