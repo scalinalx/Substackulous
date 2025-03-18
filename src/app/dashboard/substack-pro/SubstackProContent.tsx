@@ -10,6 +10,7 @@ import { Button } from '@/app/components/ui/button';
 import { Textarea } from '@/app/components/ui/textarea';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { toast } from 'sonner';
 
 interface SubstackPost {
   title: string;
@@ -24,7 +25,7 @@ interface SubstackPost {
 type SortBy = 'likes' | 'comments' | 'restacks' | 'total';
 
 export default function SubstackProContent() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, credits, updateCredits } = useAuth();
   const router = useRouter();
   const [substackUrl, setSubstackUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -57,6 +58,17 @@ export default function SubstackProContent() {
     setAnalysisOutput('');
     
     try {
+      // Check if user has enough credits
+      if (credits === null) {
+        toast.error("Credits information is missing. Please refresh the page.");
+        return;
+      }
+      
+      if (credits < creditCost) {
+        toast.error(`Not enough credits. You need ${creditCost} credit to use this feature.`);
+        return;
+      }
+      
       const response = await fetch('/api/substack-pro/analyze-posts', {
         method: 'POST',
         headers: {
@@ -91,6 +103,17 @@ export default function SubstackProContent() {
     setError(null);
     
     try {
+      // Check if user has enough credits
+      if (credits === null) {
+        toast.error("Credits information is missing. Please refresh the page.");
+        return;
+      }
+      
+      if (credits < creditCost) {
+        toast.error(`Not enough credits. You need ${creditCost} credit to use this feature.`);
+        return;
+      }
+      
       const response = await fetch('/api/substack-pro/analyze-with-groq', {
         method: 'POST',
         headers: {
@@ -106,6 +129,15 @@ export default function SubstackProContent() {
       }
 
       setAnalysisOutput(data.analysis);
+      
+      // Deduct credits after successful analysis
+      try {
+        await updateCredits(credits - creditCost);
+        toast.success('Analysis completed successfully!');
+      } catch (updateError) {
+        console.error("Error updating credits:", updateError);
+        toast.error("Failed to update credits. Please refresh the page.");
+      }
     } catch (err) {
       console.error('AI Analysis error:', err);
       setError(err instanceof Error ? err.message : 'Failed to analyze with AI');
@@ -182,6 +214,9 @@ export default function SubstackProContent() {
                     'Analyze Posts'
                   )}
                 </Button>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                  Cost: {creditCost} credit. You have {credits ?? 0} credits remaining.
+                </p>
               </div>
 
               {posts.length > 0 && (
