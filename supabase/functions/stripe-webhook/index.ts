@@ -13,7 +13,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
   apiVersion: '2024-06-20',
 })
 
-const CREDITS_TO_ADD = 250
+const CREDITS_TO_ADD = 1000
 
 console.log("Hello from Functions!")
 
@@ -105,9 +105,19 @@ serve(async (req) => {
     const event = JSON.parse(body);
     console.log('Signature verified, processing event:', event.type)
 
+    // Add comprehensive logging of the entire event data
+    console.log('=== COMPLETE STRIPE EVENT DATA ===');
+    console.log(JSON.stringify(event, null, 2));
+    console.log('=== END OF STRIPE EVENT DATA ===');
+
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
       const customerEmail = session.customer_details?.email
+
+      // Add detailed session object logging
+      console.log('=== COMPLETE CHECKOUT SESSION DATA ===');
+      console.log(JSON.stringify(session, null, 2));
+      console.log('=== END OF CHECKOUT SESSION DATA ===');
 
       console.log('Processing checkout for email:', customerEmail)
 
@@ -135,20 +145,45 @@ serve(async (req) => {
         throw new Error('Failed to find user profile')
       }
 
-      // Update credits
+      // Update credits and subscription plan
       const { error: updateError } = await supabaseAdmin
         .from('profiles')
         .update({
           credits: (userProfile.credits || 0) + CREDITS_TO_ADD,
+          subscription_plan: 'Upgraded'
         })
         .eq('id', userProfile.id)
 
       if (updateError) {
         console.error('Update error:', updateError)
-        throw new Error('Failed to update credits')
+        throw new Error('Failed to update profile')
       }
 
-      console.log('Credits updated successfully')
+      console.log('Profile updated successfully: credits added and subscription plan upgraded')
+
+      // Calculate expiration date (90 days from now)
+      const now = new Date()
+      const expirationDate = new Date(now)
+      expirationDate.setDate(now.getDate() + 90)
+      
+      // Log the purchase in credit_purchase_logs table
+      const { error: logError } = await supabaseAdmin
+        .from('credit_purchase_logs')
+        .insert({
+          user_email: customerEmail,
+          credits_added: CREDITS_TO_ADD,
+          purchase_type: `One-Time +${CREDITS_TO_ADD}`,
+          expiration_date: expirationDate.toISOString(),
+          timestamp: now.toISOString()
+        })
+        
+      if (logError) {
+        console.error('Error logging purchase:', logError)
+        // We don't throw an error here to avoid failing the whole transaction
+        // The credits are already added, so we just log the error
+      } else {
+        console.log('Purchase logged successfully')
+      }
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { 'Content-Type': 'application/json' },

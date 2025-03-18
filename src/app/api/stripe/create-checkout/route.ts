@@ -33,12 +33,8 @@ export async function POST(req: Request) {
         },
       ],
       mode: 'payment',
-      success_url: process.env.NEXT_PUBLIC_VERCEL_URL
-        ? `${process.env.NEXT_PUBLIC_VERCEL_URL}/dashboard?success=true`
-        : `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?success=true`,
-      cancel_url: process.env.NEXT_PUBLIC_VERCEL_URL
-        ? `${process.env.NEXT_PUBLIC_VERCEL_URL}/dashboard?canceled=true`
-        : `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?canceled=true`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?canceled=true`,
       customer_email: email,
       metadata: {
         credits: '1000',
