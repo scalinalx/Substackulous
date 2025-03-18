@@ -30,9 +30,21 @@ export default function TroubleshootingPage() {
   const htmlContent = `
     <div class="doc-content">
       <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">The No-BS Substackulous Quick-Start Guide</h1>
-      <p class="text-lg text-gray-600 dark:text-gray-300 mb-12">(AKA How to Go from Zero to Growth Hero in 15 Minutes)</p>
+      <p class="text-lg text-gray-600 dark:text-gray-300 mb-6">(AKA How to Go from Zero to Growth Hero in 15 Minutes)</p>
 
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mt-10 mb-4">First Things First: The Credit System</h2>
+      <div class="mb-10 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-3">Contents</h3>
+        <ul class="space-y-2 list-none">
+          <li><a href="#credit-system" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline">• First Things First: The Credit System</a></li>
+          <li><a href="#your-options" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline">• Your Options</a></li>
+          <li><a href="#growth-plan" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline">• Your First 15-Minute Growth Plan</a></li>
+          <li><a href="#create-account" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline">• Create a New Account</a></li>
+          <li><a href="#log-in" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline">• Log In</a></li>
+          <li><a href="#app-stuck" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline">• App Gets Stuck - What to Do</a></li>
+        </ul>
+      </div>
+
+      <h2 id="credit-system" class="text-2xl font-bold text-gray-900 dark:text-white mt-10 mb-4">First Things First: The Credit System</h2>
       <p class="mb-4">You have 100 free credits to start. Here's what different features cost:</p>
       <ul class="list-disc ml-8 mb-6 space-y-2">
         <li>Viral Notes Generator: 1 credit</li>
@@ -44,7 +56,7 @@ export default function TroubleshootingPage() {
       <p class="mb-8">You can always get more credits by purchasing them directly in the app. $19 will get you 1,000 new credits to play with (they never expire, btw).</p>
       <p class="mb-8">Now let's dive into what each tool actually does and how to use it for maximum impact.</p>
 
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mt-10 mb-4">Your options</h2>
+      <h2 id="your-options" class="text-2xl font-bold text-gray-900 dark:text-white mt-10 mb-4">Your options</h2>
 
       <h3 class="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-3">🎨 Instant Post Image Generator</h3>
       <p class="mb-3"><strong>What it actually does:</strong> Creates 3 eye-catching images with text overlay specifically designed for Substack posts (not generic AI art).</p>
@@ -112,7 +124,7 @@ export default function TroubleshootingPage() {
       </ol>
       <p class="mb-8"><strong>Pro tip:</strong> The most successful offers solve a specific, urgent problem rather than general improvements.</p>
 
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mt-10 mb-4">Your First 15-Minute Growth Plan</h2>
+      <h2 id="growth-plan" class="text-2xl font-bold text-gray-900 dark:text-white mt-10 mb-4">Your First 15-Minute Growth Plan</h2>
       <ol class="list-decimal ml-8 mb-6 space-y-2">
         <li><strong>Minutes 0-5:</strong> Use The Home Run to analyze your Substack</li>
         <li><strong>Minutes 5-10:</strong> Use Click-Worthy Title Maker to craft your next headline</li>
@@ -122,9 +134,9 @@ export default function TroubleshootingPage() {
       <p class="mb-8">Questions? Email <a href="mailto:anaxcalin@gmail.com" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">anaxcalin@gmail.com</a> or reply directly to any of our emails.</p>
       <p class="mb-12">Now go build that newsletter empire! 🚀</p>
 
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mt-10 mb-6">Troubleshooting</h2>
+      <h2 id="troubleshooting" class="text-2xl font-bold text-gray-900 dark:text-white mt-10 mb-6">Troubleshooting</h2>
       
-      <h3 class="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-3">1. Create a new account</h3>
+      <h3 id="create-account" class="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-3">1. Create a new account</h3>
       <p class="mb-3">Go to: <a href="https://substackulous.vercel.app/" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">https://substackulous.vercel.app/</a></p>
       <p class="mb-3">Click on GET STARTED or FREE TRIAL</p>
       <p class="mb-5">
@@ -164,14 +176,14 @@ export default function TroubleshootingPage() {
       <p class="mb-8">Reload it and login with your email and password already set.</p>
       <p class="mb-8">You may need to take this cookies deletion troubleshoot again if the app freezes and reload then the app. Our engineering team is working on fixing this bug permanently at the earliest.</p>
 
-      <h3 class="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-3">2. Log In</h3>
+      <h3 id="log-in" class="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-3">2. Log In</h3>
       <p class="mb-3">Once you enter your email and password, you will get to the your main dashboard:</p>
       <p class="mb-5">
         <img alt="Dashboard" src="images/image9.png" class="max-w-full h-auto rounded-lg shadow-md" />
       </p>
       <p class="mb-3">Enjoy your growth!</p>
 
-      <h3 class="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-3">3. App gets stuck - what to do</h3>
+      <h3 id="app-stuck" class="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-3">3. App gets stuck - what to do</h3>
       <p class="mb-3">If your window is frozen during the app use for more than a few seconds, or after you left the app open without using it for a little while, you may need to take this cookies deletion troubleshoot.</p>
       <p class="mb-3">(Our engineering team is working on fixing this bug permanently at the earliest.)</p>
       <p class="mb-3">This only takes a few seconds to fix. Here are the steps</p>

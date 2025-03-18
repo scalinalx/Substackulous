@@ -11,7 +11,7 @@ import { Pricing } from "@/components/pricing";
 import { PopupBuilder } from "@/components/popup-builder";
 import { CreatorAchievements } from "@/components/creator-achievements";
 import { AllInOneAdvantage } from "@/components/all-in-one-advantage";
-import { ArrowRight, Sparkles, Lightbulb, Zap, Sun, Moon, Circle } from "lucide-react";
+import { ArrowRight, Sparkles, Lightbulb, Zap, Sun, Moon, Circle, HelpCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "next-themes";
@@ -19,11 +19,13 @@ import { useState } from "react";
 import { VideoModal } from "@/components/video-modal";
 import { AuthModal } from "@/components/auth-modal";
 import { ComparisonSection } from "@/components/comparison-section";
+import { TroubleshootingModal } from "@/components/troubleshooting-modal";
 
 export default function Home() {
   const { theme, setTheme } = useTheme();
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isTroubleshootingModalOpen, setIsTroubleshootingModalOpen] = useState(false);
   const [authModalType, setAuthModalType] = useState<'default' | 'upgrade'>('default');
 
   const handleAuthModalOpen = (type: 'default' | 'upgrade' = 'default') => {
@@ -38,6 +40,10 @@ export default function Home() {
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
         type={authModalType}
+      />
+      <TroubleshootingModal
+        isOpen={isTroubleshootingModalOpen}
+        onClose={() => setIsTroubleshootingModalOpen(false)}
       />
       {/* Announcement Bar */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm dark:bg-[#1b002a] border-0">
@@ -154,6 +160,15 @@ export default function Home() {
                   >
                     Watch Demo
                     <Zap className="ml-2 h-4 w-4 transition-transform group-hover:scale-110" />
+                  </Button>
+                  <Button 
+                    size="lg" 
+                    variant="outline" 
+                    className="group glass bg-red-600 hover:bg-red-700 text-white"
+                    onClick={() => setIsTroubleshootingModalOpen(true)}
+                  >
+                    Help!
+                    <HelpCircle className="ml-2 h-4 w-4 transition-transform group-hover:scale-110" />
                   </Button>
                 </motion.div>
                 <motion.p 
