@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { ChevronLeft, ChevronRight, Home, LogOut, User, Crown, Wrench } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, LogOut, User, Crown, HeartHandshake } from 'lucide-react';
 
 // Define the feature interface
 interface SidebarFeature {
@@ -173,8 +173,8 @@ export default function Sidebar() {
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              <Wrench className={`${isCollapsed ? 'h-8 w-8' : 'h-5 w-5'} ${isCollapsed ? '' : 'mr-3'} transition-all duration-200`} />
-              {!isCollapsed && <span>Troubleshooting</span>}
+              <HeartHandshake className={`${isCollapsed ? 'h-8 w-8' : 'h-5 w-5'} ${isCollapsed ? '' : 'mr-3'} transition-all duration-200`} />
+              {!isCollapsed && <span className="font-bold underline">Troubleshooting</span>}
             </Link>
             <button
               onClick={handleSignOut}

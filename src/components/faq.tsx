@@ -1,12 +1,15 @@
 "use client"
 
 import { motion } from "framer-motion";
+import { useState } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { TroubleshootingModal } from "@/components/troubleshooting-modal";
+import { Button } from "@/components/ui/button";
 
 const faqs = [
   {
@@ -32,6 +35,8 @@ const faqs = [
 ];
 
 export function FAQ() {
+  const [isTroubleshootingModalOpen, setIsTroubleshootingModalOpen] = useState(false);
+
   return (
     <section className="container py-24 sm:py-32">
       <motion.div
@@ -68,7 +73,27 @@ export function FAQ() {
             </AccordionItem>
           ))}
         </Accordion>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          viewport={{ once: true }}
+          className="flex justify-center mt-12"
+        >
+          <Button 
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-md"
+            onClick={() => setIsTroubleshootingModalOpen(true)}
+          >
+            Need Help? Go To Troubleshooting
+          </Button>
+        </motion.div>
       </motion.div>
+
+      <TroubleshootingModal 
+        isOpen={isTroubleshootingModalOpen} 
+        onClose={() => setIsTroubleshootingModalOpen(false)} 
+      />
     </section>
   );
 } 

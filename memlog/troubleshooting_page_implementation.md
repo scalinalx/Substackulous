@@ -5,7 +5,8 @@
 ### Changes Made:
 
 1. Added Troubleshooting link to the sidebar in the Account section
-   - Used the Wrench icon from Lucide icons
+   - Used the HeartHandshake icon from Lucide icons (updated from Wrench)
+   - Made the link text bold and underlined for emphasis
    - Added proper styling and hover states
    - Made it responsive with the collapsible sidebar  
 
@@ -23,6 +24,12 @@
    - Included a console note reminding about the need to place images
    - Added a visual note for users if images aren't displaying correctly
 
+5. Added a Troubleshooting Modal for non-logged-in users
+   - Created a new TroubleshootingModal component in `src/components/troubleshooting-modal.tsx`
+   - Added a red "Need Help? Go To Troubleshooting" button to the FAQ section
+   - Implemented the same troubleshooting content from the dashboard page
+   - Made the modal accessible without login for better user experience
+
 ### Implementation Details:
 
 The implementation follows a two-part approach:
@@ -37,6 +44,7 @@ The implementation follows a two-part approach:
    - Improved the formatting for better readability and user experience
    - Added responsive image containers with proper alt tags for accessibility
    - Implemented dark mode support for all content elements
+   - Created a modal version for non-logged-in users through the FAQ section
 
 ### Technical Notes:
 
@@ -44,6 +52,9 @@ The implementation follows a two-part approach:
 - Authentication is handled via the AuthContext
 - The images should be placed in the public/images directory for proper rendering
 - A fixImagePaths function was implemented to ensure correct image path references
+- The troubleshooting content is now available through two entry points:
+  1. The sidebar link in dashboard (for logged-in users)
+  2. The red button in the FAQ section (for all users, including non-logged-in)
 
 ### Next Steps:
 
