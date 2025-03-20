@@ -172,7 +172,7 @@ Top 2 delivery methods:
         access_token: session.access_token ? '[PRESENT]' : '[MISSING]',
       });
 
-      console.log('Complete prompt: ', systemPrompt + '\n\n' + userPrompt);
+      //console.log('Complete prompt: ', systemPrompt + '\n\n' + userPrompt);
 
       const response = await fetch('/api/together/generate', {
         method: 'POST',
