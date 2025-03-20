@@ -11,13 +11,22 @@ import {
 } from "react";
 import { User, Session, AuthError } from "@supabase/supabase-js";
 import { useRouter, usePathname } from "next/navigation";
-import { supabase, withRetry, shouldFetchProfile } from "@/lib/supabase/clients";
+import { 
+  supabase, 
+  withRetry, 
+  shouldFetchProfile,
+  clearAuthStorage,
+  forceSessionRecovery
+} from "@/lib/supabase/clients";
 import {
   logoutUser,
   signInWithGoogle,
   resetPassword as resetPasswordUtil,
   signUp as signUpUtil,
 } from "../supabase/authUtils";
+
+// Auth loading timeout - prevents infinite loading (15 seconds)
+const AUTH_LOADING_TIMEOUT = 15000;
 
 interface UserProfile {
   id: string;
@@ -43,6 +52,7 @@ interface AuthContextType {
   updateProfile: (profile: Partial<UserProfile>) => Promise<void>;
   isInitialized: boolean;
   updateCredits: (newCredits: number) => Promise<void>;
+  recoverSession: () => Promise<boolean>; // Add new recovery function
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -60,11 +70,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isInitializing = useRef(true);
   const lastActivity = useRef(Date.now());
   const sessionCheckInterval = useRef<NodeJS.Timeout>();
+  const authLoadingTimeout = useRef<NodeJS.Timeout>();
 
   const RETRY_DELAY = 1000; // 1 second
   const MAX_RETRIES = 3;
 
-    const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string) => {
         try {
             // Check if we should attempt to fetch the profile
             if (!shouldFetchProfile()) {
@@ -115,6 +126,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [profile, credits]); // Remove supabase from dependencies
 
+  // New function to recover from a stuck auth state - MOVED UP BEFORE IT'S USED
+  const recoverSession = useCallback(async () => {
+    try {
+      console.log('Attempting to recover session...');
+      setIsLoading(true);
+      
+      // Clear all auth storage to start fresh
+      clearAuthStorage();
+      
+      // Try to get a fresh session
+      const success = await forceSessionRecovery();
+      
+      // If successful, get the session and user again
+      if (success) {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+          setSession(data.session);
+          setUser(data.session.user);
+          if (data.session.user) {
+            await fetchProfile(data.session.user.id);
+          }
+          return true;
+        }
+      }
+      
+      // If recovery failed, redirect to login
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setCredits(null);
+      router.replace('/login');
+      return false;
+    } catch (error) {
+      console.error('Session recovery failed:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [router, fetchProfile]);
 
     const startSessionCheck = useCallback(() => {
     if (sessionCheckInterval.current) {
@@ -151,18 +201,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const handleVisibilityChange = async () => {
             if (document.visibilityState === 'visible') {
                 lastActivity.current = Date.now();
-                const { data: { session: currentSession } } = await supabase.auth.getSession();
+                try {
+                    const { data: { session: currentSession } } = await supabase.auth.getSession();
 
-                if (currentSession) {
-                    setSession(currentSession);
-                    setUser(currentSession.user);
-                    await fetchProfile(currentSession.user.id);
-                } else if (session) {
-                    setSession(null);
-                    setUser(null);
-                    setProfile(null);
-                    setCredits(null);
-                    router.replace('/login');
+                    if (currentSession) {
+                        setSession(currentSession);
+                        setUser(currentSession.user);
+                        await fetchProfile(currentSession.user.id);
+                    } else if (session) {
+                        // Session was lost, clear state and redirect
+                        setSession(null);
+                        setUser(null);
+                        setProfile(null);
+                        setCredits(null);
+                        router.replace('/login');
+                    }
+                } catch (error) {
+                    console.error('Error during visibility change session check:', error);
+                    // If there's an error, attempt recovery
+                    await recoverSession();
                 }
             }
         };
@@ -171,7 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
-    }, [fetchProfile, router, session]);
+    }, [fetchProfile, router, session, recoverSession]);
 
     useEffect(() => {
         let mounted = true;
@@ -182,6 +239,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (!isInitializing.current) return;
 
                 setIsLoading(true);
+                
+                // Set a timeout to prevent infinite loading state
+                if (authLoadingTimeout.current) {
+                    clearTimeout(authLoadingTimeout.current);
+                }
+                
+                authLoadingTimeout.current = setTimeout(() => {
+                    if (isLoading && isInitializing.current) {
+                        console.warn('Auth initialization timed out, attempting recovery...');
+                        recoverSession().then(success => {
+                            if (!success && mounted) {
+                                // If recovery fails, force reset the state
+                                setIsLoading(false);
+                                setIsInitialized(true);
+                                isInitializing.current = false;
+                                router.replace('/login');
+                            }
+                        });
+                    }
+                }, AUTH_LOADING_TIMEOUT);
+                
                 const { data: { session: initialSession }, error } = await supabase.auth.getSession();
 
                 console.log('AuthContext init → initialSession:', initialSession);
@@ -202,15 +280,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 cleanup = startSessionCheck();
             } catch (error) {
                 console.error('Auth initialization error:', error);
-                setUser(null);
-                setSession(null);
-                setProfile(null);
-                setCredits(null);
+                // On error, try to recover the session
+                const recovered = await recoverSession();
+                if (!recovered) {
+                    setUser(null);
+                    setSession(null);
+                    setProfile(null);
+                    setCredits(null);
+                }
             } finally {
                 if (mounted) {
                     setIsLoading(false);
                     setIsInitialized(true);
                     isInitializing.current = false;
+                    
+                    // Clear the timeout if initialization completes
+                    if (authLoadingTimeout.current) {
+                        clearTimeout(authLoadingTimeout.current);
+                    }
                 }
             }
         };
@@ -241,11 +328,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         if (event === 'SIGNED_IN') {
                             router.replace('/dashboard');
                         } else if (event === 'SIGNED_OUT') {
+                            // Ensure we clear all auth data
+                            clearAuthStorage();
                             router.replace('/login');
+                        } else if (event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+                            // Just update the state, no redirect needed
+                            console.log('User updated or token refreshed successfully');
                         }
                     }
                 } catch (error) {
                     console.error('Auth state change error:', error);
+                    // Try to recover on auth state change errors
+                    await recoverSession();
                 } finally {
                     if (mounted) {
                         setIsLoading(false);
@@ -258,8 +352,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             mounted = false;
             if (cleanup) cleanup();
             subscription.unsubscribe();
+            
+            // Clear the timeout on unmount
+            if (authLoadingTimeout.current) {
+                clearTimeout(authLoadingTimeout.current);
+            }
         };
-    }, [fetchProfile, router, startSessionCheck, session]);
+    }, [fetchProfile, router, startSessionCheck, session, recoverSession]);
 
     const signOut = useCallback(async () => {
     try {
@@ -426,7 +525,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [user]); // Remove supabase from dependencies
 
-
     const contextValue = useMemo(() => ({
         user,
         session,
@@ -441,9 +539,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPassword: handleResetPassword,
         updateProfile,
         updateCredits,
-        isInitialized
-    // Make sure to add credits to the dependencies array here
-    }), [user, session, profile, credits, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits]);
+        isInitialized,
+        recoverSession,
+    }), [user, session, profile, credits, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits, recoverSession]);
 
 
     return (
