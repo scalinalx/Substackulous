@@ -20,7 +20,7 @@ interface AnalysisResults {
 }
 
 export default function HomeRunContent() {
-  const { user, profile, credits, updateCredits } = useAuth();
+  const { user, profile, credits, updateCredits, recordUsage } = useAuth();
   const [substackUrl, setSubstackUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -308,6 +308,31 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
       try {
         await updateCredits(credits - creditCost);
         console.log("Credits updated successfully");
+        
+        // Record usage with mode and URL information
+        try {
+          // Create a readable action description based on the mode
+          let actionDescription = '';
+          if (mode === 'brainstorm') {
+            actionDescription = `Used Home Run to brainstorm ideas based off URL: ${substackUrl}`;
+          } else if (mode === 'notes') {
+            actionDescription = `Used Home Run to generate viral notes based off URL: ${substackUrl}`;
+          } else {
+            actionDescription = `Used Home Run to analyze content based off URL: ${substackUrl}`;
+          }
+          
+          const recordResult = await recordUsage(actionDescription, creditCost);
+          
+          if (!recordResult.success) {
+            console.error("Failed to record usage:", recordResult.error);
+            // Don't block the main flow, just log the error
+          } else {
+            console.log("Usage recorded successfully");
+          }
+        } catch (recordError) {
+          console.error("Exception recording usage:", recordError);
+          // Don't block the main flow, just log the error
+        }
       } catch (updateError) {
         console.error("Error updating credits:", updateError);
         toast.error("Failed to update credits. Please refresh the page.");

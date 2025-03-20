@@ -14,7 +14,7 @@ interface GenerationOptions {
 
 export default function ThumbnailGenerator() {
   const router = useRouter();
-  const { user, credits, updateCredits, session } = useAuth();
+  const { user, credits, updateCredits, recordUsage, session } = useAuth();
   const { theme } = useTheme();
   const isDarkTheme = theme === 'dark';
   const [loading, setLoading] = useState(false);
@@ -113,6 +113,22 @@ export default function ThumbnailGenerator() {
                   // Credit deduction is handled by TitlesContent; do not deduct here.
                   if (credits !== null) {
                     await updateCredits(credits - creditCost);
+                    
+                    // Record usage with thumbnail title and theme information
+                    try {
+                      const actionDescription = `Generated thumbnails for title: "${options.title}"${options.theme ? ` with theme: ${options.theme}` : ''}`;
+                      const recordResult = await recordUsage(actionDescription, creditCost);
+                      
+                      if (!recordResult.success) {
+                        console.error("Failed to record usage:", recordResult.error);
+                        // Don't block the main flow, just log the error
+                      } else {
+                        console.log("Usage recorded successfully");
+                      }
+                    } catch (recordError) {
+                      console.error("Exception recording usage:", recordError);
+                      // Don't block the main flow, just log the error
+                    }
                   }
                   break;
               }

@@ -25,7 +25,7 @@ interface SubstackPost {
 type SortBy = 'likes' | 'comments' | 'restacks' | 'total';
 
 export default function SubstackProContent() {
-  const { user, isLoading: authLoading, credits, updateCredits } = useAuth();
+  const { user, isLoading: authLoading, credits, updateCredits, recordUsage } = useAuth();
   const router = useRouter();
   const [substackUrl, setSubstackUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -133,6 +133,23 @@ export default function SubstackProContent() {
       // Deduct credits after successful analysis
       try {
         await updateCredits(credits - creditCost);
+        
+        // Record usage with Substack URL information
+        try {
+          const actionDescription = `Used Substack Growth Engine to analyze ${substackUrl}`;
+          const recordResult = await recordUsage(actionDescription, creditCost);
+          
+          if (!recordResult.success) {
+            console.error("Failed to record usage:", recordResult.error);
+            // Don't block the main flow, just log the error
+          } else {
+            console.log("Usage recorded successfully");
+          }
+        } catch (recordError) {
+          console.error("Exception recording usage:", recordError);
+          // Don't block the main flow, just log the error
+        }
+        
         toast.success('Analysis completed successfully!');
       } catch (updateError) {
         console.error("Error updating credits:", updateError);

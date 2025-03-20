@@ -32,7 +32,7 @@ interface OutlineRequest {
 
 export default function OutlineContent() {
   const [mounted, setMounted] = useState(false);
-  const { user, credits, updateCredits, session } = useAuth();
+  const { user, credits, updateCredits, recordUsage, session } = useAuth();
   const router = useRouter();
   const supabase = createClientComponentClient();
   const [formData, setFormData] = useState<OutlineRequest>({
@@ -164,6 +164,22 @@ Format the outline with clear hierarchical structure using markdown.`
 
       if (credits !== null) {
         await updateCredits(credits - creditCost);
+        
+        // Record usage after credits are deducted
+        try {
+          const actionDescription = `Used Outline Builder to create outline on topic: ${formData.topic} with primary goal: ${formData.objective}`;
+          const recordResult = await recordUsage(actionDescription, creditCost);
+          
+          if (!recordResult.success) {
+            console.error("Failed to record usage:", recordResult.error);
+            // Don't block the main flow, just log the error
+          } else {
+            console.log("Usage recorded successfully");
+          }
+        } catch (recordError) {
+          console.error("Exception recording usage:", recordError);
+          // Don't block the main flow, just log the error
+        }
       }
     } catch (err) {
       console.error('Error in outline generation:', err);

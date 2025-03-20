@@ -38,15 +38,50 @@ After consideration, we moved the `recordUsage` function to the AuthContext, whi
   - `action`: A descriptive string including details like the topic or subject
   - `credits_consumed`: The number of credits used for the action
 
+## Component Integrations
+
+### NotesRagContent
 For the NotesRagContent component, we've implemented usage tracking with the action format:
 `Generated viral notes on topic: {topic}`
+
+### HomeRunContent
+For the HomeRunContent component, we've implemented usage tracking that records both the action and the URL used:
+- For brainstorm mode: `Used Home Run to brainstorm ideas based off URL: {url}`
+- For notes mode: `Used Home Run to generate viral notes based off URL: {url}`
+- For post mode: `Used Home Run to analyze content based off URL: {url}`
+
+### OfferBuilderPage
+For the OfferBuilderPage component, we've implemented usage tracking that records the target audience:
+`Used Offer Builder to create offer for target audience: {targetAudience}`
+
+### OutlineContent
+For the OutlineContent component, we've implemented usage tracking that records the topic:
+`Used Outline Builder to create outline on topic: {topic}`
+
+### TitlesContent
+For the TitlesContent component, we've implemented usage tracking that records the topic and number of titles generated:
+`Generated {count} title ideas for topic: {topic}`
+
+### SubstackProContent
+For the SubstackProContent component, we've implemented usage tracking that records the Substack URL being analyzed:
+`Used Substack Growth Engine to analyze {url}`
+
+### ThumbnailGenerator
+For the ThumbnailGenerator component, we've implemented usage tracking that records the title and optional theme:
+`Generated thumbnails for title: "{title}" with theme: {theme}`
 
 ## Progress
 - [x] Add recordUsage to AuthContext
 - [x] Integrate with NotesRagContent.tsx
+- [x] Integrate with HomeRunContent.tsx
+- [x] Integrate with OfferBuilderPage.tsx
+- [x] Integrate with OutlineContent.tsx
+- [x] Integrate with TitlesContent.tsx
+- [x] Integrate with SubstackProContent.tsx
+- [x] Integrate with ThumbnailGenerator.tsx
 - [ ] Test functionality
 - [ ] Remove the standalone usageTracker.ts file
-- [ ] Extend to other app features (ViralNoteGenerator, TitleGenerator, etc.)
+- [ ] Extend to other app features (ViralNoteGenerator, etc.)
 
 ## Next Steps
 1. Test the implementation to ensure it works correctly

@@ -8,7 +8,7 @@ import { darkModeClasses } from '@/lib/utils/darkModeClasses';
 
 export default function TitleGenerator() {
     const router = useRouter();
-    const { user, profile, updateCredits, session, credits } = useAuth(); // Use updateCredits and credits
+    const { user, profile, updateCredits, session, credits, recordUsage } = useAuth(); // Use updateCredits and credits
     const [loading, setLoading] = useState(false);
     const [generatedTitles, setGeneratedTitles] = useState<string[]>([]);
     const [topic, setTopic] = useState('');
@@ -108,6 +108,22 @@ export default function TitleGenerator() {
             try {
                 await updateCredits(credits - creditCost);
                 console.log("Credits updated");
+                
+                // Record usage history
+                try {
+                    const actionDescription = `Generated ${cleanedTitles.length} title ideas for topic: ${topic}`;
+                    const recordResult = await recordUsage(actionDescription, creditCost);
+                    
+                    if (!recordResult.success) {
+                        console.error("Failed to record usage:", recordResult.error);
+                        // Don't block the main flow, just log the error
+                    } else {
+                        console.log("Usage recorded successfully");
+                    }
+                } catch (recordError) {
+                    console.error("Exception recording usage:", recordError);
+                    // Don't block the main flow, just log the error
+                }
             } catch (updateError) {
                 console.error("Error updating credits:", updateError);
                 setError("Failed to update credits. Please refresh the page.");
@@ -126,7 +142,7 @@ export default function TitleGenerator() {
                 titlesRef.current = null;
             }
         }
-    }, [topic, session, user, profile, creditCost, updateCredits, credits]);
+    }, [topic, session, user, profile, creditCost, updateCredits, credits, recordUsage]);
 
 
   const TitleItem = ({ title, index }: { title: string; index: number }) => {
