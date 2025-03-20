@@ -8,7 +8,7 @@ import { darkModeClasses } from '@/lib/utils/darkModeClasses';
 
 export default function NotesRagContent() {
   const router = useRouter();
-  const { user, profile, updateCredits, session, credits } = useAuth();
+  const { user, profile, updateCredits, recordUsage, session, credits } = useAuth();
   const [loading, setLoading] = useState(false);
   // Store both model responses as strings.
   const [generatedNotes, setGeneratedNotes] = useState<{ notesTurbo: string; notesLlama: string }>({
@@ -121,6 +121,24 @@ export default function NotesRagContent() {
       try {
         await updateCredits(credits - creditCost);
         console.log("Credits updated");
+        
+        // Record usage with topic information using the function from AuthContext
+        try {
+          const recordResult = await recordUsage(
+            `Generated viral notes on topic: ${topic}`,
+            creditCost
+          );
+          
+          if (!recordResult.success) {
+            console.error("Failed to record usage:", recordResult.error);
+            // Don't block the main flow, just log the error
+          } else {
+            console.log("Usage recorded successfully");
+          }
+        } catch (recordError) {
+          console.error("Exception recording usage:", recordError);
+          // Don't block the main flow, just log the error
+        }
       } catch (updateError) {
         console.error("Error updating credits:", updateError);
         setError("Failed to update credits. Please refresh the page.");
@@ -141,7 +159,7 @@ export default function NotesRagContent() {
       setLoading(false);
       console.log("Notes generation complete");
     }
-  }, [topic, session, user, profile, creditCost, updateCredits, credits]);
+  }, [topic, session, user, profile, creditCost, updateCredits, recordUsage, credits]);
 
   // Helper to split notes based on delimiter.
   const splitNotes = (notes: string): string[] => {

@@ -53,6 +53,7 @@ interface AuthContextType {
   isInitialized: boolean;
   updateCredits: (newCredits: number) => Promise<void>;
   recoverSession: () => Promise<boolean>; // Add new recovery function
+  recordUsage: (action: string, credits_consumed: number) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
@@ -369,7 +370,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       setCredits(null);
       router.refresh();
-      await router.replace('/login');
+      await router.replace('/');
     } catch (error) {
       console.error('Logout failed:', error);
       throw error;
@@ -525,6 +526,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [user]); // Remove supabase from dependencies
 
+    const recordUsage = useCallback(async (action: string, credits_consumed: number) => {
+        if (!user || !profile) throw new Error('No user logged in');
+
+        try {
+            console.log(`recordUsage: STARTING - Action: ${action} - Credits: ${credits_consumed}`);
+            
+            if (!action) {
+                console.error('recordUsage: action is required');
+                return { success: false, error: 'Action description is required' };
+            }
+
+            if (credits_consumed < 0) {
+                console.error('recordUsage: credits_consumed must be a non-negative number');
+                return { success: false, error: 'Credits consumed must be a non-negative number' };
+            }
+
+            console.log(`Recording usage: ${profile.email} - ${action} - ${credits_consumed} credits`);
+
+            const { error } = await supabase
+                .from('usage_history')
+                .insert({
+                    user_email: profile.email,
+                    action: action,
+                    credits_consumed: credits_consumed
+                });
+
+            if (error) {
+                console.error('Error recording usage:', error);
+                return { success: false, error: error.message };
+            }
+
+            console.log("recordUsage: COMPLETED");
+            return { success: true };
+        } catch (error) {
+            console.error('Exception in recordUsage:', error);
+            return { 
+                success: false, 
+                error: error instanceof Error ? error.message : 'Unknown error recording usage' 
+            };
+        }
+    }, [user, profile]);
+
     const contextValue = useMemo(() => ({
         user,
         session,
@@ -539,9 +582,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPassword: handleResetPassword,
         updateProfile,
         updateCredits,
+        recordUsage,
         isInitialized,
         recoverSession,
-    }), [user, session, profile, credits, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits, recoverSession]);
+    }), [user, session, profile, credits, isLoading, isInitialized, signIn, signUp, signOut, handleGoogleSignIn, handleResetPassword, updateProfile, updateCredits, recordUsage, recoverSession]);
 
 
     return (
