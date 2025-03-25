@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { ChevronLeft, ChevronRight, Home, LogOut, User, Crown, HeartHandshake } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, LogOut, User, CreditCard, HeartHandshake } from 'lucide-react';
 
 // Define the feature interface
 interface SidebarFeature {
@@ -56,7 +56,7 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const pathname = usePathname();
-  const { signOut } = useAuth();
+  const { signOut, user, credits } = useAuth();
 
   // Handle responsive behavior
   useEffect(() => {
@@ -82,6 +82,36 @@ export default function Sidebar() {
     } catch (error) {
       console.error('Error signing out:', error);
       alert('Failed to sign out. Please try again.');
+    }
+  };
+
+  const handlePurchaseCredits = async () => {
+    if (!user?.email) {
+      alert('Please sign in to purchase credits');
+      return;
+    }
+
+    try {
+      // Create a checkout session
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user.email,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      alert('Failed to start checkout process. Please try again.');
     }
   };
 
@@ -143,17 +173,16 @@ export default function Sidebar() {
         <div className="mt-auto px-4 py-2">
           {!isCollapsed && <h3 className="text-xs uppercase text-gray-500 dark:text-gray-400 font-semibold mb-2">Account</h3>}
           <div className="space-y-1">
-            <Link
-              href="/dashboard/upgrade"
-              className={`flex items-center justify-left px-2 py-2 rounded-md ${
-                pathname === '/dashboard/upgrade'
-                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400'
-                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-              }`}
+            {/* Purchase Credits Button */}
+            <button
+              onClick={handlePurchaseCredits}
+              className={`w-full flex items-center justify-left px-2 py-2 rounded-md
+                bg-green-600 hover:bg-green-700 text-white
+                transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2`}
             >
-              <Crown className={`${isCollapsed ? 'h-8 w-8' : 'h-5 w-5'} ${isCollapsed ? '' : 'mr-3'} transition-all duration-200`} />
-              {!isCollapsed && <span className="font-medium">Upgrade Plan</span>}
-            </Link>
+              <CreditCard className={`${isCollapsed ? 'h-8 w-8' : 'h-5 w-5'} ${isCollapsed ? '' : 'mr-3'} transition-all duration-200`} />
+              {!isCollapsed && <span className="font-medium">Purchase Credits</span>}
+            </button>
             <Link
               href="/dashboard/account"
               className={`flex items-center justify-left px-2 py-2 rounded-md ${
