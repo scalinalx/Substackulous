@@ -13,7 +13,7 @@ const plans = [
     price: 0,
     features: [
       "One-time only",
-      "Receive 100 credits",
+      "Receive 15 credits",
       "All tools unlocked",
       "Experience the Substackulous magic",
     ],
