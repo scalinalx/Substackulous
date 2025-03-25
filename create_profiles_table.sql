@@ -6,7 +6,7 @@ DROP FUNCTION IF EXISTS public.handle_new_user();
 CREATE TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
-  credits INTEGER NOT NULL DEFAULT 100,
+  credits INTEGER NOT NULL DEFAULT 15,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_login TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -30,7 +30,7 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, credits)
-  VALUES (new.id, new.email, 100);
+  VALUES (new.id, new.email, 15);
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

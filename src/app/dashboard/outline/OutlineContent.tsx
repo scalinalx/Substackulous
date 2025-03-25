@@ -48,7 +48,7 @@ export default function OutlineContent() {
   const [outline, setOutline] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const creditCost = 2;
+  const creditCost = 1;
 
   useEffect(() => {
     setMounted(true);

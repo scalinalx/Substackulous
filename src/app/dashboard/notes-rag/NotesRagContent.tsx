@@ -18,7 +18,7 @@ export default function NotesRagContent() {
   const [topic, setTopic] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const creditCost = 1;
+  const creditCost = 2;
   const isMounted = useRef(true);
 
   useEffect(() => {

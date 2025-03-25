@@ -26,7 +26,7 @@ export default function OfferBuilderPage() {
   const [offer, setOffer] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const creditCost = 3;
+  const creditCost = 1;
 
   useEffect(() => {
     setMounted(true);

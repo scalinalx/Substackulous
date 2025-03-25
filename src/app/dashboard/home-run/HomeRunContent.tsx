@@ -28,7 +28,7 @@ export default function HomeRunContent() {
   const [activeSection, setActiveSection] = useState<'brainstorm' | 'notes' | 'post' | null>(null);
   const [parsedNotes, setParsedNotes] = useState<string[]>([]);
   const [parsedIdeas, setParsedIdeas] = useState<string[]>([]);
-  const creditCost = 3;
+  const creditCost = 2;
 
   // Constructs the analysis prompt using only the first 20 posts.
   const constructPrompt = (posts: Post[]) => {

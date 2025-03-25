@@ -37,7 +37,7 @@ export async function POST(req: Request) {
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard?canceled=true`,
       customer_email: email,
       metadata: {
-        credits: '1000',
+        credits: '200',
       },
     });
 

@@ -13,7 +13,7 @@ const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
   apiVersion: '2024-06-20',
 })
 
-const CREDITS_TO_ADD = 1000
+const CREDITS_TO_ADD = 200
 
 console.log("Hello from Functions!")
 

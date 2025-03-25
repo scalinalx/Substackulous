@@ -24,7 +24,7 @@ export default function ThumbnailGenerator() {
     theme: '',
     aspectRatio: '3:2'
   });
-  const creditCost = 30; // Fixed credit cost
+  const creditCost = 5; // Fixed credit cost
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [status, setStatus] = useState('');
