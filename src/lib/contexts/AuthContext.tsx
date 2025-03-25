@@ -158,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       setCredits(null);
       router.replace('/login');
+      window.location.href = '/login';
       return false;
     } catch (error) {
       console.error('Session recovery failed:', error);
@@ -186,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
           setCredits(null);
           router.replace('/login');
+          window.location.href = '/login';
         }
         lastActivity.current = now;
       }
