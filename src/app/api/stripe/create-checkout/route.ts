@@ -24,7 +24,7 @@ export async function POST(req: Request) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: '1000 Credits',
+              name: '200 Credits',
               description: 'Credits for generating content',
             },
             unit_amount: 1900, // $19
