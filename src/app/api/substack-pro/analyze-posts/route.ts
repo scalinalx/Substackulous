@@ -248,21 +248,60 @@ export async function POST(request: Request) {
 
       // If we got less than 5 posts, try the fallback
       if (postUrls.length < 5) {
-        logs.push('Insufficient posts from top sort, trying fallback crawl...');
+        logs.push('Insufficient posts from top sort, trying fallback crawl with crawlUrl...');
         
-        const fallbackMapResult = await app.mapUrl(baseUrl, {
-          includeSubdomains: true
-        }) as MapResult;
+        try {
+          const fallbackCrawlResult = await app.crawlUrl(`${baseUrl}/archive?sort=top`, {
+            limit: 1,
+            scrapeOptions: {
+              formats: ["markdown", "links"],
+            }
+          }) as CrawlResponse;
+          
+          logs.push(`Fallback crawl result: ${JSON.stringify(fallbackCrawlResult).substring(0, 200)}...`);
+          
+          if (fallbackCrawlResult.success && fallbackCrawlResult.data && fallbackCrawlResult.data.length > 0) {
+            // Extract links from the result
+            const firstResult = fallbackCrawlResult.data[0];
+            const linksData = firstResult.metadata?.links || [];
+            
+            if (Array.isArray(linksData) && linksData.length > 0) {
+              // Extract URLs from links data, filter and remove duplicates
+              const fallbackUrls = Array.from(new Set(
+                linksData
+                  .map(link => typeof link === 'string' ? link : link.url)
+                  .filter(url => url && url.includes('/p/'))
+                  .filter(url => !url.includes('/comments'))
+              )).slice(0, 60);
+              
+              // Combine URLs and remove duplicates (again, just to be safe)
+              postUrls = Array.from(new Set([...postUrls, ...fallbackUrls]));
+              logs.push(`Added ${fallbackUrls.length} posts from fallback crawl. Total unique posts: ${postUrls.length}`);
+            } else {
+              logs.push('No links found in fallback crawl result');
+            }
+          } else {
+            logs.push('Fallback crawl unsuccessful or returned no data');
+          }
+        } catch (fallbackError) {
+          logs.push(`Error in fallback crawl: ${fallbackError}`);
+          // Continue with original fallback if the new approach fails
+          logs.push('Falling back to original mapUrl approach...');
+          
+          const fallbackMapResult = await app.mapUrl(baseUrl, {
+            includeSubdomains: true
+          }) as MapResult;
 
-        if (fallbackMapResult.success && fallbackMapResult.links) {
-          const fallbackUrls = fallbackMapResult.links
-            .filter(url => url.includes('/p/'))
-            .filter(url => !url.includes('/comments'))
-            .slice(0, 60);
+          if (fallbackMapResult.success && fallbackMapResult.links) {
+            const fallbackUrls = fallbackMapResult.links
+              .filter(url => url.includes('/p/'))
+              .filter(url => !url.includes('/comments'))
+              .slice(0, 60);
 
-          // Combine URLs and remove duplicates
-          postUrls = Array.from(new Set([...postUrls, ...fallbackUrls]));
-          logs.push(`Added ${fallbackUrls.length} posts from fallback crawl. Total unique posts: ${postUrls.length}`);
+            // Combine URLs and remove duplicates
+            postUrls = Array.from(new Set([...postUrls, ...fallbackUrls]));
+            logs.push(`Added ${fallbackUrls.length} posts from original fallback crawl. Total unique posts: ${postUrls.length}`);
+          }
         }
       }
 
