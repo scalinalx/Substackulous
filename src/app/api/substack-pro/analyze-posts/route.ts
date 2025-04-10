@@ -43,6 +43,7 @@ interface CrawlResult {
   success?: boolean;
   error?: string;
   markdown?: string;
+  links?: string[] | { url: string }[];
   metadata?: any;
 }
 
@@ -259,10 +260,56 @@ export async function POST(request: Request) {
             }
           }) as CrawlResponse;
           
+          // Add even more detailed logging for the data structure
+          if (fallbackCrawlResult.data && fallbackCrawlResult.data.length > 0) {
+            logs.push(`First data item keys: ${Object.keys(fallbackCrawlResult.data[0]).join(', ')}`);
+            
+            // Specifically log if links is present in data[0] and what type it is
+            if (fallbackCrawlResult.data[0].links) {
+              logs.push(`data[0].links is present with type: ${Array.isArray(fallbackCrawlResult.data[0].links) ? 'array' : typeof fallbackCrawlResult.data[0].links}`);
+              logs.push(`data[0].links length: ${Array.isArray(fallbackCrawlResult.data[0].links) ? fallbackCrawlResult.data[0].links.length : 'not an array'}`);
+              if (Array.isArray(fallbackCrawlResult.data[0].links) && fallbackCrawlResult.data[0].links.length > 0) {
+                logs.push(`First link type: ${typeof fallbackCrawlResult.data[0].links[0]}`);
+                logs.push(`First link sample: ${JSON.stringify(fallbackCrawlResult.data[0].links[0]).substring(0, 100)}`);
+              }
+            }
+            
+            // Check for metadata
+            if (fallbackCrawlResult.data[0].metadata) {
+              logs.push(`Metadata keys: ${Object.keys(fallbackCrawlResult.data[0].metadata).join(', ')}`);
+            }
+          }
+          
           logs.push(`Fallback crawl result: ${JSON.stringify(fallbackCrawlResult).substring(0, 200)}...`);
           
+          // First check for links in data[0].links (most likely location based on documentation)
+          if (fallbackCrawlResult.data && 
+              fallbackCrawlResult.data.length > 0 && 
+              fallbackCrawlResult.data[0].links && 
+              Array.isArray(fallbackCrawlResult.data[0].links)) {
+            
+            logs.push(`Found ${fallbackCrawlResult.data[0].links.length} links in data[0].links array`);
+            
+            // Extract links, handling both string and object formats
+            const processedLinks = fallbackCrawlResult.data[0].links.map(link => {
+              if (typeof link === 'string') return link;
+              if (typeof link === 'object' && link !== null && 'url' in link) return link.url as string;
+              return null;
+            }).filter(Boolean) as string[];
+            
+            // Filter and process links
+            const fallbackUrls = Array.from(new Set(
+              processedLinks
+                .filter(url => url && url.includes('/p/'))
+                .filter(url => !url.includes('/comments'))
+            )).slice(0, 60);
+            
+            // Combine URLs and remove duplicates
+            postUrls = Array.from(new Set([...postUrls, ...fallbackUrls]));
+            logs.push(`Added ${fallbackUrls.length} posts from data[0].links array. Total unique posts: ${postUrls.length}`);
+          }
           // Check if we have links directly in the response object (top-level links array)
-          if (fallbackCrawlResult.links && Array.isArray(fallbackCrawlResult.links) && fallbackCrawlResult.links.length > 0) {
+          else if (fallbackCrawlResult.links && Array.isArray(fallbackCrawlResult.links) && fallbackCrawlResult.links.length > 0) {
             logs.push(`Found ${fallbackCrawlResult.links.length} links in top-level links array`);
             
             // Filter and process links from the top-level links array
@@ -275,6 +322,44 @@ export async function POST(request: Request) {
             // Combine URLs and remove duplicates
             postUrls = Array.from(new Set([...postUrls, ...fallbackUrls]));
             logs.push(`Added ${fallbackUrls.length} posts from fallback crawl top-level links. Total unique posts: ${postUrls.length}`);
+          }
+          // Extract links from markdown if available
+          else if (fallbackCrawlResult.data && 
+                  fallbackCrawlResult.data.length > 0 && 
+                  fallbackCrawlResult.data[0].markdown) {
+            
+            // Extract links from markdown using regex
+            const markdown = fallbackCrawlResult.data[0].markdown;
+            const linkRegex = /\]\((https?:\/\/[^)]+)\)/g;
+            const extractedLinks: string[] = [];
+            let match;
+            
+            while ((match = linkRegex.exec(markdown)) !== null) {
+              if (match[1] && match[1].includes('/p/') && !match[1].includes('/comments')) {
+                extractedLinks.push(match[1]);
+              }
+            }
+            
+            // Also try another regex pattern for href links
+            const hrefRegex = /href="(https?:\/\/[^"]+)"/g;
+            while ((match = hrefRegex.exec(markdown)) !== null) {
+              if (match[1] && match[1].includes('/p/') && !match[1].includes('/comments')) {
+                extractedLinks.push(match[1]);
+              }
+            }
+            
+            if (extractedLinks.length > 0) {
+              logs.push(`Extracted ${extractedLinks.length} links from markdown content`);
+              
+              // Remove duplicates and limit to 60
+              const fallbackUrls = Array.from(new Set(extractedLinks)).slice(0, 60);
+              
+              // Combine URLs and remove duplicates
+              postUrls = Array.from(new Set([...postUrls, ...fallbackUrls]));
+              logs.push(`Added ${fallbackUrls.length} posts extracted from markdown. Total unique posts: ${postUrls.length}`);
+            } else {
+              logs.push('No links found in markdown content');
+            }
           }
           // Check if we have data with links in metadata as fallback (original expectation)
           else if (fallbackCrawlResult.success && fallbackCrawlResult.data && fallbackCrawlResult.data.length > 0) {
