@@ -29,6 +29,7 @@ interface CrawlResponse {
   success: boolean;
   error?: string;
   data: CrawlResult[];
+  links?: string[];
 }
 
 interface StatusResponse {
@@ -260,7 +261,23 @@ export async function POST(request: Request) {
           
           logs.push(`Fallback crawl result: ${JSON.stringify(fallbackCrawlResult).substring(0, 200)}...`);
           
-          if (fallbackCrawlResult.success && fallbackCrawlResult.data && fallbackCrawlResult.data.length > 0) {
+          // Check if we have links directly in the response object (top-level links array)
+          if (fallbackCrawlResult.links && Array.isArray(fallbackCrawlResult.links) && fallbackCrawlResult.links.length > 0) {
+            logs.push(`Found ${fallbackCrawlResult.links.length} links in top-level links array`);
+            
+            // Filter and process links from the top-level links array
+            const fallbackUrls = Array.from(new Set(
+              fallbackCrawlResult.links
+                .filter((url: string) => url && url.includes('/p/'))
+                .filter((url: string) => !url.includes('/comments'))
+            )).slice(0, 60);
+            
+            // Combine URLs and remove duplicates
+            postUrls = Array.from(new Set([...postUrls, ...fallbackUrls]));
+            logs.push(`Added ${fallbackUrls.length} posts from fallback crawl top-level links. Total unique posts: ${postUrls.length}`);
+          }
+          // Check if we have data with links in metadata as fallback (original expectation)
+          else if (fallbackCrawlResult.success && fallbackCrawlResult.data && fallbackCrawlResult.data.length > 0) {
             // Extract links from the result
             const firstResult = fallbackCrawlResult.data[0];
             const linksData = firstResult.metadata?.links || [];
@@ -276,12 +293,12 @@ export async function POST(request: Request) {
               
               // Combine URLs and remove duplicates (again, just to be safe)
               postUrls = Array.from(new Set([...postUrls, ...fallbackUrls]));
-              logs.push(`Added ${fallbackUrls.length} posts from fallback crawl. Total unique posts: ${postUrls.length}`);
+              logs.push(`Added ${fallbackUrls.length} posts from fallback crawl metadata links. Total unique posts: ${postUrls.length}`);
             } else {
-              logs.push('No links found in fallback crawl result');
+              logs.push('No links found in fallback crawl result metadata');
             }
           } else {
-            logs.push('Fallback crawl unsuccessful or returned no data');
+            logs.push('No links found in fallback crawl result (checked both top-level and metadata)');
           }
         } catch (fallbackError) {
           logs.push(`Error in fallback crawl: ${fallbackError}`);
