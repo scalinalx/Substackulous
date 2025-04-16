@@ -115,6 +115,7 @@ export default function SubstackProContent() {
       }
 
       // Construct a detailed prompt for post analysis
+      console.log('Number of posts before analysis:', posts.length, posts);
       const postsForAnalysis = posts.map(post => ({
         title: post.title,
         preview: post.preview || 'No preview available',
