@@ -80,10 +80,14 @@ Think through this step by step.`;
 
       if (mode === 'brainstorm') {
         console.log('Starting analysis API call with prompt for Brainstorm...');
-        const analysisResponse = await fetch('/api/groq/analyze-content', {
+        const analysisResponse = await fetch('/api/together/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
+          body: JSON.stringify({
+            systemPrompt: "Act like a seasoned content analyst and Substack content coach who provides detailed, structured analysis.",
+            userPrompt: prompt,
+            temperature: 0.8
+          }),
         });
         console.log('Analysis API call completed for Brainstorm.');
         if (!analysisResponse.ok) {
@@ -213,10 +217,14 @@ Output ONLY the 10 viral post ideas in a numbered list.`;
       } else {
         // For mode 'post' or any other case, we simply use the analysis.
         console.log('Mode "post" selected, using only analysis.');
-        const analysisResponse = await fetch('/api/groq/analyze-content', {
+        const analysisResponse = await fetch('/api/together/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, model: 'llama-3.3-70b-specdec', temperature: 0.62 }),
+          body: JSON.stringify({
+            systemPrompt: "Act like a seasoned content analyst and Substack content coach who provides detailed, structured analysis.",
+            userPrompt: prompt,
+            temperature: 0.8
+          }),
         });
         if (!analysisResponse.ok) {
           const error = await analysisResponse.json();
