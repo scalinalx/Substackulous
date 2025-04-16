@@ -113,22 +113,73 @@ export default function SubstackProContent() {
         toast.error(`Not enough credits. You need ${creditCost} credit to use this feature.`);
         return;
       }
+
+      // Construct a detailed prompt for post analysis
+      const postsForAnalysis = posts.map(post => ({
+        title: post.title,
+        preview: post.preview || 'No preview available',
+        engagement: {
+          likes: post.likes,
+          comments: post.comments,
+          restacks: post.restacks,
+          total: post.likes + post.comments + post.restacks
+        }
+      }));
+
+      const prompt = `I will provide you with a collection of Substack posts, sorted by total engagement. Each post includes a title, preview content, and engagement metrics. Your task is to analyze this collection and extract detailed patterns across the following dimensions:
+
+1. Content Strategy:
+- What types of content perform best?
+- What patterns emerge in the high-performing posts vs lower-performing ones?
+- What unique angles or approaches are used in the most successful posts?
+
+2. Title Analysis:
+- What patterns appear in the most engaging titles?
+- What structures, formats, or trigger words are used effectively?
+- How do the best-performing titles differ from others?
+
+3. Writing Style:
+- What writing techniques are most effective?
+- How is the content structured in successful posts?
+- What tone and voice characteristics stand out?
+
+4. Engagement Patterns:
+- What content types drive more likes vs. comments vs. restacks?
+- Are there specific topics or approaches that consistently generate higher engagement?
+- What patterns emerge in the preview text of highly-engaged posts?
+
+5. Actionable Recommendations:
+- What specific strategies should be adopted based on this analysis?
+- What content types should be prioritized?
+- What writing techniques should be emphasized?
+
+Posts for Analysis (sorted by total engagement):
+
+${JSON.stringify(postsForAnalysis, null, 2)}
+
+Please provide a detailed, data-driven analysis with specific examples from the posts. Focus on actionable insights that can be immediately implemented to improve content performance.
+
+Format your response in clear sections with markdown headings and bullet points for better readability. Include specific examples from the analyzed posts to support your findings.`;
       
-      const response = await fetch('/api/substack-pro/analyze-with-groq', {
+      const response = await fetch('/api/together/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ posts }),
+        body: JSON.stringify({
+          systemPrompt: "Act like a seasoned content analyst and Substack content coach who provides detailed, structured analysis with actionable insights.",
+          userPrompt: prompt,
+          temperature: 0.8
+        }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to analyze with AI');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to analyze with AI');
       }
 
-      setAnalysisOutput(data.analysis);
+      const data = await response.json();
+      setAnalysisOutput(data.result);
       
       // Deduct credits after successful analysis
       try {
