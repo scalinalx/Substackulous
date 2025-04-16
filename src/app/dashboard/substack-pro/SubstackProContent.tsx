@@ -116,15 +116,18 @@ export default function SubstackProContent() {
 
       // Construct a detailed prompt for post analysis
       console.log('Number of posts before analysis:', posts.length, posts);
-      const postsForAnalysis = posts.map(post => ({
+      
+      // Take only top 20 posts by total engagement
+      const top20posts = [...posts]
+        .sort((a, b) => ((b.likes + b.comments + b.restacks) - (a.likes + a.comments + a.restacks)))
+        .slice(0, 20);
+      
+      console.log('Number of posts after slicing to top 20:', top20posts.length);
+      
+      const postsForAnalysis = top20posts.map(post => ({
         title: post.title,
         preview: post.preview || 'No preview available',
-        engagement: {
-          likes: post.likes,
-          comments: post.comments,
-          restacks: post.restacks,
-          total: post.likes + post.comments + post.restacks
-        }
+        engagement: post.likes + post.comments + post.restacks
       }));
 
       const prompt = `I will provide you with a collection of Substack posts, sorted by total engagement. Each post includes a title, preview content, and engagement metrics. Your task is to analyze this collection and extract detailed patterns across the following dimensions:
