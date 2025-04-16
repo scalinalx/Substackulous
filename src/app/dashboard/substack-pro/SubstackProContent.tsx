@@ -161,6 +161,8 @@ ${JSON.stringify(postsForAnalysis, null, 2)}
 Please provide a detailed, data-driven analysis with specific examples from the posts. Focus on actionable insights that can be immediately implemented to improve content performance.
 
 Format your response in clear sections with markdown headings and bullet points for better readability. Include specific examples from the analyzed posts to support your findings.`;
+
+      console.log('Prompt:', prompt);
       
       const response = await fetch('/api/together/generate', {
         method: 'POST',
